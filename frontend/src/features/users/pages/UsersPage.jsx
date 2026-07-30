@@ -12,28 +12,41 @@ import {
   Loader2,
   RefreshCw,
   ShieldCheck,
-  User,
+  UserPlus,
   Clock,
   Calendar,
   AlertCircle,
   Shield,
-  Info
+  Stethoscope,
+  Building2,
+  Filter,
+  CheckCircle2,
+  UserX
 } from 'lucide-react';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+
+  // Create User modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    phone: '',
+    role: 'STAFF',
+  });
 
   // Edit User modal state
-  const [modalOpen, setModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const [deleteId, setDeleteId] = useState(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const [formData, setFormData] = useState({
+  const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
     phone: '',
@@ -41,6 +54,10 @@ export default function UsersPage() {
     accountNonLocked: true,
     role: 'STAFF',
   });
+
+  // Delete state
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -58,13 +75,50 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
+  // Handle Create User Submit
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    if (!createForm.firstName.trim() || !createForm.email.trim() || !createForm.password) {
+      toast.error('Please fill in all required fields (First Name, Email, Password).');
+      return;
+    }
+
+    setCreatingUser(true);
+    try {
+      await userService.createUser({
+        firstName: createForm.firstName.trim(),
+        lastName: createForm.lastName.trim(),
+        email: createForm.email.trim(),
+        password: createForm.password,
+        phone: createForm.phone.trim(),
+        role: createForm.role,
+      });
+      toast.success(`New ${createForm.role} account created successfully!`);
+      setCreateModalOpen(false);
+      setCreateForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        phone: '',
+        role: 'STAFF',
+      });
+      fetchUsers();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create user account');
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  // Open Edit Modal
   const handleOpenEditModal = (u) => {
     setEditingUser(u);
     const rolesArr = u.roles ? (Array.isArray(u.roles) ? u.roles : Array.from(u.roles)) : [];
-    const cleanRoles = rolesArr.map((r) => r.replace('ROLE_', ''));
+    const cleanRoles = rolesArr.map((r) => r.replace('ROLE_', '').toUpperCase());
     const primaryRole = cleanRoles.length > 0 ? cleanRoles[0] : 'STAFF';
 
-    setFormData({
+    setEditForm({
       firstName: u.firstName || '',
       lastName: u.lastName || '',
       phone: u.phone || '',
@@ -72,39 +126,40 @@ export default function UsersPage() {
       accountNonLocked: u.accountNonLocked ?? true,
       role: primaryRole,
     });
-    setModalOpen(true);
+    setEditModalOpen(true);
   };
 
-  const handleSave = async (e) => {
+  // Save Edit User
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    if (!formData.firstName.trim()) {
+    if (!editForm.firstName.trim()) {
       toast.error('First name is required.');
       return;
     }
 
     setSubmitting(true);
     const payload = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phone: formData.phone,
-      enabled: formData.enabled,
-      accountNonLocked: formData.accountNonLocked,
-      roles: [formData.role],
+      firstName: editForm.firstName,
+      lastName: editForm.lastName,
+      phone: editForm.phone,
+      enabled: editForm.enabled,
+      accountNonLocked: editForm.accountNonLocked,
+      roles: [editForm.role],
     };
 
     try {
       await userService.updateUser(editingUser.id, payload);
-      toast.success(`User permissions updated (${formData.role} role assigned)`);
-      setModalOpen(false);
+      toast.success(`User permissions updated (${editForm.role} role assigned)`);
+      setEditModalOpen(false);
       fetchUsers();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update user';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || 'Failed to update user');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Delete User
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
@@ -120,12 +175,21 @@ export default function UsersPage() {
     }
   };
 
+  // Role Stats Calculations
+  const adminCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('ADMIN'))).length;
+  const pharmacistCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('PHARMACIST'))).length;
+  const staffCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('STAFF'))).length;
+
   const filteredUsers = users.filter((u) => {
     const q = searchTerm.toLowerCase();
     const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
     const email = (u.email || '').toLowerCase();
     const empId = (u.employeeId || '').toLowerCase();
-    return fullName.includes(q) || email.includes(q) || empId.includes(q);
+    const matchesSearch = fullName.includes(q) || email.includes(q) || empId.includes(q);
+
+    if (roleFilter === 'ALL') return matchesSearch;
+    const rolesArr = u.roles ? Array.from(u.roles).map((r) => r.replace('ROLE_', '').toUpperCase()) : [];
+    return matchesSearch && rolesArr.includes(roleFilter);
   });
 
   const formatDate = (dt) => {
@@ -141,27 +205,92 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      {/* Top Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 rounded-3xl text-white shadow-xl border border-slate-800">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Users className="w-6 h-6 text-blue-600" /> Enterprise User Access Management
+          <h1 className="text-2xl font-black tracking-tight flex items-center gap-2.5">
+            <ShieldCheck className="w-7 h-7 text-blue-400" /> Enterprise Role & User Management
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Manage employee access, single-role hierarchy assignments, last login activity, and security lockouts
+          <p className="text-xs text-slate-300 mt-1">
+            Manage system access tiers, role permissions (Admin, Pharmacist, Staff), and employee accounts.
           </p>
         </div>
 
-        <button
-          onClick={fetchUsers}
-          className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition self-start sm:self-auto"
-          title="Refresh user accounts"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl shadow-lg shadow-blue-500/20 transition flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" /> Create New Account
+          </button>
+          <button
+            onClick={fetchUsers}
+            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 transition"
+            title="Refresh Users"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Role Summary Statistic Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div
+          onClick={() => setRoleFilter(roleFilter === 'ADMIN' ? 'ALL' : 'ADMIN')}
+          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+            roleFilter === 'ADMIN'
+              ? 'bg-purple-900/20 border-purple-500 shadow-lg shadow-purple-500/10'
+              : 'bg-white border-slate-200 hover:border-purple-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-600">Admin Role</span>
+            <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+              <Shield className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{adminCount}</div>
+          <p className="text-[11px] text-slate-500 mt-0.5">Full system governance & user management</p>
+        </div>
+
+        <div
+          onClick={() => setRoleFilter(roleFilter === 'PHARMACIST' ? 'ALL' : 'PHARMACIST')}
+          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+            roleFilter === 'PHARMACIST'
+              ? 'bg-emerald-900/20 border-emerald-500 shadow-lg shadow-emerald-500/10'
+              : 'bg-white border-slate-200 hover:border-emerald-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Pharmacist Role</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+              <Stethoscope className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{pharmacistCount}</div>
+          <p className="text-[11px] text-slate-500 mt-0.5">Medicine catalog, batch stock & supplier orders</p>
+        </div>
+
+        <div
+          onClick={() => setRoleFilter(roleFilter === 'STAFF' ? 'ALL' : 'STAFF')}
+          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+            roleFilter === 'STAFF'
+              ? 'bg-blue-900/20 border-blue-500 shadow-lg shadow-blue-500/10'
+              : 'bg-white border-slate-200 hover:border-blue-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Staff Role</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+              <Building2 className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{staffCount}</div>
+          <p className="text-[11px] text-slate-500 mt-0.5">Standard inventory lookup & dispenses</p>
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -173,8 +302,23 @@ export default function UsersPage() {
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="text-xs font-medium text-slate-500">
-          Showing <span className="font-bold text-slate-800">{filteredUsers.length}</span> system accounts
+
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-400" />
+          <span className="text-xs font-bold text-slate-600">Filter Role:</span>
+          {['ALL', 'ADMIN', 'PHARMACIST', 'STAFF'].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(r)}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition ${
+                roleFilter === r
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {r}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -184,11 +328,10 @@ export default function UsersPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="py-3.5 px-6">Employee ID / User</th>
+                <th className="py-3.5 px-6">User / Employee ID</th>
                 <th className="py-3.5 px-6">Official Email</th>
                 <th className="py-3.5 px-6">Assigned Role</th>
-                <th className="py-3.5 px-6">Last Login</th>
-                <th className="py-3.5 px-6">Created Date</th>
+                <th className="py-3.5 px-6">Last Active</th>
                 <th className="py-3.5 px-6">Status</th>
                 <th className="py-3.5 px-6 text-right">Actions</th>
               </tr>
@@ -196,30 +339,29 @@ export default function UsersPage() {
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={6} className="py-12 text-center text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600 mb-2" />
                     Loading user accounts...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
-                    No user accounts found matching filter.
+                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                    No user accounts found matching filter criteria.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((u) => {
-                  const rolesArr = u.roles
-                    ? Array.from(u.roles).map((r) => r.replace('ROLE_', ''))
-                    : [];
+                  const rolesArr = u.roles ? Array.from(u.roles).map((r) => r.replace('ROLE_', '').toUpperCase()) : [];
                   const primaryRole = rolesArr.length > 0 ? rolesArr[0] : 'STAFF';
-                  const empId = u.employeeId || `EMP${String(u.id).padStart(3, '0')}`;
 
                   return (
                     <tr key={u.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                          <div className={`w-10 h-10 rounded-xl font-bold text-xs flex items-center justify-center text-white ${
+                            primaryRole === 'ADMIN' ? 'bg-purple-600' : primaryRole === 'PHARMACIST' ? 'bg-emerald-600' : 'bg-blue-600'
+                          }`}>
                             {u.firstName ? u.firstName.charAt(0).toUpperCase() : 'U'}
                           </div>
                           <div>
@@ -227,7 +369,7 @@ export default function UsersPage() {
                               {u.firstName} {u.lastName}
                             </div>
                             <span className="inline-block px-1.5 py-0.2 bg-slate-100 border border-slate-200 rounded text-[10px] font-mono font-bold text-slate-600 mt-0.5">
-                              {empId}
+                              {u.employeeId || `EMP${String(u.id).padStart(3, '0')}`}
                             </span>
                           </div>
                         </div>
@@ -246,18 +388,8 @@ export default function UsersPage() {
                         </div>
                       </td>
 
-                      <td className="py-4 px-6 text-slate-500">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{formatDate(u.createdAt)}</span>
-                        </div>
-                      </td>
-
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-1.5">
-                          <StatusBadge status={u.enabled ? 'ACTIVE' : 'DISABLED'} />
-                          {!u.accountNonLocked && <StatusBadge status="LOCKED" label="LOCKED" />}
-                        </div>
+                        <StatusBadge status={u.enabled ? 'ACTIVE' : 'DISABLED'} />
                       </td>
 
                       <td className="py-4 px-6 text-right">
@@ -265,7 +397,7 @@ export default function UsersPage() {
                           <button
                             onClick={() => handleOpenEditModal(u)}
                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                            title="Edit Permissions"
+                            title="Edit User Role"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
@@ -287,180 +419,231 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Edit User Modal using Reusable Modal Component */}
+      {/* CREATE NEW USER MODAL */}
       <Modal
-        isOpen={modalOpen && editingUser !== null}
-        onClose={() => setModalOpen(false)}
-        title="Edit User Account & Role Permissions"
-        subtitle="Manage employee access level, read-only official email, and security settings"
-        icon={ShieldCheck}
-        footerActions={
-          <>
+        isOpen={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        title="Create New Employee Account"
+        subtitle="Add a new system user and assign their access tier (Admin, Pharmacist, Staff)"
+        icon={UserPlus}
+      >
+        <form onSubmit={handleCreateSubmit} className="space-y-4 py-2">
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="First Name" required>
+              <input
+                type="text"
+                required
+                value={createForm.firstName}
+                onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                placeholder="John"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </FormField>
+
+            <FormField label="Last Name">
+              <input
+                type="text"
+                value={createForm.lastName}
+                onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                placeholder="Doe"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Official Email Address" required>
+            <input
+              type="email"
+              required
+              value={createForm.email}
+              onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+              placeholder="employee@medistock.com"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </FormField>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Initial Password" required>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={createForm.password}
+                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </FormField>
+
+            <FormField label="Phone Number">
+              <input
+                type="text"
+                value={createForm.phone}
+                onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                placeholder="+91 9999900000"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </FormField>
+          </div>
+
+          <FormField label="Assigned System Role" required>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {[
+                { id: 'ADMIN', label: 'Admin', desc: 'Full System Control' },
+                { id: 'PHARMACIST', label: 'Pharmacist', desc: 'Catalog & Stock' },
+                { id: 'STAFF', label: 'Staff', desc: 'Standard Access' },
+              ].map((r) => (
+                <label
+                  key={r.id}
+                  className={`p-3 rounded-xl border cursor-pointer text-center transition ${
+                    createForm.role === r.id
+                      ? 'bg-blue-50 border-blue-600 text-blue-900 font-bold'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="newRole"
+                    value={r.id}
+                    checked={createForm.role === r.id}
+                    onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+                    className="sr-only"
+                  />
+                  <div className="text-xs">{r.label}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{r.desc}</div>
+                </label>
+              ))}
+            </div>
+          </FormField>
+
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
+              onClick={() => setCreateModalOpen(false)}
               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
             >
               Cancel
             </button>
             <button
-              onClick={handleSave}
-              disabled={submitting}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5"
+              type="submit"
+              disabled={creatingUser}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md"
             >
-              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Save Permissions
+              {creatingUser && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Create Account
             </button>
-          </>
-        }
-      >
-        {editingUser && (
-          <form onSubmit={handleSave} className="space-y-5">
-            {/* Account Info Card */}
-            <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 text-xs">
+          </div>
+        </form>
+      </Modal>
+
+      {/* EDIT USER ROLE MODAL */}
+      {editModalOpen && editingUser && (
+        <Modal
+          isOpen={true}
+          onClose={() => setEditModalOpen(false)}
+          title="Edit User Role & Permissions"
+          subtitle={`Updating permissions for ${editingUser.firstName} ${editingUser.lastName}`}
+          icon={ShieldCheck}
+        >
+          <form onSubmit={handleSaveEdit} className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3 font-mono text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Employee ID</span>
-                <span className="font-mono font-bold text-slate-900">{editingUser.employeeId || `EMP${String(editingUser.id).padStart(3, '0')}`}</span>
+                <span className="font-bold text-slate-900">{editingUser.employeeId}</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Created Date</span>
-                <span className="font-medium text-slate-800">{formatDate(editingUser.createdAt)}</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Email</span>
+                <span className="font-bold text-slate-900">{editingUser.email}</span>
               </div>
             </div>
 
-            {/* Read-Only Official Email Field */}
-            <FormField label="Official Email Address" readOnly helperText="Email address is fixed to employee account credentials">
-              <input
-                type="email"
-                disabled
-                readOnly
-                value={editingUser.email}
-                className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-medium text-slate-600 cursor-not-allowed"
-              />
-            </FormField>
-
-            {/* First & Last Name */}
-            <div className="grid grid-cols-2 gap-3">
-              <FormField label="First Name" required>
-                <input
-                  type="text"
-                  required
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </FormField>
-              <FormField label="Last Name">
-                <input
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </FormField>
-            </div>
-
-            {/* Enterprise Role Selector */}
-            <FormField label="Assigned Enterprise Role" required helperText="Select single primary role for access control">
-              <div className="grid grid-cols-1 gap-2 pt-1">
-                {[
-                  { id: 'SUPER_ADMIN', name: 'Super Admin', desc: 'Full root control across enterprise, organization settings & security logs' },
-                  { id: 'SYSTEM_ADMINISTRATOR', name: 'System Administrator', desc: 'System management, user creation, permissions & analytics' },
-                  { id: 'INVENTORY_ADMINISTRATOR', name: 'Inventory Administrator', desc: 'Batch control, reorder thresholds & warehouse management' },
-                  { id: 'PHARMACY_ADMINISTRATOR', name: 'Pharmacy Administrator', desc: 'Medicine catalog, dosage rules & supplier governance' },
-                  { id: 'PHARMACIST', name: 'Staff Pharmacist', desc: 'Medicine dispensing, stock updates & inventory review' },
-                  { id: 'STAFF', name: 'Medical Staff', desc: 'Standard stock queries & order creation' },
-                ].map((r) => (
+            <FormField label="Assigned Role" required>
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                {['ADMIN', 'PHARMACIST', 'STAFF'].map((r) => (
                   <label
-                    key={r.id}
-                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
-                      formData.role === r.id
-                        ? 'bg-blue-50 border-blue-500 text-blue-950 shadow-xs'
-                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    key={r}
+                    className={`p-3 rounded-xl border cursor-pointer text-center transition ${
+                      editForm.role === r
+                        ? 'bg-blue-50 border-blue-600 text-blue-900 font-bold'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
                     <input
                       type="radio"
-                      name="userEnterpriseRole"
-                      value={r.id}
-                      checked={formData.role === r.id}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      className="mt-0.5 text-blue-600 focus:ring-blue-500"
+                      name="editRole"
+                      value={r}
+                      checked={editForm.role === r}
+                      onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                      className="sr-only"
                     />
-                    <div>
-                      <div className="font-bold text-xs flex items-center gap-2">
-                        {r.name}
-                        {r.id.includes('ADMIN') && (
-                          <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded font-bold uppercase">
-                            Admin Role
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{r.desc}</div>
-                    </div>
+                    <div className="text-xs font-bold">{r}</div>
                   </label>
                 ))}
               </div>
             </FormField>
 
-            {/* Account Status Toggles */}
-            <div className="space-y-2 pt-3 border-t border-slate-100">
-              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-800 select-none">
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
                 <input
                   type="checkbox"
-                  checked={formData.enabled}
-                  onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  checked={editForm.enabled}
+                  onChange={(e) => setEditForm({ ...editForm, enabled: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded"
                 />
-                <span>Account Active & Enabled (Can log in to MediStock)</span>
-              </label>
-
-              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-800 select-none">
-                <input
-                  type="checkbox"
-                  checked={formData.accountNonLocked}
-                  onChange={(e) => setFormData({ ...formData, accountNonLocked: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span>Account Unlocked</span>
+                <span>Account Active & Enabled</span>
               </label>
             </div>
-          </form>
-        )}
-      </Modal>
 
-      {/* Delete User Confirmation */}
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md"
+              >
+                {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* DELETE CONFIRMATION */}
       {deleteId && (
         <Modal
           isOpen={true}
           onClose={() => setDeleteId(null)}
-          title="Delete User Account?"
-          subtitle="Permanent account deletion"
+          title="Delete Account?"
+          subtitle="Confirm user deletion"
           icon={AlertCircle}
-          maxWidth="max-w-md"
-          footerActions={
-            <>
+          maxWidth="max-w-sm"
+        >
+          <div className="py-2 text-center">
+            <p className="text-xs text-slate-600">
+              Are you sure you want to delete user account #{deleteId}?
+            </p>
+            <div className="flex items-center justify-center gap-2 mt-4">
               <button
                 onClick={() => setDeleteId(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
+                className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5"
+                className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl flex items-center gap-1"
               >
-                {deleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Confirm Delete
+                {deleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Delete
               </button>
-            </>
-          }
-        >
-          <div className="text-center py-3">
-            <p className="text-xs text-slate-600">
-              Are you sure you want to permanently delete user account #{deleteId}?
-            </p>
+            </div>
           </div>
         </Modal>
       )}

@@ -4,17 +4,18 @@ import com.medistock.common.exception.ResourceNotFoundException;
 import com.medistock.profile.dto.response.UserProfileResponse;
 import com.medistock.role.entity.Role;
 import com.medistock.role.repository.RoleRepository;
+import com.medistock.common.exception.UserAlreadyExistsException;
+import com.medistock.user.dto.request.CreateUserRequest;
 import com.medistock.user.dto.request.AdminUpdateUserRequest;
 import com.medistock.user.entity.User;
 import com.medistock.user.repository.UserRepository;
 import com.medistock.user.service.AdminUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +24,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -38,6 +40,43 @@ public class AdminUserServiceImpl implements AdminUserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
         return mapToProfileResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileResponse createUser(CreateUserRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new UserAlreadyExistsException("User already exists with email: " + request.getEmail());
+        }
+
+        String roleName = (request.getRole() != null && !request.getRole().isBlank()) 
+                ? request.getRole().toUpperCase().replace("ROLE_", "") 
+                : "STAFF";
+
+        Role assignedRole = roleRepository.findByName(roleName)
+                .orElseGet(() -> roleRepository.save(Role.builder()
+                        .name(roleName)
+                        .description(roleName + " Role")
+                        .build()));
+
+        String empPrefix = roleName.contains("ADMIN") ? "ADM" : roleName.contains("PHARMACIST") ? "PHA" : "EMP";
+        long nextId = userRepository.count() + 1;
+        String autoEmpId = String.format("%s%03d", empPrefix, nextId);
+
+        User user = User.builder()
+                .employeeId(autoEmpId)
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phone(request.getPhone())
+                .enabled(true)
+                .accountNonLocked(true)
+                .roles(new HashSet<>(Collections.singletonList(assignedRole)))
+                .build();
+
+        User savedUser = userRepository.save(user);
+        return mapToProfileResponse(savedUser);
     }
 
     @Override
@@ -81,6 +120,18 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new ResourceNotFoundException("User not found with ID: " + id);
         }
         userRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, String>> getAllRoles() {
+        return roleRepository.findAll().stream()
+                .map(r -> Map.of(
+                        "id", String.valueOf(r.getId()),
+                        "name", r.getName(),
+                        "description", r.getDescription() != null ? r.getDescription() : ""
+                ))
+                .collect(Collectors.toList());
     }
 
     private UserProfileResponse mapToProfileResponse(User user) {

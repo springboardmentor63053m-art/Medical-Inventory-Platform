@@ -13,11 +13,14 @@ import {
   Lock,
   Eye,
   EyeOff,
-  CheckCircle2
+  CheckCircle2,
+  BadgeCheck,
+  Calendar,
+  Building
 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user, updateUserProfileState, isAdmin, isPharmacist } = useAuth();
+  const { user, updateUserProfileState } = useAuth();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -113,46 +116,64 @@ export default function ProfilePage() {
     return (
       <div className="py-20 text-center text-slate-500">
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-3" />
-        <p className="text-sm font-medium">Loading user profile...</p>
+        <p className="text-sm font-medium">Loading user profile hub...</p>
       </div>
     );
   }
 
   const roleLabels = profileData?.roles
-    ? Array.from(profileData.roles).map((r) => r.replace('ROLE_', ''))
+    ? Array.from(profileData.roles).map((r) => r.replace('ROLE_', '').toUpperCase())
     : ['STAFF'];
+
+  const empId = profileData?.employeeId || `EMP${String(profileData?.id || '001').padStart(3, '0')}`;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Profile Header Banner */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center gap-6">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-black text-3xl shadow-lg shadow-blue-500/20">
-          {profileData?.firstName ? profileData.firstName.charAt(0).toUpperCase() : 'U'}
+      {/* Top Gradient Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-8 rounded-3xl text-white shadow-xl border border-slate-800 relative overflow-hidden flex flex-col md:flex-row items-center gap-6">
+        <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 p-[2px] shadow-2xl flex-shrink-0">
+          <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center font-black text-3xl text-blue-400">
+            {profileData?.firstName ? profileData.firstName.charAt(0).toUpperCase() : 'U'}
+          </div>
         </div>
 
         <div className="text-center md:text-left flex-1">
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-            <h1 className="text-xl font-bold text-slate-900">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
+            <h1 className="text-2xl font-black tracking-tight">
               {profileData?.firstName} {profileData?.lastName}
             </h1>
+            <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 font-mono font-bold text-xs rounded-lg">
+              {empId}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-xs text-slate-300 mt-2">
+            <span className="flex items-center gap-1">
+              <Mail className="w-3.5 h-3.5 text-blue-400" /> {profileData?.email}
+            </span>
+            {profileData?.phone && (
+              <span className="flex items-center gap-1">
+                <Phone className="w-3.5 h-3.5 text-indigo-400" /> {profileData?.phone}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-center md:justify-start gap-2 mt-3">
             {roleLabels.map((role) => (
               <span
                 key={role}
-                className="px-2.5 py-0.5 bg-blue-100 text-blue-800 font-bold text-[10px] rounded-full border border-blue-200"
+                className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold text-[10px] rounded-full uppercase tracking-wider flex items-center gap-1"
               >
-                {role}
+                <BadgeCheck className="w-3 h-3 text-emerald-400" /> {role} Role
               </span>
             ))}
           </div>
-          <p className="text-xs text-slate-500 mt-1 flex items-center justify-center md:justify-start gap-1">
-            <Mail className="w-3.5 h-3.5" /> {profileData?.email}
-          </p>
         </div>
 
-        <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center text-xs">
-          <span className="text-slate-400 block text-[10px]">Account Status</span>
-          <span className="font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Verified & Active
+        <div className="p-4 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-slate-800 text-center text-xs flex-shrink-0">
+          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Account Status</span>
+          <span className="font-bold text-emerald-400 flex items-center justify-center gap-1.5 mt-1">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Verified & Active
           </span>
         </div>
       </div>
@@ -195,27 +216,27 @@ export default function ProfilePage() {
                 type="text"
                 value={profileForm.phone}
                 onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                placeholder="+1 555-0199"
+                placeholder="+91 9999900000"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Official Email Address</label>
               <input
                 type="email"
                 disabled
                 value={profileData?.email || ''}
                 className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-500 cursor-not-allowed"
               />
-              <span className="text-[10px] text-slate-400 mt-1 block">Email address cannot be changed</span>
+              <span className="text-[10px] text-slate-400 mt-1 block">Email address is fixed to employee record</span>
             </div>
 
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={updatingProfile}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 disabled:opacity-75"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 disabled:opacity-75"
               >
                 {updatingProfile ? (
                   <>
@@ -303,7 +324,7 @@ export default function ProfilePage() {
               <button
                 type="submit"
                 disabled={updatingPassword}
-                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 disabled:opacity-75"
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2 disabled:opacity-75"
               >
                 {updatingPassword ? (
                   <>

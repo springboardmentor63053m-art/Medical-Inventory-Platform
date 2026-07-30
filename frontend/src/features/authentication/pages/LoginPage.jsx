@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
+import { authService } from '../../../services/api/authService';
 import { toast } from 'react-toastify';
+import Modal from '../../../components/common/Modal';
 import {
   User,
   Lock,
@@ -12,10 +14,21 @@ import {
   Pill,
   Package,
   Truck,
-  BarChart2
+  BarChart2,
+  KeyRound,
+  Mail,
+  CheckCircle2,
+  ShieldCheck,
+  Sparkles,
+  Phone,
+  UserPlus,
+  LogIn
 } from 'lucide-react';
 
 export default function LoginPage() {
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+
+  // Login state
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
@@ -23,13 +36,48 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const { login } = useAuth();
+  // Register state
+  const [regFirstName, setRegFirstName] = useState('');
+  const [regLastName, setRegLastName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+
+  // Password Reset Modal State
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetStep, setResetStep] = useState(1);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const { login, loginWithToken } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const from = location.state?.from?.pathname || '/dashboard';
 
-  const handleSubmit = async (e) => {
+  // Process OAuth2 callback redirect query tokens
+  useEffect(() => {
+    const oauthToken = searchParams.get('oauthToken');
+    if (oauthToken) {
+      setLoading(true);
+      loginWithToken(oauthToken)
+        .then(() => {
+          toast.success('Signed in successfully with OAuth2!');
+          navigate(from, { replace: true });
+        })
+        .catch(() => {
+          toast.error('OAuth2 authentication failed. Please try again.');
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [searchParams]);
+
+  // Handle Login Submit
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!identifier.trim() || !password) {
       setErrorMsg('Please enter your Employee ID or Email Address.');
@@ -39,13 +87,9 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
 
-    // Determine type for logging / future routing readiness
-    const isEmail = identifier.includes('@');
-    const loginPayload = identifier.trim();
-
     try {
-      await login(loginPayload, password);
-      toast.success('Authentication successful! Welcome to MediStock.');
+      await login(identifier.trim(), password);
+      toast.success('Authentication successful! Welcome back to MediStock.');
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
@@ -60,248 +104,571 @@ export default function LoginPage() {
     }
   };
 
-  const handleForgotPassword = (e) => {
+  // Handle Register Submit
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    toast.info('Please contact your System Administrator to reset your password.');
+    if (!regFirstName.trim() || !regEmail.trim() || !regPassword) {
+      setErrorMsg('Please fill in all required fields (First Name, Email, Password).');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      const res = await authService.register({
+        firstName: regFirstName.trim(),
+        lastName: regLastName.trim(),
+        email: regEmail.trim(),
+        password: regPassword,
+        phone: regPhone.trim(),
+      });
+
+      if (res.token) {
+        await loginWithToken(res.token);
+        toast.success(`Account created! Welcome to MediStock, ${regFirstName}.`);
+        navigate(from, { replace: true });
+      } else {
+        toast.success('Account registered successfully! Please sign in.');
+        setAuthMode('login');
+        setIdentifier(regEmail);
+      }
+    } catch (err) {
+      console.error('Register error:', err);
+      const msg = err.response?.data?.message || 'Registration failed. User may already exist.';
+      setErrorMsg(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuthLogin = (provider) => {
+    toast.info(`Redirecting to ${provider} OAuth2 authentication...`);
+    window.location.href = `http://localhost:8080/oauth2/authorization/${provider.toLowerCase()}`;
+  };
+
+  // Password Reset Request Code
+  const handleRequestResetCode = async (e) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      toast.error('Please enter your registered email address.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const res = await authService.forgotPassword(resetEmail.trim());
+      if (res.resetCode) {
+        setResetCode(res.resetCode);
+      }
+      toast.success(res.message || 'Verification code sent to your email!');
+      setResetStep(2);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send reset code. Verify your email.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  // Password Reset Confirmation
+  const handleConfirmResetPassword = async (e) => {
+    e.preventDefault();
+    if (!resetCode.trim() || !newPassword || !confirmPassword) {
+      toast.error('Please fill in all required fields.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('New password and confirm password do not match.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await authService.resetPassword({
+        token: resetCode.trim(),
+        newPassword,
+        confirmPassword,
+      });
+      toast.success('Password reset successfully! You can now sign in.');
+      setResetModalOpen(false);
+      setResetStep(1);
+      setAuthMode('login');
+      setIdentifier(resetEmail);
+      setPassword(newPassword);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Invalid or expired code.');
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col lg:flex-row font-sans text-slate-900 selection:bg-blue-600 selection:text-white">
-      {/* LEFT SIDE (40%) - Premium Enterprise Healthcare Panel */}
-      <div className="lg:w-[40%] bg-[#0F172A] text-white p-8 lg:p-12 xl:p-16 flex flex-col justify-between relative overflow-hidden min-h-[360px] lg:min-h-screen">
-        {/* Subtle low-opacity decorative SVG grid background */}
-        <div className="absolute inset-0 opacity-[0.05] pointer-events-none flex items-center justify-center overflow-hidden">
-          <svg className="w-[120%] h-[120%] text-blue-400" viewBox="0 0 800 800" fill="none" stroke="currentColor" strokeWidth="1">
-            <line x1="50" y1="200" x2="750" y2="200" strokeDasharray="6 6" />
-            <line x1="50" y1="400" x2="750" y2="400" strokeDasharray="6 6" />
-            <line x1="50" y1="600" x2="750" y2="600" strokeDasharray="6 6" />
-            <line x1="250" y1="50" x2="250" y2="750" strokeDasharray="6 6" />
-            <line x1="550" y1="50" x2="550" y2="750" strokeDasharray="6 6" />
-          </svg>
-        </div>
+    <div className="min-h-screen bg-[#090D16] flex flex-col lg:flex-row font-sans text-slate-100 selection:bg-blue-600 selection:text-white relative overflow-hidden">
+      {/* Background Glows */}
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none" />
 
-        {/* Ambient lighting accents */}
-        <div className="absolute -top-32 -left-32 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Top Logo & Title Section */}
-        <div className="z-10 my-auto lg:my-0">
-          <div className="flex items-center gap-4 mb-6">
-            {/* Premium Healthcare SVG Logo */}
-            <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-2xl shadow-blue-500/30 border border-blue-400/40 text-white flex-shrink-0">
-              <svg className="w-10 h-10 lg:w-12 lg:h-12" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="6" width="26" height="20" rx="4" stroke="white" strokeWidth="2.2" strokeLinejoin="round" fill="none" />
-                <path d="M3 13H29" stroke="white" strokeWidth="1.8" strokeOpacity="0.5" />
-                <path d="M16 10V22M10 16H22" stroke="white" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="23" cy="9" r="3.5" fill="#60A5FA" stroke="#0F172A" strokeWidth="1.5" />
-              </svg>
+      {/* LEFT PANEL (45%) */}
+      <div className="lg:w-[45%] bg-slate-900/60 backdrop-blur-xl border-r border-slate-800/80 p-8 lg:p-14 xl:p-16 flex flex-col justify-between relative overflow-hidden min-h-[400px] lg:min-h-screen z-10">
+        <div className="space-y-8 my-auto lg:my-0">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 p-[1.5px] shadow-xl shadow-blue-500/20">
+              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                <svg className="w-8 h-8 lg:w-9 lg:h-9 text-blue-400" viewBox="0 0 32 32" fill="none">
+                  <rect x="4" y="6" width="24" height="20" rx="4" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                  <path d="M4 13H28" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
+                  <path d="M16 9V23M9 16H23" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              </div>
             </div>
 
             <div>
-              <h1 className="text-3xl lg:text-4xl xl:text-5xl font-black tracking-tight text-white leading-none">
-                Medi<span className="text-blue-500">Stock</span>
-              </h1>
-              {/* Refined Subtitle */}
-              <p className="text-xs lg:text-sm font-semibold tracking-wider text-slate-300 uppercase mt-1.5">
-                Enterprise Medical Inventory Platform
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl lg:text-4xl font-black tracking-tight text-white">
+                  Medi<span className="text-blue-500">Stock</span>
+                </h1>
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                  Enterprise
+                </span>
+              </div>
+              <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase mt-1">
+                Medical Inventory & Pharmacy Platform
               </p>
             </div>
           </div>
 
-          {/* Tagline */}
-          <p className="text-xs lg:text-sm font-medium text-slate-200 leading-relaxed max-w-sm mb-8 hidden lg:block">
-            Secure inventory management for hospitals and pharmacies.
+          <p className="text-sm font-normal text-slate-300 leading-relaxed max-w-md hidden lg:block">
+            Streamlined real-time stock monitoring, supplier management, automated reorder thresholds, and role-based access control.
           </p>
 
-          {/* 4 Compact Feature Rows */}
-          <div className="space-y-5 my-8 hidden lg:block">
-            <div className="flex items-center gap-4 text-white">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/25 flex items-center justify-center text-blue-400 flex-shrink-0">
-                <Pill className="w-5.5 h-5.5" />
+          <div className="grid grid-cols-2 gap-3 pt-4 hidden lg:grid">
+            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 hover:border-blue-500/40 transition duration-300 group">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition">
+                <Pill className="w-5 h-5" />
               </div>
-              <span className="text-base font-bold tracking-wide">Medicine Catalog</span>
+              <h3 className="text-xs font-bold text-slate-200 mt-3">Medicine Catalog</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Dosage, category & batch expiry tracking</p>
             </div>
 
-            <div className="flex items-center gap-4 text-white">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/25 flex items-center justify-center text-blue-400 flex-shrink-0">
-                <Package className="w-5.5 h-5.5" />
+            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 hover:border-indigo-500/40 transition duration-300 group">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition">
+                <Package className="w-5 h-5" />
               </div>
-              <span className="text-base font-bold tracking-wide">Inventory Control</span>
+              <h3 className="text-xs font-bold text-slate-200 mt-3">Inventory Control</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Real-time alerts & stock level audit</p>
             </div>
 
-            <div className="flex items-center gap-4 text-white">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/25 flex items-center justify-center text-blue-400 flex-shrink-0">
-                <Truck className="w-5.5 h-5.5" />
+            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 hover:border-emerald-500/40 transition duration-300 group">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition">
+                <Truck className="w-5 h-5" />
               </div>
-              <span className="text-base font-bold tracking-wide">Supplier Management</span>
+              <h3 className="text-xs font-bold text-slate-200 mt-3">Supplier Orders</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Purchase workflows & approvals</p>
             </div>
 
-            <div className="flex items-center gap-4 text-white">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/25 flex items-center justify-center text-blue-400 flex-shrink-0">
-                <BarChart2 className="w-5.5 h-5.5" />
+            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 hover:border-purple-500/40 transition duration-300 group">
+              <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition">
+                <ShieldCheck className="w-5 h-5" />
               </div>
-              <span className="text-base font-bold tracking-wide">Reports & Analytics</span>
+              <h3 className="text-xs font-bold text-slate-200 mt-3">Role Security</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Admin, Pharmacist & Staff permissions</p>
             </div>
           </div>
         </div>
 
-        {/* Footer info */}
-        <div className="z-10 text-xs text-slate-400 font-medium flex items-center justify-between border-t border-slate-800/80 pt-5 mt-6 lg:mt-auto">
-          <span>Version 1.0</span>
-          <span>© 2026 MediStock</span>
+        <div className="z-10 text-xs text-slate-500 font-medium flex items-center justify-between border-t border-slate-800/80 pt-5 mt-6 lg:mt-auto">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> System Operational v1.0
+          </span>
+          <span>© 2026 MediStock Platform</span>
         </div>
       </div>
 
-      {/* RIGHT SIDE (60%) - Clean Enterprise Login Form */}
-      <div className="lg:w-[60%] flex-1 bg-[#F8FAFC] p-6 lg:p-12 xl:p-16 flex flex-col justify-center items-center relative overflow-hidden">
-        {/* Soft Radial Blue Glow Behind Login Card */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[580px] h-[580px] bg-[#2563EB]/[0.06] rounded-full blur-3xl pointer-events-none z-0" />
-
-        {/* Ambient Secondary Glow Accent */}
-        <div className="absolute top-10 right-10 w-96 h-96 bg-[#E0F2FE]/40 rounded-full blur-3xl pointer-events-none z-0" />
-
-        {/* Minimal Abstract Background Elements */}
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
-          {/* Reduced Density Dot Grid Pattern */}
-          <svg className="absolute inset-0 w-full h-full text-[#60A5FA]/[0.025]" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="dot-grid-sparse" width="48" height="48" patternUnits="userSpaceOnUse">
-                <circle cx="3" cy="3" r="1.2" fill="currentColor" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#dot-grid-sparse)" />
-          </svg>
-
-          {/* Minimal Abstract Elements */}
-          <svg
-            className="absolute inset-0 w-full h-full text-[#2563EB]/[0.04]"
-            viewBox="0 0 1000 800"
-            fill="none"
-            stroke="currentColor"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M-100 150 C 200 80, 450 220, 800 120" stroke="#60A5FA" strokeWidth="1" opacity="0.3" />
-            <path d="M200 700 C 500 620, 750 780, 1100 650" stroke="#DBEAFE" strokeWidth="1" opacity="0.35" />
-
-            <g strokeWidth="2" strokeLinecap="round">
-              <path d="M120 180 V196 M112 188 H128" />
-              <path d="M850 140 V156 M842 148 H860" />
-              <path d="M160 620 V636 M152 628 H168" />
-              <path d="M880 660 V676 M872 668 H888" />
-              <path d="M780 320 V336 M772 328 H788" />
-            </g>
-
-            <polygon points="220,120 232,128 232,144 220,152 208,144 208,128" strokeWidth="1.2" />
-            <polygon points="840,420 854,430 854,450 840,460 826,450 826,430" strokeWidth="1.2" />
-            <polygon points="110,400 122,408 122,424 110,432 98,424 98,408" strokeWidth="1.2" />
-
-            <rect x="740" y="200" width="40" height="18" rx="9" transform="rotate(-25 760 209)" strokeWidth="1.4" />
-            <rect x="140" y="480" width="38" height="18" rx="9" transform="rotate(15 159 489)" strokeWidth="1.4" />
-          </svg>
-        </div>
-
-        {/* Login Card Container */}
-        <div className="w-full max-w-[580px] my-auto relative z-10">
-          <div className="bg-white rounded-2xl p-8 lg:p-10 shadow-2xl shadow-slate-900/10 border border-slate-200/90">
-            <div className="mb-6">
-              <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0F172A] tracking-tight">Sign In</h2>
-              <p className="text-xs lg:text-sm text-slate-500 mt-1">
-                Sign in using your Employee ID or official email.
-              </p>
+      {/* RIGHT PANEL (55%) - Glassmorphic Auth Form */}
+      <div className="lg:w-[55%] flex-1 p-6 lg:p-12 xl:p-16 flex flex-col justify-center items-center relative z-10">
+        <div className="w-full max-w-[500px] my-auto">
+          <div className="bg-slate-900/80 backdrop-blur-2xl rounded-3xl p-8 lg:p-10 shadow-2xl border border-slate-800/90 relative">
+            
+            {/* Mode Switcher Tabs (Sign In vs Sign Up) */}
+            <div className="flex bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800/80 mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('login');
+                  setErrorMsg('');
+                }}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
+                  authMode === 'login'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <LogIn className="w-4 h-4" /> Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('register');
+                  setErrorMsg('');
+                }}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
+                  authMode === 'register'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" /> Create Account (Sign Up)
+              </button>
             </div>
 
-            {/* Error Notification */}
+            {/* Error Banner */}
             {errorMsg && (
-              <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2 font-medium">
-                <span className="font-bold text-rose-600">Error:</span> {errorMsg}
+              <div className="mb-5 p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-rose-300 text-xs flex items-center gap-2 font-medium">
+                <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0" />
+                {errorMsg}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Employee ID or Email Address Field */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Employee ID / Email
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="e.g EMP001 or staff01@medistock.com"
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs lg:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent focus:bg-white transition"
-                  />
-                </div>
-              </div>
+            {/* Google OAuth2 SSO Login Button */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={() => handleOAuthLogin('Google')}
+                className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 rounded-2xl text-xs font-semibold text-slate-200 transition-all hover:border-slate-600 active:scale-[0.98]"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.1 8.9 5 12 5z" />
+                  <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z" />
+                  <path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.2C.6 9.2 0 10.5 0 12s.6 2.8 1.6 4.8l3.7-2.1z" />
+                  <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.1-6.7-5.3L1.6 16C3.5 19.8 7.4 23 12 23z" />
+                </svg>
+                Continue with Google SSO
+              </button>
+            </div>
 
-              {/* Password */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs lg:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent focus:bg-white transition"
-                  />
+            <div className="relative flex items-center justify-center my-5">
+              <div className="border-t border-slate-800 w-full" />
+              <span className="bg-slate-900 px-3 text-[10px] uppercase font-bold text-slate-500 tracking-widest absolute">
+                {authMode === 'login' ? 'or sign in with email' : 'or sign up with email'}
+              </span>
+            </div>
+
+            {/* FORM MODE: SIGN IN */}
+            {authMode === 'login' ? (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Employee ID / Official Email
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="e.g. ADM001 or admin@medistock.com"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs lg:text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2.5 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs lg:text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition"
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs py-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-slate-400 font-medium select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 rounded bg-slate-950 border-slate-700 focus:ring-blue-500"
+                    />
+                    <span>Remember me</span>
+                  </label>
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
-                    title={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => {
+                      setResetModalOpen(true);
+                      setResetStep(1);
+                    }}
+                    className="font-semibold text-blue-400 hover:text-blue-300 hover:underline transition"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    Forgot Password?
                   </button>
                 </div>
-              </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between text-xs py-1">
-                <label className="flex items-center gap-2 cursor-pointer text-slate-600 font-medium select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 text-[#2563EB] rounded border-slate-300 focus:ring-[#2563EB]"
-                  />
-                  <span>Remember me</span>
-                </label>
-                <a
-                  href="#forgot-password"
-                  onClick={handleForgotPassword}
-                  className="font-semibold text-[#2563EB] hover:underline"
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-600 text-white font-bold text-xs lg:text-sm rounded-2xl shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 active:scale-[0.99]"
                 >
-                  Forgot Password?
-                </a>
-              </div>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Authenticating...
+                    </>
+                  ) : (
+                    <>
+                      Sign In to MediStock <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            ) : (
+              /* FORM MODE: SIGN UP / REGISTER */
+              <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      First Name <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regFirstName}
+                      onChange={(e) => setRegFirstName(e.target.value)}
+                      placeholder="Jane"
+                      className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      value={regLastName}
+                      onChange={(e) => setRegLastName(e.target.value)}
+                      placeholder="Smith"
+                      className="w-full px-3.5 py-2.5 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
 
-              {/* Large Sign In Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-xs lg:text-sm rounded-xl shadow-md shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Authenticating...
-                  </>
-                ) : (
-                  <>
-                    Sign In <ArrowRight className="w-4 h-4 text-blue-100" />
-                  </>
-                )}
-              </button>
-            </form>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Official Email Address <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      required
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      placeholder="jane.smith@medistock.com"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Password <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      className="w-full pl-10 pr-10 py-2.5 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      placeholder="+91 9999900000"
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 px-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-600 text-white font-bold text-xs lg:text-sm rounded-2xl shadow-xl shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 disabled:opacity-60 flex items-center justify-center gap-2 active:scale-[0.99]"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Creating Account...
+                    </>
+                  ) : (
+                    <>
+                      Complete Sign Up <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>
+
+      {/* 2-Step Interactive Password Reset Modal */}
+      {resetModalOpen && (
+        <Modal
+          isOpen={true}
+          onClose={() => setResetModalOpen(false)}
+          title="Account Password Recovery"
+          subtitle={resetStep === 1 ? 'Step 1 of 2: Enter registered email address' : 'Step 2 of 2: Enter reset code & new password'}
+          icon={KeyRound}
+          maxWidth="max-w-md"
+        >
+          {resetStep === 1 ? (
+            <form onSubmit={handleRequestResetCode} className="space-y-4 py-2">
+              <p className="text-xs text-slate-600">
+                Enter your official email address. We will generate a 6-digit verification code to reset your account password.
+              </p>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Registered Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="e.g. admin@medistock.com"
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setResetModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md"
+                >
+                  {resetLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Send Verification Code
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleConfirmResetPassword} className="space-y-4 py-2">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span>Verification code sent to <strong>{resetEmail}</strong></span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  6-Digit Verification Code
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={resetCode}
+                  onChange={(e) => setResetCode(e.target.value)}
+                  placeholder="e.g. 123456"
+                  className="w-full text-center tracking-widest font-mono text-base py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setResetStep(1)}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-semibold"
+                >
+                  ← Back to Email
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md"
+                >
+                  {resetLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Confirm New Password
+                </button>
+              </div>
+            </form>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

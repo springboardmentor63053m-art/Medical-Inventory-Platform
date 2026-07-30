@@ -30,6 +30,11 @@ public class AdminUserController {
         return ResponseEntity.ok(adminUserService.getUserById(id));
     }
 
+    @PostMapping
+    public ResponseEntity<UserProfileResponse> createUser(@Valid @RequestBody com.medistock.user.dto.request.CreateUserRequest request) {
+        return new ResponseEntity<>(adminUserService.createUser(request), org.springframework.http.HttpStatus.CREATED);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<UserProfileResponse> updateUser(
             @PathVariable Long id,
@@ -42,5 +47,10 @@ public class AdminUserController {
     public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
         adminUserService.deleteUser(id);
         return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
+    }
+
+    @GetMapping("/roles")
+    public ResponseEntity<List<Map<String, String>>> getAllRoles() {
+        return ResponseEntity.ok(adminUserService.getAllRoles());
     }
 }

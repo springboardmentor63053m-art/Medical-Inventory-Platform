@@ -42,6 +42,27 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, [token]);
 
+  const loginWithToken = async (jwtToken) => {
+    localStorage.setItem('token', jwtToken);
+    setToken(jwtToken);
+    try {
+      const profile = await profileService.getProfile();
+      const rolesArray = profile.roles
+        ? Array.isArray(profile.roles)
+          ? profile.roles
+          : Array.from(profile.roles)
+        : [];
+      const updatedUser = { ...profile, roles: rolesArray };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return updatedUser;
+    } catch (err) {
+      console.error('Failed to initialize session with OAuth token:', err);
+      logout();
+      throw err;
+    }
+  };
+
   const login = async (email, password) => {
     try {
       const response = await authService.login({ email, password });
@@ -89,6 +110,7 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         login,
+        loginWithToken,
         logout,
         updateUserProfileState,
         hasRole,

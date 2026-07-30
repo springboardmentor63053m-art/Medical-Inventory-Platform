@@ -4,6 +4,23 @@ spring:
   profiles:
     active: dev
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: google-dummy-client-id
+            client-secret: google-dummy-client-secret
+            scope:
+              - email
+              - profile
+          github:
+            client-id: github-dummy-client-id
+            client-secret: github-dummy-client-secret
+            scope:
+              - user:email
+              - read:user
+
   # PostgreSQL Datasource Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/medistock_db

@@ -10,4 +10,24 @@ export const authService = {
     const response = await apiClient.post('/auth/register', userData);
     return response.data;
   },
+
+  forgotPassword: async (email) => {
+    const response = await apiClient.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (data) => {
+    const response = await apiClient.post('/auth/reset-password', data);
+    return response.data;
+  },
+
+  validateResetToken: async (token) => {
+    const response = await apiClient.get(`/auth/validate-reset-token?token=${token}`);
+    return response.data;
+  },
+
+  validateToken: async (token) => {
+    const response = await apiClient.get(`/auth/validate?token=${token}`);
+    return response.data;
+  },
 };
