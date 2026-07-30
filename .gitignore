@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+target/
+dist/
+build/
+*.jar
+*.war
+
+# Environment & IDE
+.env
+.env.local
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+logs/
+*.log

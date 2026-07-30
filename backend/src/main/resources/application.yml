@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: medistock-backend
+  profiles:
+    active: dev
+
+  # PostgreSQL Datasource Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/medistock_db
+    username: postgres
+    password: 12345
+    driver-class-name: org.postgresql.Driver
+
+  # Hibernate JPA Configuration
+  jpa:
+    open-in-view: false
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Flyway Database Migration Configuration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    repair-on-migrate: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
