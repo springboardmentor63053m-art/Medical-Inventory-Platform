@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # ── MySQL Database ────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: medinv-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE:      medical_inventory_db
+      MYSQL_USER:          ${DB_USERNAME:-medinv_user}
+      MYSQL_PASSWORD:      ${DB_PASSWORD:-MedInv@2024}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/sample_data.sql:/docker-entrypoint-initdb.d/02-sample_data.sql
+    networks:
+      - medinv-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Spring Boot Backend ───────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medinv-backend
+    environment:
+      DB_HOST:      mysql
+      DB_PORT:      3306
+      DB_NAME:      medical_inventory_db
+      DB_USERNAME:  ${DB_USERNAME:-medinv_user}
+      DB_PASSWORD:  ${DB_PASSWORD:-MedInv@2024}
+      JWT_SECRET:   ${JWT_SECRET:-MedicalInventoryManagementPlatformSecretKey2024BtechProjectSecure256BitKey}
+      JWT_EXPIRATION: 86400000
+      SERVER_PORT:  8080
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - medinv-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── React Frontend ────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: medinv-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - medinv-network
+    restart: unless-stopped
+
+networks:
+  medinv-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
