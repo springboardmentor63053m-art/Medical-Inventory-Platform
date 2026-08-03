@@ -15,7 +15,7 @@ MediStock is a practical, enterprise-grade Medical Inventory Management Platform
 ### Backend Setup
 ```bash
 cd backend
-mvn spring-boot:run
+.\mvnw spring-boot:run
 ```
 
 ### Frontend Setup
