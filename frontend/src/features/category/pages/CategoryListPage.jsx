@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 export default function CategoryListPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isPharmacist, isUser } = useAuth();
   const [categories, setCategories] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -41,21 +41,30 @@ export default function CategoryListPage() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [cats, meds, inv] = await Promise.all([
-        categoryService.getAllCategories(),
-        medicineService.getAllMedicines(0, 500).catch(() => []),
-        inventoryService.getAllInventory().catch(() => [])
-      ]);
-
-      setCategories(Array.isArray(cats) ? cats : []);
-      
-      const medList = meds?.content ? meds.content : Array.isArray(meds) ? meds : [];
-      setMedicines(medList);
-
-      const invList = Array.isArray(inv) ? inv : [];
-      setInventory(invList);
+      if (isUser) {
+        // Normal USER only fetches authorized Category & Medicine data; zero Inventory API calls
+        const [cats, meds] = await Promise.all([
+          categoryService.getAllCategories(),
+          medicineService.getAllMedicines(0, 500).catch(() => [])
+        ]);
+        setCategories(Array.isArray(cats) ? cats : []);
+        const medList = meds?.content ? meds.content : Array.isArray(meds) ? meds : [];
+        setMedicines(medList);
+        setInventory([]);
+      } else {
+        const [cats, meds, inv] = await Promise.all([
+          categoryService.getAllCategories(),
+          medicineService.getAllMedicines(0, 500).catch(() => []),
+          inventoryService.getAllInventory().catch(() => [])
+        ]);
+        setCategories(Array.isArray(cats) ? cats : []);
+        const medList = meds?.content ? meds.content : Array.isArray(meds) ? meds : [];
+        setMedicines(medList);
+        const invList = Array.isArray(inv) ? inv : [];
+        setInventory(invList);
+      }
     } catch (err) {
-      toast.error('Failed to load category management dataset');
+      toast.error('Failed to load categories');
     } finally {
       setLoading(false);
     }
@@ -190,12 +199,14 @@ export default function CategoryListPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
-          <button
-            onClick={handleOpenAddModal}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Category
-          </button>
+          {(isAdmin || isPharmacist) && (
+            <button
+              onClick={handleOpenAddModal}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Category
+            </button>
+          )}
         </div>
       </div>
 
@@ -368,13 +379,15 @@ export default function CategoryListPage() {
                     {/* Actions */}
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEditModal(cat)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          title="Edit Category"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+                        {(isAdmin || isPharmacist) && (
+                          <button
+                            onClick={() => handleOpenEditModal(cat)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Edit Category"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        )}
                         {isAdmin && (
                           <button
                             onClick={() => setDeleteId(cat.id)}

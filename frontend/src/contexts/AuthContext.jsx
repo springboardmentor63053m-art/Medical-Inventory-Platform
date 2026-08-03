@@ -4,27 +4,100 @@ import { profileService } from '../services/api/profileService';
 
 export const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+export const clearAuthStorage = () => {
+  const keys = ['token', 'user', 'auth', 'roles', 'jwt', 'refreshToken'];
+  keys.forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
   });
+};
+
+export const isJwtValid = (token) => {
+  if (!token || typeof token !== 'string' || token.trim() === '' || token === 'null' || token === 'undefined') {
+    return false;
+  }
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return false;
+  }
+  try {
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    if (payload && payload.exp) {
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (payload.exp <= currentTime) {
+        return false;
+      }
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+export const getRoleDashboardPath = (user) => {
+  if (!user || !user.roles) return '/login';
+  const rolesArray = Array.isArray(user.roles) ? user.roles : Array.from(user.roles);
+  const cleanRoles = rolesArray.map((r) => String(r).replace('ROLE_', '').toUpperCase());
+  if (cleanRoles.includes('ADMIN')) return '/admin/dashboard';
+  if (cleanRoles.includes('PHARMACIST')) return '/pharmacist/dashboard';
+  if (cleanRoles.includes('STAFF')) return '/staff/dashboard';
+  return '/user/dashboard';
+};
+
+export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(() => {
+    const savedToken = localStorage.getItem('token');
+    if (isJwtValid(savedToken)) {
+      return savedToken;
+    }
+    clearAuthStorage();
+    return null;
+  });
+
+  const [user, setUser] = useState(() => {
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    if (isJwtValid(savedToken) && savedUser) {
+      try {
+        return JSON.parse(savedUser);
+      } catch (e) {
+        clearAuthStorage();
+        return null;
+      }
+    }
+    clearAuthStorage();
+    return null;
+  });
+
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth state by fetching current user profile if token exists
+  const logout = () => {
+    clearAuthStorage();
+    setToken(null);
+    setUser(null);
+  };
+
+  // Initialize auth state by fetching current user profile if valid token exists
   useEffect(() => {
     const initAuth = async () => {
-      if (token) {
+      const storedToken = localStorage.getItem('token');
+      if (isJwtValid(storedToken)) {
         try {
           const profile = await profileService.getProfile();
-          // Normalize roles format if needed
           const rolesArray = profile.roles
             ? Array.isArray(profile.roles)
               ? profile.roles
               : Array.from(profile.roles)
             : [];
-          
+
           const updatedUser = {
             ...profile,
             roles: rolesArray,
@@ -32,17 +105,24 @@ export const AuthProvider = ({ children }) => {
           setUser(updatedUser);
           localStorage.setItem('user', JSON.stringify(updatedUser));
         } catch (err) {
-          console.error('Failed to verify session token:', err);
+          console.error('Failed to verify session token on initialization:', err);
           logout();
         }
+      } else {
+        // Token invalid or missing - enforce complete session cleanup
+        logout();
       }
       setLoading(false);
     };
 
     initAuth();
-  }, [token]);
+  }, []);
 
   const loginWithToken = async (jwtToken) => {
+    if (!isJwtValid(jwtToken)) {
+      logout();
+      throw new Error('Invalid JWT Token structure or expired.');
+    }
     localStorage.setItem('token', jwtToken);
     setToken(jwtToken);
     try {
@@ -57,7 +137,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(updatedUser));
       return updatedUser;
     } catch (err) {
-      console.error('Failed to initialize session with OAuth token:', err);
+      console.error('Failed to initialize session with token:', err);
       logout();
       throw err;
     }
@@ -68,6 +148,11 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login({ email, password });
       const { token: jwtToken, ...userData } = response;
 
+      if (!isJwtValid(jwtToken)) {
+        logout();
+        throw new Error('Received invalid JWT token from server.');
+      }
+
       localStorage.setItem('token', jwtToken);
       localStorage.setItem('user', JSON.stringify(userData));
 
@@ -75,15 +160,9 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       return response;
     } catch (err) {
+      logout();
       throw err;
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
   };
 
   const updateUserProfileState = (updatedFields) => {
@@ -99,9 +178,12 @@ export const AuthProvider = ({ children }) => {
     if (!user || !user.roles) return false;
     const userRoles = Array.isArray(user.roles) ? user.roles : Array.from(user.roles);
     return roles.some((role) =>
-      userRoles.some((r) => r.replace('ROLE_', '').toUpperCase() === role.toUpperCase())
+      userRoles.some((r) => String(r).replace('ROLE_', '').toUpperCase() === role.toUpperCase())
     );
   };
+
+  const getDashboardPath = () => getRoleDashboardPath(user);
+  const isAuthenticated = isJwtValid(token) && !!user;
 
   return (
     <AuthContext.Provider
@@ -114,10 +196,12 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateUserProfileState,
         hasRole,
-        isAuthenticated: !!token && !!user,
-        isAdmin: hasRole('ADMIN'),
-        isPharmacist: hasRole('PHARMACIST'),
-        isStaff: hasRole('STAFF'),
+        getDashboardPath,
+        isAuthenticated,
+        isAdmin: isAuthenticated && hasRole('ADMIN'),
+        isPharmacist: isAuthenticated && hasRole('PHARMACIST'),
+        isStaff: isAuthenticated && hasRole('STAFF'),
+        isUser: isAuthenticated && hasRole('USER'),
       }}
     >
       {children}

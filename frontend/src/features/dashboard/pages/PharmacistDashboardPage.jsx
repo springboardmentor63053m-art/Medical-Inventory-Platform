@@ -1,0 +1,223 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { medicineService } from '../../../services/api/medicineService';
+import { categoryService } from '../../../services/api/categoryService';
+import { supplierService } from '../../../services/api/supplierService';
+import { inventoryService } from '../../../services/api/inventoryService';
+import { purchaseOrderService } from '../../../services/api/purchaseOrderService';
+import { useAuth } from '../../../contexts/AuthContext';
+import StatusBadge from '../../../components/common/StatusBadge';
+import {
+  Pill,
+  Boxes,
+  Truck,
+  Package,
+  AlertTriangle,
+  Clock,
+  Plus,
+  ArrowRight,
+  RefreshCw,
+  ShoppingCart,
+  FileText,
+  Stethoscope
+} from 'lucide-react';
+
+export default function PharmacistDashboardPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalMedicines: 0,
+    totalCategories: 0,
+    totalSuppliers: 0,
+    totalInventory: 0,
+    lowStockCount: 0,
+    expiringCount: 0,
+    totalPOs: 0,
+  });
+
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+
+  const fetchPharmacistData = async () => {
+    setLoading(true);
+    try {
+      const [
+        medsRes,
+        catsRes,
+        supsRes,
+        invRes,
+        poRes
+      ] = await Promise.allSettled([
+        medicineService.getAllMedicines(0, 200),
+        categoryService.getAllCategories(),
+        supplierService.getAllSuppliers(),
+        inventoryService.getAllInventory(),
+        purchaseOrderService.getAllPurchaseOrders()
+      ]);
+
+      const meds = medsRes.status === 'fulfilled' ? (medsRes.value?.content || medsRes.value || []) : [];
+      const cats = catsRes.status === 'fulfilled' ? (catsRes.value || []) : [];
+      const sups = supsRes.status === 'fulfilled' ? (supsRes.value || []) : [];
+      const invs = invRes.status === 'fulfilled' ? (invRes.value || []) : [];
+      const pos = poRes.status === 'fulfilled' ? (poRes.value || []) : [];
+
+      const lowList = invs.filter((item) => Number(item.quantity || 0) <= Number(item.minimumStock || 10));
+
+      setStats({
+        totalMedicines: Array.isArray(meds) ? meds.length : 0,
+        totalCategories: Array.isArray(cats) ? cats.length : 0,
+        totalSuppliers: Array.isArray(sups) ? sups.length : 0,
+        totalInventory: Array.isArray(invs) ? invs.length : 0,
+        lowStockCount: lowList.length,
+        expiringCount: 0,
+        totalPOs: Array.isArray(pos) ? pos.length : 0,
+      });
+
+      setLowStockItems(lowList.slice(0, 5));
+      setPurchaseOrders(Array.isArray(pos) ? pos.slice(0, 4) : []);
+    } catch (error) {
+      console.error('Pharmacist dashboard fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPharmacistData();
+  }, []);
+
+  const empId = user?.employeeId || `PHA${String(user?.id || '001').padStart(3, '0')}`;
+
+  return (
+    <div className="space-y-6 font-sans text-slate-900 pb-10">
+      {/* Pharmacist Header Banner */}
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 p-6 rounded-3xl text-white shadow-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 font-mono font-bold text-xs rounded-lg">
+              {empId}
+            </span>
+            <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-bold text-xs rounded-full uppercase">
+              Pharmacist Role
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-2">
+            Pharmacy & Supplier Operations Hub
+          </h1>
+          <p className="text-xs text-slate-300 mt-1">
+            Medicine catalog management, batch stock levels, supplier integration, and purchase order tracking
+          </p>
+        </div>
+
+        <button
+          onClick={fetchPharmacistData}
+          className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 transition flex items-center gap-2 text-xs font-bold shrink-0"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Sync Pharmacy Hub
+        </button>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500">Medicines Catalog</p>
+            <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.totalMedicines}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">{stats.totalCategories} Active Categories</p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <Pill className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500">Active Inventory</p>
+            <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.totalInventory}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">{stats.lowStockCount} Low stock alerts</p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <Package className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500">Suppliers</p>
+            <h3 className="text-2xl font-bold text-purple-600 mt-1">{stats.totalSuppliers}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Verified pharma vendors</p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+            <Truck className="w-6 h-6" />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500">Purchase Orders</p>
+            <h3 className="text-2xl font-bold text-amber-600 mt-1">{stats.totalPOs}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Active order requisitions</p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+            <ShoppingCart className="w-6 h-6" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid: Management Shortcuts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div
+          onClick={() => navigate('/medicines')}
+          className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-blue-400 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
+        >
+          <div>
+            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
+              <Pill className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mt-4">Medicine Management</h3>
+            <p className="text-xs text-slate-500 mt-1">Add, update, and manage pharmaceutical catalog & pricing</p>
+          </div>
+          <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-600">
+            <span>Manage Catalog</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+          </div>
+        </div>
+
+        <div
+          onClick={() => navigate('/suppliers')}
+          className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-purple-400 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
+        >
+          <div>
+            <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
+              <Truck className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mt-4">Supplier Directory</h3>
+            <p className="text-xs text-slate-500 mt-1">Manage vendor contracts, contact details, and orders</p>
+          </div>
+          <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-purple-600">
+            <span>Manage Suppliers</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+          </div>
+        </div>
+
+        <div
+          onClick={() => navigate('/purchase-orders')}
+          className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-amber-400 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
+        >
+          <div>
+            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
+              <ShoppingCart className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mt-4">Purchase Orders</h3>
+            <p className="text-xs text-slate-500 mt-1">Create purchase orders, track approvals, and receipts</p>
+          </div>
+          <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-amber-600">
+            <span>View Purchase Orders</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

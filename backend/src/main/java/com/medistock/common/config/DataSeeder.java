@@ -63,6 +63,7 @@ public class DataSeeder implements CommandLineRunner {
         Role sysAdminRole = getOrCreateRole("SYSTEM_ADMINISTRATOR", "System Administrator");
         Role pharmacistRole = getOrCreateRole("PHARMACIST", "Staff Pharmacist Role");
         Role staffRole = getOrCreateRole("STAFF", "Medical Staff Role");
+        Role userRole = getOrCreateRole("USER", "Standard User (Read-Only) Role");
 
         // Seed Users
         if (!userRepository.existsByEmail("admin@medistock.com")) {
@@ -107,6 +108,21 @@ public class DataSeeder implements CommandLineRunner {
                     .accountNonLocked(true)
                     .roles(new HashSet<>(Collections.singletonList(staffRole)))
                     .lastLogin(LocalDateTime.now().minusDays(1))
+                    .build());
+        }
+
+        if (!userRepository.existsByEmail("user@medistock.com")) {
+            userRepository.save(User.builder()
+                    .employeeId(null) // Normal USER is not an employee; employeeId is null
+                    .firstName("Alex")
+                    .lastName("Standard")
+                    .email("user@medistock.com")
+                    .password(passwordEncoder.encode("Password@123"))
+                    .phone("+1 800-555-0104")
+                    .enabled(true)
+                    .accountNonLocked(true)
+                    .roles(new HashSet<>(Collections.singletonList(userRole)))
+                    .lastLogin(LocalDateTime.now().minusDays(2))
                     .build());
         }
 

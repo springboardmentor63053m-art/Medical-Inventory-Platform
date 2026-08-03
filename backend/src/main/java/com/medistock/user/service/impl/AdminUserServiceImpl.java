@@ -51,7 +51,7 @@ public class AdminUserServiceImpl implements AdminUserService {
 
         String roleName = (request.getRole() != null && !request.getRole().isBlank()) 
                 ? request.getRole().toUpperCase().replace("ROLE_", "") 
-                : "STAFF";
+                : "USER";
 
         Role assignedRole = roleRepository.findByName(roleName)
                 .orElseGet(() -> roleRepository.save(Role.builder()
@@ -59,9 +59,13 @@ public class AdminUserServiceImpl implements AdminUserService {
                         .description(roleName + " Role")
                         .build()));
 
-        String empPrefix = roleName.contains("ADMIN") ? "ADM" : roleName.contains("PHARMACIST") ? "PHA" : "EMP";
-        long nextId = userRepository.count() + 1;
-        String autoEmpId = String.format("%s%03d", empPrefix, nextId);
+        boolean isEmployee = !roleName.equalsIgnoreCase("USER");
+        String autoEmpId = null;
+        if (isEmployee) {
+            String empPrefix = roleName.contains("ADMIN") ? "ADM" : roleName.contains("PHARMACIST") ? "PHA" : "STF";
+            long nextId = userRepository.count() + 1;
+            autoEmpId = String.format("%s%03d", empPrefix, nextId);
+        }
 
         User user = User.builder()
                 .employeeId(autoEmpId)
@@ -107,6 +111,18 @@ public class AdminUserServiceImpl implements AdminUserService {
                 updatedRoles.add(role);
             }
             user.setRoles(updatedRoles);
+
+            // Handle Employee ID on role promotion / demotion
+            String primaryRole = request.getRoles().stream().findFirst().orElse("USER").toUpperCase();
+            boolean isNowEmployee = primaryRole.contains("ADMIN") || primaryRole.contains("PHARMACIST") || primaryRole.contains("STAFF");
+            if (isNowEmployee) {
+                if (user.getEmployeeId() == null || user.getEmployeeId().isBlank()) {
+                    String prefix = primaryRole.contains("ADMIN") ? "ADM" : primaryRole.contains("PHARMACIST") ? "PHA" : "STF";
+                    user.setEmployeeId(String.format("%s%03d", prefix, user.getId()));
+                }
+            } else {
+                user.setEmployeeId(null);
+            }
         }
 
         User updatedUser = userRepository.save(user);

@@ -46,24 +46,21 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String lastName = nameParts.length > 1 ? nameParts[1] : "User";
 
         User user = userRepository.findByEmail(email).orElseGet(() -> {
-            Role staffRole = roleRepository.findByName("STAFF")
+            Role userRole = roleRepository.findByName("USER")
                     .orElseGet(() -> roleRepository.save(Role.builder()
-                            .name("STAFF")
-                            .description("Staff Role")
+                            .name("USER")
+                            .description("Standard User (Read-Only) Role")
                             .build()));
 
-            long count = userRepository.count() + 1;
-            String autoEmpId = String.format("EMP%03d", count);
-
             return User.builder()
-                    .employeeId(autoEmpId)
+                    .employeeId(null) // Normal USER is not an employee; employeeId is null
                     .email(email)
                     .firstName(firstName)
                     .lastName(lastName)
                     .password(UUID.randomUUID().toString()) // Dummy password for OAuth users
                     .enabled(true)
                     .accountNonLocked(true)
-                    .roles(new HashSet<>(Collections.singletonList(staffRole)))
+                    .roles(new HashSet<>(Collections.singletonList(userRole)))
                     .build();
         });
 

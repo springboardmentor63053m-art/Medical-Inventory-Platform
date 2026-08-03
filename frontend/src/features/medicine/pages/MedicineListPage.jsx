@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 import Modal from '../../../components/common/Modal';
 import StatusBadge from '../../../components/common/StatusBadge';
 import FormField from '../../../components/common/FormField';
+import UnifiedMedicineDetailsModal from '../components/UnifiedMedicineDetailsModal';
 import {
   Pill,
   Boxes,
@@ -33,7 +34,7 @@ import {
 
 export default function MedicineListPage() {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isPharmacist, isUser } = useAuth();
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -120,12 +121,18 @@ export default function MedicineListPage() {
 
   const fetchDropdownData = async () => {
     try {
-      const [cats, sups] = await Promise.all([
-        categoryService.getAllCategories(),
-        supplierService.getAllSuppliers()
-      ]);
-      setCategories(Array.isArray(cats) ? cats : []);
-      setSuppliers(Array.isArray(sups) ? sups : []);
+      if (isAdmin || isPharmacist) {
+        const [cats, sups] = await Promise.all([
+          categoryService.getAllCategories(),
+          supplierService.getAllSuppliers()
+        ]);
+        setCategories(Array.isArray(cats) ? cats : []);
+        setSuppliers(Array.isArray(sups) ? sups : []);
+      } else {
+        const cats = await categoryService.getAllCategories();
+        setCategories(Array.isArray(cats) ? cats : []);
+        setSuppliers([]);
+      }
     } catch (err) {
       console.error('Failed to fetch dropdown datasets:', err);
     }
@@ -148,6 +155,7 @@ export default function MedicineListPage() {
     }
   };
 
+  // Image State
   const handleOpenAddModal = () => {
     setEditingMedicine(null);
     const autoCode = `MED-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -199,6 +207,7 @@ export default function MedicineListPage() {
         await medicineService.createMedicine(payload);
         toast.success('Medicine created successfully');
       }
+
       setModalOpen(false);
       fetchMedicines();
     } catch (err) {
@@ -280,12 +289,14 @@ export default function MedicineListPage() {
             <Boxes className="w-4 h-4 text-blue-600" /> Manage Categories
           </button>
 
-          <button
-            onClick={handleOpenAddModal}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Medicine
-          </button>
+          {(isAdmin || isPharmacist) && (
+            <button
+              onClick={handleOpenAddModal}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Medicine
+            </button>
+          )}
         </div>
       </div>
 
@@ -489,13 +500,15 @@ export default function MedicineListPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleOpenEditModal(med)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          title="Edit Medicine"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+                        {(isAdmin || isPharmacist) && (
+                          <button
+                            onClick={() => handleOpenEditModal(med)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Edit Medicine"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        )}
                         {isAdmin && (
                           <button
                             onClick={() => setDeleteId(med.id)}
@@ -571,6 +584,7 @@ export default function MedicineListPage() {
         }
       >
         <form onSubmit={handleSave} className="space-y-6">
+
           {/* SECTION 1: MEDICINE IDENTIFICATION */}
           <div className="space-y-3">
             <div className="border-b border-slate-200 pb-1.5 flex items-center justify-between">
@@ -739,71 +753,23 @@ export default function MedicineListPage() {
       </Modal>
 
       {/* View Details Modal */}
-      <Modal
-        isOpen={viewModalOpen && viewMedicine !== null}
-        onClose={() => setViewModalOpen(false)}
-        title="Medicine Formulation Profile"
-        subtitle="Complete catalog overview and clinical specifications"
-        icon={Pill}
-        maxWidth="max-w-md"
-        footerActions={
-          <button
-            onClick={() => setViewModalOpen(false)}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
-          >
-            Close Profile
-          </button>
-        }
-      >
-        {viewMedicine && (
-          <div className="space-y-3 text-xs text-slate-700">
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Medicine Code:</span>
-              <span className="font-mono font-bold text-slate-900">{viewMedicine.medicineCode}</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Brand Name:</span>
-              <span className="font-bold text-slate-900">{viewMedicine.name}</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Generic Name:</span>
-              <span>{viewMedicine.genericName || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Category:</span>
-              <span className="font-bold text-blue-600">{viewMedicine.category?.name || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Manufacturer:</span>
-              <span>{viewMedicine.manufacturer}</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Dosage Form:</span>
-              <span>{viewMedicine.dosage || 'N/A'}</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Unit Price:</span>
-              <span className="font-bold text-slate-900">{formatINR(viewMedicine.unitPrice)}</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Reorder Threshold:</span>
-              <span className="font-bold text-amber-600">{viewMedicine.reorderLevel} Units</span>
-            </div>
-            <div className="flex justify-between border-b border-slate-100 pb-2">
-              <span className="text-slate-400 font-semibold">Status:</span>
-              <StatusBadge status={viewMedicine.status} />
-            </div>
-            {viewMedicine.description && (
-              <div className="pt-2">
-                <span className="text-slate-400 font-semibold block mb-1">Clinical Notes:</span>
-                <p className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 leading-relaxed">
-                  {viewMedicine.description}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
+      {viewModalOpen && viewMedicine && (
+        <UnifiedMedicineDetailsModal
+          isOpen={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          medicine={viewMedicine}
+          allMedicines={medicines}
+          onSelectRelated={(rel) => setViewMedicine(rel)}
+          onEdit={(med) => {
+            setViewModalOpen(false);
+            handleOpenEditModal(med);
+          }}
+          onDelete={(med) => {
+            setViewModalOpen(false);
+            setDeleteId(med.id);
+          }}
+        />
+      )}
 
       {/* Delete Modal */}
       {deleteId && (

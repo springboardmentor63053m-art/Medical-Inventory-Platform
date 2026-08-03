@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user, updateUserProfileState } = useAuth();
+  const { user, updateUserProfileState, isUser } = useAuth();
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -123,9 +123,9 @@ export default function ProfilePage() {
 
   const roleLabels = profileData?.roles
     ? Array.from(profileData.roles).map((r) => r.replace('ROLE_', '').toUpperCase())
-    : ['STAFF'];
+    : ['USER'];
 
-  const empId = profileData?.employeeId || `EMP${String(profileData?.id || '001').padStart(3, '0')}`;
+  const showEmpId = profileData?.employeeId && !isUser;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -142,9 +142,11 @@ export default function ProfilePage() {
             <h1 className="text-2xl font-black tracking-tight">
               {profileData?.firstName} {profileData?.lastName}
             </h1>
-            <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 font-mono font-bold text-xs rounded-lg">
-              {empId}
-            </span>
+            {showEmpId && (
+              <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 font-mono font-bold text-xs rounded-lg">
+                {profileData.employeeId}
+              </span>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-xs text-slate-300 mt-2">

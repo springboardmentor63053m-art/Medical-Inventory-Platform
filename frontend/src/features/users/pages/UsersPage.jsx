@@ -39,7 +39,7 @@ export default function UsersPage() {
     email: '',
     password: '',
     phone: '',
-    role: 'STAFF',
+    role: 'USER',
   });
 
   // Edit User modal state
@@ -52,7 +52,7 @@ export default function UsersPage() {
     phone: '',
     enabled: true,
     accountNonLocked: true,
-    role: 'STAFF',
+    role: 'USER',
   });
 
   // Delete state
@@ -179,6 +179,7 @@ export default function UsersPage() {
   const adminCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('ADMIN'))).length;
   const pharmacistCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('PHARMACIST'))).length;
   const staffCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('STAFF'))).length;
+  const userCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('USER'))).length;
 
   const filteredUsers = users.filter((u) => {
     const q = searchTerm.toLowerCase();
@@ -212,7 +213,7 @@ export default function UsersPage() {
             <ShieldCheck className="w-7 h-7 text-blue-400" /> Enterprise Role & User Management
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Manage system access tiers, role permissions (Admin, Pharmacist, Staff), and employee accounts.
+            Manage system access tiers, role permissions (Admin, Pharmacist, Staff, User), and employee accounts.
           </p>
         </div>
 
@@ -234,7 +235,7 @@ export default function UsersPage() {
       </div>
 
       {/* Role Summary Statistic Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div
           onClick={() => setRoleFilter(roleFilter === 'ADMIN' ? 'ALL' : 'ADMIN')}
           className={`p-5 rounded-2xl border cursor-pointer transition-all ${
@@ -288,6 +289,24 @@ export default function UsersPage() {
           <div className="text-2xl font-black text-slate-900 mt-2">{staffCount}</div>
           <p className="text-[11px] text-slate-500 mt-0.5">Standard inventory lookup & dispenses</p>
         </div>
+
+        <div
+          onClick={() => setRoleFilter(roleFilter === 'USER' ? 'ALL' : 'USER')}
+          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+            roleFilter === 'USER'
+              ? 'bg-slate-900/20 border-slate-500 shadow-lg shadow-slate-500/10'
+              : 'bg-white border-slate-200 hover:border-slate-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">User Role</span>
+            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{userCount}</div>
+          <p className="text-[11px] text-slate-500 mt-0.5">Standard read-only catalog lookup</p>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
@@ -306,7 +325,7 @@ export default function UsersPage() {
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-slate-400" />
           <span className="text-xs font-bold text-slate-600">Filter Role:</span>
-          {['ALL', 'ADMIN', 'PHARMACIST', 'STAFF'].map((r) => (
+          {['ALL', 'ADMIN', 'PHARMACIST', 'STAFF', 'USER'].map((r) => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
@@ -487,11 +506,12 @@ export default function UsersPage() {
           </div>
 
           <FormField label="Assigned System Role" required>
-            <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="grid grid-cols-4 gap-2 pt-1">
               {[
-                { id: 'ADMIN', label: 'Admin', desc: 'Full System Control' },
+                { id: 'ADMIN', label: 'Admin', desc: 'Full Control' },
                 { id: 'PHARMACIST', label: 'Pharmacist', desc: 'Catalog & Stock' },
-                { id: 'STAFF', label: 'Staff', desc: 'Standard Access' },
+                { id: 'STAFF', label: 'Staff', desc: 'Stock Ops' },
+                { id: 'USER', label: 'User', desc: 'Read-Only' },
               ].map((r) => (
                 <label
                   key={r.id}
@@ -558,8 +578,8 @@ export default function UsersPage() {
             </div>
 
             <FormField label="Assigned Role" required>
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                {['ADMIN', 'PHARMACIST', 'STAFF'].map((r) => (
+              <div className="grid grid-cols-4 gap-2 pt-1">
+                {['ADMIN', 'PHARMACIST', 'STAFF', 'USER'].map((r) => (
                   <label
                     key={r}
                     className={`p-3 rounded-xl border cursor-pointer text-center transition ${

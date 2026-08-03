@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff1f2"/>
+      <stop offset="50%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#ffe4e6"/>
+    </linearGradient>
+    <linearGradient id="tubeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#881337" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect width="400" height="300" rx="24" fill="url(#bg)"/>
+  <g filter="url(#shadow)" transform="translate(100, 75) rotate(-15 100 75)">
+    <!-- Ointment Tube -->
+    <rect x="20" y="50" width="40" height="30" rx="4" fill="#9f1239"/>
+    <path d="M 60 45 L 170 30 L 170 100 L 60 85 Z" fill="url(#tubeGrad)"/>
+    <rect x="165" y="28" width="15" height="74" rx="3" fill="#881337"/>
+  </g>
+  <rect x="130" y="210" width="140" height="32" rx="16" fill="#be123c"/>
+  <text x="200" y="231" font-family="system-ui, sans-serif" font-size="13" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1.5">CREAM</text>
+</svg>

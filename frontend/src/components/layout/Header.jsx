@@ -16,7 +16,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Header({ toggleSidebar, sidebarOpen }) {
-  const { user, logout, isAdmin, isPharmacist } = useAuth();
+  const { user, logout, isAdmin, isPharmacist, isStaff, isUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -25,6 +25,8 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
 
   useEffect(() => {
     const fetchAlerts = async () => {
+      // Do not fetch inventory alerts for normal USER role or unauthenticated users
+      if (!user || isUser) return;
       try {
         const [lowStockRes, expiringRes] = await Promise.allSettled([
           inventoryService.getLowStockInventory(),
@@ -57,19 +59,21 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
     };
 
     fetchAlerts();
-  }, []);
+  }, [user, isUser]);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
-  const roleLabel = isAdmin ? 'Admin' : isPharmacist ? 'Pharmacist' : 'Staff';
+  const roleLabel = isAdmin ? 'Admin' : isPharmacist ? 'Pharmacist' : isStaff ? 'Staff' : 'User';
   const roleBadgeColor = isAdmin 
     ? 'bg-purple-100 text-purple-700 border-purple-200' 
     : isPharmacist 
     ? 'bg-blue-100 text-blue-700 border-blue-200'
-    : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    : isStaff
+    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    : 'bg-slate-100 text-slate-700 border-slate-200';
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-4 flex items-center justify-between shadow-xs">

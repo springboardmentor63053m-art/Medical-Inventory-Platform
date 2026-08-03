@@ -1,0 +1,306 @@
+import React, { useState, useEffect } from 'react';
+import { medicineService } from '../../../services/api/medicineService';
+import { categoryService } from '../../../services/api/categoryService';
+import StatusBadge from '../../../components/common/StatusBadge';
+import UnifiedMedicineDetailsModal from '../components/UnifiedMedicineDetailsModal';
+import {
+  Pill,
+  Boxes,
+  Search,
+  Eye,
+  RefreshCw,
+  Info,
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
+
+export default function UserMedicinePage() {
+  const [medicines, setMedicines] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Search & Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+
+  // Pagination State
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+
+  // View Modal State
+  const [viewMedicine, setViewMedicine] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+
+  const formatINR = (val) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 2,
+    }).format(val || 0);
+  };
+
+  const fetchMedicines = async () => {
+    setLoading(true);
+    try {
+      if (searchTerm.trim()) {
+        const searchResults = await medicineService.searchMedicines(searchTerm.trim());
+        const list = Array.isArray(searchResults) ? searchResults : [];
+        setMedicines(list);
+        setTotalPages(1);
+        setTotalElements(list.length);
+      } else if (selectedCategory) {
+        const catResults = await medicineService.getMedicinesByCategory(selectedCategory);
+        const list = Array.isArray(catResults) ? catResults : [];
+        setMedicines(list);
+        setTotalPages(1);
+        setTotalElements(list.length);
+      } else {
+        const data = await medicineService.getAllMedicines(page, pageSize);
+        if (data && data.content) {
+          setMedicines(data.content);
+          setTotalPages(data.totalPages || 1);
+          setTotalElements(data.totalElements || data.content.length);
+        } else if (Array.isArray(data)) {
+          setMedicines(data);
+          setTotalPages(1);
+          setTotalElements(data.length);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load medicines for user view:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const cats = await categoryService.getAllCategories();
+      setCategories(Array.isArray(cats) ? cats : []);
+    } catch (err) {
+      console.error('Failed to load categories for filter:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    fetchMedicines();
+  }, [page, pageSize, selectedCategory]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setPage(0);
+    fetchMedicines();
+  };
+
+  return (
+    <div className="space-y-6 font-sans text-slate-900 pb-10">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Pill className="w-6 h-6 text-blue-600" /> Browse Medicines
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Search medicine formulations, view active dosage specifications, generic names, and pricing.
+          </p>
+        </div>
+
+        <button
+          onClick={fetchMedicines}
+          className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center gap-2 text-xs font-bold shrink-0 self-start sm:self-auto"
+          title="Refresh medicines"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        </button>
+      </div>
+
+      {/* Search & Category Filter Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by medicine brand name, generic name, code, or manufacturer..."
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition shrink-0 shadow-xs"
+          >
+            Search
+          </button>
+        </form>
+
+        {/* Category Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-t border-slate-100 pt-3">
+          <span className="text-xs font-bold text-slate-500 flex items-center gap-1 shrink-0 mr-1">
+            <Filter className="w-3.5 h-3.5" /> Category:
+          </span>
+          <button
+            onClick={() => {
+              setSelectedCategory('');
+              setPage(0);
+            }}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition shrink-0 ${
+              selectedCategory === ''
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            All Categories
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => {
+                setSelectedCategory(selectedCategory === String(cat.id) ? '' : String(cat.id));
+                setPage(0);
+              }}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition shrink-0 ${
+                selectedCategory === String(cat.id)
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Medicines Display Grid */}
+      {loading ? (
+        <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-slate-200">
+          <RefreshCw className="w-7 h-7 animate-spin mx-auto text-blue-600 mb-2" />
+          <p className="text-xs font-medium">Loading medicine formulations...</p>
+        </div>
+      ) : medicines.length === 0 ? (
+        <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-slate-200 space-y-3">
+          <Pill className="w-8 h-8 text-slate-400 mx-auto" />
+          <p className="text-sm font-bold text-slate-800">
+            {searchTerm || selectedCategory
+              ? 'No medicines match the selected search criteria or category filter.'
+              : 'No medicine formulations currently available in the catalog.'}
+          </p>
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setSelectedCategory('');
+              setPage(0);
+              fetchMedicines();
+            }}
+            className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition"
+          >
+            {searchTerm || selectedCategory ? 'Clear Search & Filters' : 'Refresh Catalog'}
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {medicines.map((med) => (
+            <div
+              key={med.id}
+              className="p-5 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition bg-white flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-mono text-[10px] font-bold text-slate-400 uppercase">
+                    {med.medicineCode}
+                  </span>
+                  <StatusBadge status={med.status} />
+                </div>
+
+                <h3 className="text-sm font-bold text-slate-900 mt-1.5 line-clamp-1">{med.name}</h3>
+                {med.genericName && (
+                  <p className="text-[11px] text-slate-500 italic mt-0.5 line-clamp-1">{med.genericName}</p>
+                )}
+
+                <div className="mt-3 space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-2.5">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Category:</span>
+                    <span className="font-semibold text-slate-800">{med.category?.name || 'General'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Dosage:</span>
+                    <span className="font-medium text-slate-700">{med.dosage || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Manufacturer:</span>
+                    <span className="font-medium text-slate-700 line-clamp-1">{med.manufacturer || 'Standard'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Unit Price</span>
+                  <span className="text-sm font-black text-slate-900">{formatINR(med.unitPrice)}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setViewMedicine(med);
+                    setViewModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
+                >
+                  <Eye className="w-3.5 h-3.5" /> Details
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 text-xs">
+          <span className="text-slate-500">
+            Page <span className="font-bold text-slate-900">{page + 1}</span> of{' '}
+            <span className="font-bold text-slate-900">{totalPages}</span> ({totalElements} total medicines)
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
+              disabled={page === 0}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition disabled:opacity-50 flex items-center gap-1"
+            >
+              <ChevronLeft className="w-4 h-4" /> Previous
+            </button>
+            <button
+              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages - 1))}
+              disabled={page >= totalPages - 1}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition disabled:opacity-50 flex items-center gap-1"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* View Medicine Details Modal */}
+      {viewModalOpen && viewMedicine && (
+        <UnifiedMedicineDetailsModal
+          isOpen={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          medicine={viewMedicine}
+          allMedicines={medicines}
+          onSelectRelated={(rel) => setViewMedicine(rel)}
+        />
+      )}
+    </div>
+  );
+}

@@ -44,21 +44,16 @@ public class AuthServiceImpl implements AuthService {
             throw new UserAlreadyExistsException("User already exists with email: " + request.getEmail());
         }
 
-        String targetRole = request.getEmail().toLowerCase().contains("admin") ? "ADMIN" :
-                            request.getEmail().toLowerCase().contains("pharmacist") ? "PHARMACIST" : "STAFF";
+        String targetRole = "USER";
 
         Role defaultRole = roleRepository.findByName(targetRole)
                 .orElseGet(() -> roleRepository.save(Role.builder()
                         .name(targetRole)
-                        .description(targetRole + " Role")
+                        .description("Standard User (Read-Only) Role")
                         .build()));
 
-        String empIdPrefix = targetRole.equals("ADMIN") ? "ADM" : targetRole.equals("PHARMACIST") ? "PHA" : "EMP";
-        long count = userRepository.count() + 1;
-        String autoEmpId = String.format("%s%03d", empIdPrefix, count);
-
         User user = User.builder()
-                .employeeId(autoEmpId)
+                .employeeId(null) // Normal USER is not an employee; employeeId is null
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
@@ -100,10 +95,11 @@ public class AuthServiceImpl implements AuthService {
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         User user = userPrincipal.getUser();
 
-        // Update last login timestamp & assign employeeId if missing
-        if (user.getEmployeeId() == null || user.getEmployeeId().isEmpty()) {
-            String roleName = user.getRoles().stream().map(Role::getName).findFirst().orElse("STAFF");
-            String prefix = roleName.contains("ADMIN") ? "ADM" : roleName.contains("PHARMACIST") ? "PHA" : "EMP";
+        // Assign employeeId ONLY if user is an employee (ADMIN, PHARMACIST, STAFF) and missing employeeId
+        String primaryRole = user.getRoles().stream().map(Role::getName).findFirst().orElse("USER");
+        boolean isEmployeeRole = primaryRole.contains("ADMIN") || primaryRole.contains("PHARMACIST") || primaryRole.contains("STAFF");
+        if (isEmployeeRole && (user.getEmployeeId() == null || user.getEmployeeId().isEmpty())) {
+            String prefix = primaryRole.contains("ADMIN") ? "ADM" : primaryRole.contains("PHARMACIST") ? "PHA" : "STF";
             user.setEmployeeId(String.format("%s%03d", prefix, user.getId()));
         }
         user.setLastLogin(LocalDateTime.now());

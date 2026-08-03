@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth, getRoleDashboardPath } from '../../../contexts/AuthContext';
 import { authService } from '../../../services/api/authService';
 import { toast } from 'react-toastify';
 import Modal from '../../../components/common/Modal';
@@ -52,12 +52,18 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
 
-  const { login, loginWithToken } = useAuth();
+  const { login, loginWithToken, isAuthenticated, user, getDashboardPath } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  // If already authenticated, redirect immediately to the appropriate role dashboard
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const targetPath = getDashboardPath();
+      navigate(targetPath, { replace: true });
+    }
+  }, [isAuthenticated, user, navigate, getDashboardPath]);
 
   // Process OAuth2 callback redirect query tokens
   useEffect(() => {
@@ -65,9 +71,10 @@ export default function LoginPage() {
     if (oauthToken) {
       setLoading(true);
       loginWithToken(oauthToken)
-        .then(() => {
+        .then((userData) => {
           toast.success('Signed in successfully with OAuth2!');
-          navigate(from, { replace: true });
+          const target = getRoleDashboardPath(userData);
+          navigate(target, { replace: true });
         })
         .catch(() => {
           toast.error('OAuth2 authentication failed. Please try again.');
@@ -88,9 +95,15 @@ export default function LoginPage() {
     setErrorMsg('');
 
     try {
-      await login(identifier.trim(), password);
+      const authData = await login(identifier.trim(), password);
       toast.success('Authentication successful! Welcome back to MediStock.');
-      navigate(from, { replace: true });
+      
+      const targetDashboard = getRoleDashboardPath(authData);
+      const destination = (location.state?.from?.pathname && location.state.from.pathname !== '/' && location.state.from.pathname !== '/dashboard')
+        ? location.state.from.pathname
+        : targetDashboard;
+
+      navigate(destination, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
       const msg =

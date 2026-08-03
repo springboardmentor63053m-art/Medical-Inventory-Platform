@@ -18,20 +18,34 @@ import {
 } from 'lucide-react';
 
 export default function SidebarLayout({ isOpen, onClose }) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isPharmacist, isStaff, isUser, getDashboardPath } = useAuth();
 
-  // Structured sidebar navigation with Expiry Monitoring link
+  const userDashboardPath = getDashboardPath();
+
   const primaryNavItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Dashboard', path: userDashboardPath, icon: LayoutDashboard },
     { name: 'Medicines', path: '/medicines', icon: Pill },
     { name: 'Categories', path: '/categories', icon: Boxes },
-    { name: 'Inventory', path: '/inventory', icon: Package },
-    { name: 'Expiring Soon', path: '/expiring', icon: Clock, badge: '< 90d' },
-    { name: 'Suppliers', path: '/suppliers', icon: Truck },
-    { name: 'Purchase Orders', path: '/purchase-orders', icon: ShoppingCart },
-    { name: 'Reports', path: '/reports', icon: FileText },
-    { name: 'Notifications', path: '/notifications', icon: Bell },
   ];
+
+  if (isAdmin || isPharmacist || isStaff) {
+    primaryNavItems.push(
+      { name: 'Inventory', path: '/inventory', icon: Package },
+      { name: 'Expiring Soon', path: '/expiring', icon: Clock, badge: '< 90d' }
+    );
+  }
+
+  if (isAdmin || isPharmacist) {
+    primaryNavItems.push(
+      { name: 'Suppliers', path: '/suppliers', icon: Truck },
+      { name: 'Purchase Orders', path: '/purchase-orders', icon: ShoppingCart },
+      { name: 'Reports', path: '/reports', icon: FileText }
+    );
+  }
+
+  if (isAdmin || isPharmacist || isStaff) {
+    primaryNavItems.push({ name: 'Notifications', path: '/notifications', icon: Bell });
+  }
 
   if (isAdmin) {
     primaryNavItems.push({ name: 'User Management', path: '/users', icon: Users, badge: 'Admin' });

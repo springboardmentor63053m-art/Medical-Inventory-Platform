@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { clearAuthStorage, isJwtValid } from '../../contexts/AuthContext';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -8,12 +9,14 @@ const apiClient = axios.create({
   },
 });
 
-// Request Interceptor: Attach JWT Token from localStorage
+// Request Interceptor: Attach JWT Token from localStorage if valid
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && isJwtValid(token)) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else if (token && !isJwtValid(token)) {
+      clearAuthStorage();
     }
     return config;
   },
@@ -33,16 +36,10 @@ apiClient.interceptors.response.use(
       'An unexpected error occurred. Please try again.';
 
     if (status === 401) {
-      // Unauthorized: clear session if token was invalid/expired
-      const token = localStorage.getItem('token');
-      if (token) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        toast.error('Session expired. Please log in again.');
-        // Only redirect if not already on login page
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
+      clearAuthStorage();
+      if (window.location.pathname !== '/login') {
+        toast.error('Session expired or unauthorized. Please log in again.');
+        window.location.href = '/login';
       }
     } else if (status === 403) {
       toast.error('Access Denied: You do not have permission for this action.');

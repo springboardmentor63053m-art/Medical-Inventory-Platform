@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf4ff"/>
+      <stop offset="100%" stop-color="#f5d0fe"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#701a75" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <rect width="400" height="300" rx="24" fill="url(#bg)"/>
+  <g filter="url(#shadow)" transform="translate(60, 40)">
+    <rect x="0" y="0" width="280" height="180" rx="16" fill="#ffffff" stroke="#c026d3" stroke-width="4"/>
+    <rect x="0" y="0" width="280" height="45" rx="16" fill="#c026d3"/>
+    <rect x="0" y="25" width="280" height="20" fill="#c026d3"/>
+    <text x="20" y="30" font-family="system-ui, sans-serif" font-size="18" font-weight="900" fill="#ffffff" letter-spacing="1">AZITHROMYCIN 500 MG</text>
+    <text x="20" y="75" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#1e293b">Macrolide Antibiotic</text>
+    <text x="20" y="95" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#64748b">3 Tablets • 3-Day Course</text>
+    
+    <rect x="20" y="115" width="60" height="36" rx="8" fill="#f5d0fe"/>
+    <text x="50" y="139" font-family="system-ui, sans-serif" font-size="16" font-weight="900" fill="#a21caf" text-anchor="middle">Rx</text>
+    
+    <rect x="180" y="110" width="80" height="45" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+    <circle cx="205" cy="132" r="10" fill="#c026d3"/>
+    <circle cx="235" cy="132" r="10" fill="#c026d3"/>
+  </g>
+</svg>

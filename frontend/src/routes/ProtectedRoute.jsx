@@ -1,17 +1,17 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
-  const { isAuthenticated, loading, hasRole } = useAuth();
+  const { isAuthenticated, loading, hasRole, getDashboardPath } = useAuth();
   const location = useLocation();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-600 text-sm font-medium">Loading MediStock...</p>
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-300 text-xs font-semibold tracking-wider uppercase">Verifying MediStock Credentials...</p>
         </div>
       </div>
     );
@@ -33,12 +33,12 @@ export default function ProtectedRoute({ children, allowedRoles }) {
           <p className="text-slate-600 max-w-md mb-6">
             You do not have the required permissions ({allowedRoles.join(', ')}) to access this feature.
           </p>
-          <a
-            href="/dashboard"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+          <Link
+            to={getDashboardPath()}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition shadow-md"
           >
-            Return to Dashboard
-          </a>
+            Return to Authorized Dashboard
+          </Link>
         </div>
       );
     }
