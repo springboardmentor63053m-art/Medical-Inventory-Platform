@@ -1,104 +1,89 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { authApi } from '../api/authApi';
-import { storage } from '../utils/storage';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import api from '../api/api';
 
-export const AuthContext = createContext(null);
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Initialize auth state from persistent storage on mount
   useEffect(() => {
-    const storedToken = storage.getToken();
-    const storedUser = storage.getUser();
+    // Check if user credentials exist in local storage on mount
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
 
-    if (storedToken && storedUser && !storage.isTokenExpired(storedToken)) {
-      setToken(storedToken);
-      setUser(storedUser);
-    } else {
-      storage.clearAuth();
+    if (savedToken && savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        // Corrupted user data in local storage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
 
-  const login = async (username, password, rememberMe = true) => {
-    setLoading(true);
+  const login = async (username, password) => {
     setError(null);
     try {
-      const response = await authApi.login(username, password);
-
-      if (response && response.success && response.data) {
-        const authData = response.data;
-        const jwtToken = authData.token;
-
-        const rolesArray = Array.isArray(authData.roles)
-          ? authData.roles
-          : Array.from(authData.roles || []);
-
-        const userData = {
-          id: authData.id,
-          username: authData.username,
-          email: authData.email,
-          roles: rolesArray,
-        };
-
-        storage.setToken(jwtToken, rememberMe);
-        storage.setUser(userData, rememberMe);
-
-        setToken(jwtToken);
-        setUser(userData);
-        setLoading(false);
-        return { success: true, user: userData, roles: rolesArray };
+      const response = await api.post('/auth/login', { username, password });
+      
+      // Response shape: ApiResponse<JwtResponse>
+      const apiResponse = response.data;
+      if (apiResponse.success) {
+        const { token, id, email, roles } = apiResponse.data;
+        const loggedUser = { id, username: apiResponse.data.username, email, roles };
+        
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(loggedUser));
+        setUser(loggedUser);
+        return loggedUser;
       } else {
-        const errMsg = response?.message || 'Login failed. Please verify credentials.';
-        setError(errMsg);
-        setLoading(false);
-        return { success: false, message: errMsg };
+        throw new Error(apiResponse.message || 'Login failed');
       }
     } catch (err) {
-      console.error('Login error details:', err);
-      let errMsg = 'Network or server error occurred. Please try again.';
-      if (err.response?.data) {
-        errMsg = err.response.data.message || err.response.data.errors?.join(', ') || errMsg;
-      }
-      setError(errMsg);
-      setLoading(false);
-      return { success: false, message: errMsg };
+      const msg = err.response?.data?.message || err.message || 'Authentication error';
+      setError(msg);
+      throw new Error(msg);
     }
   };
 
-  const logout = useCallback(() => {
-    storage.clearAuth();
-    setToken(null);
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
-    setError(null);
-  }, []);
+  };
 
-  const hasRole = useCallback((roleName) => {
+  const hasRole = (roleName) => {
     if (!user || !user.roles) return false;
     return user.roles.includes(roleName);
-  }, [user]);
+  };
 
-  const hasAnyRole = useCallback((requiredRoles) => {
+  const hasAnyRole = (roleNames) => {
     if (!user || !user.roles) return false;
-    return requiredRoles.some(r => user.roles.includes(r));
-  }, [user]);
+    return roleNames.some(role => user.roles.includes(role));
+  };
 
   const value = {
     user,
-    token,
-    isAuthenticated: !!token && !!user,
-    roles: user?.roles || [],
     loading,
     error,
     login,
     logout,
     hasRole,
     hasAnyRole,
+    isAuthenticated: !!user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
