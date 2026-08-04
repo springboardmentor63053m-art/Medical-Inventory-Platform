@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Activity } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState('ROLE_STAFF');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
   
@@ -13,7 +14,6 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If user is already logged in, redirect them immediately to home page
     if (isAuthenticated) {
       navigate('/', { replace: true });
     }
@@ -30,7 +30,7 @@ const Login = () => {
     setLocalError('');
 
     try {
-      await login(username, password);
+      await login(username, password, selectedRole);
       navigate('/', { replace: true });
     } catch (err) {
       setLocalError(err.message || 'Login failed. Please verify credentials.');
@@ -81,6 +81,20 @@ const Login = () => {
             />
           </div>
 
+          <div className="form-group">
+            <label htmlFor="role">Select Role</label>
+            <select
+              id="role"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              disabled={submitting}
+            >
+              <option value="ROLE_ADMIN">Admin</option>
+              <option value="ROLE_PHARMACIST">Pharmacist</option>
+              <option value="ROLE_STAFF">Staff</option>
+            </select>
+          </div>
+
           <button 
             type="submit" 
             className="btn btn-primary" 
@@ -92,7 +106,9 @@ const Login = () => {
         </form>
         
         <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          To create new user accounts, please contact system administrator.
+          New staff or pharmacist accounts can be created from the registration page.
+          <br />
+          <Link to="/register" style={{ color: 'var(--primary)', marginTop: '6px', display: 'inline-block' }}>Create account</Link>
         </div>
       </div>
     </div>

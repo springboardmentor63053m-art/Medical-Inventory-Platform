@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 
 // Pages
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Medicines from './pages/Medicines';
 import Categories from './pages/Categories';
@@ -21,6 +22,7 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Authenticated routes */}
           <Route element={<ProtectedRoute />}>

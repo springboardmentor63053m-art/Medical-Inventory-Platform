@@ -25,12 +25,11 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (username, password, selectedRole) => {
     setError(null);
     try {
-      const response = await api.post('/auth/login', { username, password });
+      const response = await api.post('/auth/login', { username, password, selectedRole });
       
-      // Response shape: ApiResponse<JwtResponse>
       const apiResponse = response.data;
       if (apiResponse.success) {
         const { token, id, email, roles } = apiResponse.data;
@@ -39,12 +38,28 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(loggedUser));
         setUser(loggedUser);
-        return loggedUser;
+        return { success: true, ...loggedUser };
       } else {
         throw new Error(apiResponse.message || 'Login failed');
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Authentication error';
+      setError(msg);
+      throw new Error(msg);
+    }
+  };
+
+  const register = async (userData) => {
+    setError(null);
+    try {
+      const response = await api.post('/auth/register', userData);
+      const apiResponse = response.data;
+      if (apiResponse.success) {
+        return { success: true, user: apiResponse.data };
+      }
+      throw new Error(apiResponse.message || 'Registration failed');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Registration error';
       setError(msg);
       throw new Error(msg);
     }
@@ -71,6 +86,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     login,
+    register,
     logout,
     hasRole,
     hasAnyRole,
