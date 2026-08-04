@@ -15,7 +15,6 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If user is already logged in, redirect them immediately to home page
     if (isAuthenticated) {
       navigate('/', { replace: true });
     }
@@ -116,9 +115,24 @@ const Login = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="btn-login"
+          <div className="form-group">
+            <label htmlFor="role">Select Role</label>
+            <select
+              id="role"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              disabled={submitting}
+            >
+              <option value="ROLE_ADMIN">Admin</option>
+              <option value="ROLE_PHARMACIST">Pharmacist</option>
+              <option value="ROLE_STAFF">Staff</option>
+            </select>
+          </div>
+
+          <button 
+            type="submit" 
+            className="btn btn-primary" 
+            style={{ width: '100%', marginTop: '10px', height: '44px' }}
             disabled={submitting}
             style={{ marginTop: '10px' }}
           >
