@@ -115,26 +115,14 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="role">Select Role</label>
-            <select
-              id="role"
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              disabled={submitting}
-            >
-              <option value="ROLE_ADMIN">Admin</option>
-              <option value="ROLE_PHARMACIST">Pharmacist</option>
-              <option value="ROLE_STAFF">Staff</option>
-            </select>
-          </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            style={{ width: '100%', marginTop: '10px', height: '44px' }}
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: '6px', height: '44px' }}
             disabled={submitting}
-            style={{ marginTop: '10px' }}
+
           >
             {submitting ? 'Authenticating...' : 'Sign In'}
           </button>
