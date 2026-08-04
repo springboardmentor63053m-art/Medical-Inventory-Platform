@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,14 @@ public class AuthServiceImpl implements AuthService {
 
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new BadRequestException("User not found"));
+
+        String selectedRole = normalizeRoleName(loginRequest.getSelectedRole());
+        boolean hasMatchingRole = user.getRoles().stream()
+                .anyMatch(role -> role.getName().name().equals(selectedRole));
+
+        if (!hasMatchingRole) {
+            throw new BadRequestException("Selected role does not match your account.");
+        }
 
         Set<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -85,24 +94,14 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         Set<Role> roles = new HashSet<>();
-        if (registerRequest.getRoles() == null || registerRequest.getRoles().isEmpty()) {
-            Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                    .orElseGet(() -> roleRepository.save(Role.builder().name(ERole.ROLE_USER).build()));
-            roles.add(userRole);
-        } else {
-            registerRequest.getRoles().forEach(roleStr -> {
-                ERole eRole;
-                try {
-                    eRole = ERole.valueOf(roleStr.toUpperCase().startsWith("ROLE_") ? roleStr.toUpperCase() : "ROLE_" + roleStr.toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    eRole = ERole.ROLE_USER;
-                }
-                ERole finalERole = eRole;
-                Role role = roleRepository.findByName(eRole)
-                        .orElseGet(() -> roleRepository.save(Role.builder().name(finalERole).build()));
-                roles.add(role);
-            });
+        Set<ERole> requestedRoles = resolveRequestedRoles(registerRequest.getRoles());
+
+        for (ERole eRole : requestedRoles) {
+            Role role = roleRepository.findByName(eRole)
+                    .orElseGet(() -> roleRepository.save(Role.builder().name(eRole).build()));
+            roles.add(role);
         }
+
         user.setRoles(roles);
         User savedUser = userRepository.save(user);
 
@@ -116,5 +115,39 @@ public class AuthServiceImpl implements AuthService {
                 .roles(savedUser.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet()))
                 .createdAt(savedUser.getCreatedAt())
                 .build();
+    }
+
+    private String normalizeRoleName(String roleName) {
+        if (roleName == null || roleName.isBlank()) {
+            throw new BadRequestException("Role is required");
+        }
+
+        String normalizedRole = roleName.trim().toUpperCase(Locale.ROOT);
+        if (!normalizedRole.startsWith("ROLE_")) {
+            normalizedRole = "ROLE_" + normalizedRole;
+        }
+
+        return normalizedRole;
+    }
+
+    private Set<ERole> resolveRequestedRoles(Set<String> requestedRoles) {
+        Set<ERole> resolvedRoles = new HashSet<>();
+        Set<String> incomingRoles = requestedRoles == null || requestedRoles.isEmpty()
+                ? Set.of("ROLE_STAFF")
+                : requestedRoles;
+
+        if (incomingRoles.size() > 1) {
+            throw new BadRequestException("Please select a single role for registration.");
+        }
+
+        for (String roleStr : incomingRoles) {
+            String normalizedRole = normalizeRoleName(roleStr);
+            if (!normalizedRole.equals("ROLE_PHARMACIST") && !normalizedRole.equals("ROLE_STAFF")) {
+                throw new BadRequestException("Only pharmacist and staff roles are allowed for registration.");
+            }
+            resolvedRoles.add(ERole.valueOf(normalizedRole));
+        }
+
+        return resolvedRoles;
     }
 }
