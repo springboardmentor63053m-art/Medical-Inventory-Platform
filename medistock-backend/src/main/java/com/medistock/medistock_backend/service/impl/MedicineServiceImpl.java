@@ -13,6 +13,8 @@ import com.medistock.medistock_backend.exception.ResourceNotFoundException;
 import com.medistock.medistock_backend.repository.CategoryRepository;
 import com.medistock.medistock_backend.repository.InventoryRepository;
 import com.medistock.medistock_backend.repository.MedicineRepository;
+import com.medistock.medistock_backend.service.StockMovementService;
+import com.medistock.medistock_backend.entity.MovementType;
 import com.medistock.medistock_backend.repository.SupplierRepository;
 import com.medistock.medistock_backend.service.MedicineService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class MedicineServiceImpl implements MedicineService {
     private final CategoryRepository categoryRepository;
     private final SupplierRepository supplierRepository;
     private final InventoryRepository inventoryRepository;
+    private final StockMovementService stockMovementService;
 
     @Override
     @Transactional(readOnly = true)
@@ -58,7 +61,7 @@ public class MedicineServiceImpl implements MedicineService {
     @Override
     @Transactional(readOnly = true)
     public List<MedicineResponse> searchMedicines(String query) {
-        return medicineRepository.findByNameContainingIgnoreCase(query).stream()
+        return medicineRepository.searchMedicines(query).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -114,6 +117,10 @@ public class MedicineServiceImpl implements MedicineService {
 
         inventoryRepository.save(inventory);
         savedMedicine.setInventory(inventory);
+
+        if (request.getInitialQuantity() != null && request.getInitialQuantity() > 0) {
+            stockMovementService.logMovement(savedMedicine.getId(), request.getBatchNumber(), MovementType.IN, request.getInitialQuantity(), null);
+        }
 
         return mapToResponse(savedMedicine);
     }

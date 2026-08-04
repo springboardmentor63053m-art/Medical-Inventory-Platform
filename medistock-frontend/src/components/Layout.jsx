@@ -22,37 +22,43 @@ const Layout = () => {
       path: '/',
       label: 'Dashboard',
       icon: <LayoutDashboard />,
-      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_SUPPLIER', 'ROLE_USER']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_SUPPLIER', 'ROLE_USER', 'ROLE_STAFF']
     },
     {
       path: '/medicines',
       label: 'Medicines',
       icon: <Pill />,
-      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_SUPPLIER', 'ROLE_USER']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_SUPPLIER', 'ROLE_USER', 'ROLE_STAFF']
     },
     {
       path: '/categories',
       label: 'Categories',
       icon: <Tags />,
-      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']
     },
     {
       path: '/suppliers',
       label: 'Suppliers',
       icon: <Truck />,
-      roles: ['ROLE_ADMIN']
+      roles: ['ROLE_ADMIN', 'ROLE_STAFF']
     },
     {
       path: '/inventory',
       label: 'Inventory',
       icon: <Warehouse />,
-      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_USER']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_USER', 'ROLE_STAFF']
+    },
+    {
+      path: '/stock-movements',
+      label: 'Stock Movements',
+      icon: <Activity />,
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']
     },
     {
       path: '/purchase-orders',
       label: 'Purchase Orders',
       icon: <ClipboardList />,
-      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_SUPPLIER']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_SUPPLIER', 'ROLE_STAFF']
     },
     {
       path: '/users',
