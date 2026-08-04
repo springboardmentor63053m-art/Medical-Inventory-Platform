@@ -39,11 +39,13 @@ public class InventoryController {
     }
 
     @PutMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PHARMACIST')")
     public ResponseEntity<ApiResponse<InventoryResponse>> updateInventory(@PathVariable Long id, @Valid @RequestBody InventoryRequest inventoryRequest) {
         return ResponseEntity.ok(ApiResponse.success("Inventory updated successfully", inventoryService.updateInventory(id, inventoryRequest)));
     }
 
     @PatchMapping("/medicine/{medicineId}/stock")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PHARMACIST')")
     public ResponseEntity<ApiResponse<InventoryResponse>> updateStockQuantity(
             @PathVariable Long medicineId,
             @RequestParam Integer delta) {
