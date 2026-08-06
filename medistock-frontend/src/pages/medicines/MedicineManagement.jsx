@@ -34,6 +34,7 @@ export const MedicineManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedSupplier, setSelectedSupplier] = useState('ALL');
+  const [selectedStockStatus, setSelectedStockStatus] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
@@ -114,9 +115,15 @@ export const MedicineManagement = () => {
       const matchesCategory = selectedCategory === 'ALL' || (med.category && med.category.id === Number(selectedCategory));
       const matchesSupplier = selectedSupplier === 'ALL' || (med.supplier && med.supplier.id === Number(selectedSupplier));
 
-      return matchesSearch && matchesCategory && matchesSupplier;
+      const isLowStock = (med.currentStock || 0) <= (med.reorderLevel || 0);
+      const matchesStockStatus =
+        selectedStockStatus === 'ALL' ||
+        (selectedStockStatus === 'AVAILABLE' && !isLowStock) ||
+        (selectedStockStatus === 'LOW_STOCK' && isLowStock);
+
+      return matchesSearch && matchesCategory && matchesSupplier && matchesStockStatus;
     });
-  }, [medicines, searchQuery, selectedCategory, selectedSupplier]);
+  }, [medicines, searchQuery, selectedCategory, selectedSupplier, selectedStockStatus]);
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredMedicines.length / itemsPerPage) || 1;
@@ -444,6 +451,30 @@ export const MedicineManagement = () => {
               {suppliers.map((sup) => (
                 <option key={sup.id} value={sup.id}>{sup.name}</option>
               ))}
+            </select>
+          </div>
+
+          {/* Stock Status Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
+            <Filter size={16} style={{ color: 'var(--color-text-muted)' }} />
+            <select
+              value={selectedStockStatus}
+              onChange={(e) => {
+                setSelectedStockStatus(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '8px 12px',
+                fontSize: '0.85rem',
+                color: 'var(--color-text-primary)'
+              }}
+            >
+              <option value="ALL">All Stock Status</option>
+              <option value="AVAILABLE">Available</option>
+              <option value="LOW_STOCK">Low Stock</option>
             </select>
           </div>
 

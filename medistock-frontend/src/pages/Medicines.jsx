@@ -11,6 +11,8 @@ const Medicines = () => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [selectedStockStatus, setSelectedStockStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -109,23 +111,8 @@ const Medicines = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSearch = async (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    if (!query.trim()) {
-      // Reload all
-      const res = await api.get('/medicines');
-      if (res.data.success) setMedicines(res.data.data);
-      return;
-    }
-    try {
-      const response = await api.get('/medicines/search', { params: { query } });
-      if (response.data.success) {
-        setMedicines(response.data.data);
-      }
-    } catch (err) {
-      console.error('Search error', err);
-    }
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
   };
 
   const handleSubmit = async (e) => {
@@ -189,12 +176,29 @@ const Medicines = () => {
   };
 
   const filteredMedicines = medicines.filter(m => {
+    const query = searchQuery.toLowerCase().trim();
+    const matchesSearch = !query || (
+      (m.name && m.name.toLowerCase().includes(query)) ||
+      (m.code && m.code.toLowerCase().includes(query)) ||
+      (m.genericName && m.genericName.toLowerCase().includes(query)) ||
+      (m.manufacturer && m.manufacturer.toLowerCase().includes(query)) ||
+      (m.batchNumber && m.batchNumber.toLowerCase().includes(query))
+    );
+
     const matchesCategory = selectedCategory === '' || m.category?.id?.toString() === selectedCategory;
-    return matchesCategory;
+    const matchesSupplier = selectedSupplier === '' || m.supplier?.id?.toString() === selectedSupplier;
+
+    const isLowStock = (m.currentStock || 0) <= (m.reorderLevel || 0);
+    const matchesStockStatus = 
+      selectedStockStatus === '' ||
+      (selectedStockStatus === 'AVAILABLE' && !isLowStock) ||
+      (selectedStockStatus === 'LOW_STOCK' && isLowStock);
+
+    return matchesSearch && matchesCategory && matchesSupplier && matchesStockStatus;
   });
 
   const formatCurrency = (val) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
   };
 
   if (loading) {
@@ -212,22 +216,43 @@ const Medicines = () => {
           <Search />
           <input
             type="text"
-            placeholder="Search medicines by code, brand name, or generic formula..."
+            placeholder="Search medicines by name, code, generic formula, manufacturer..."
             value={searchQuery}
             onChange={handleSearch}
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <select 
             value={selectedCategory} 
             onChange={(e) => setSelectedCategory(e.target.value)}
-            style={{ width: '180px', height: '42px' }}
+            style={{ width: '160px', height: '42px' }}
           >
             <option value="">All Categories</option>
             {categories.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
+          </select>
+
+          <select 
+            value={selectedSupplier} 
+            onChange={(e) => setSelectedSupplier(e.target.value)}
+            style={{ width: '160px', height: '42px' }}
+          >
+            <option value="">All Suppliers</option>
+            {suppliers.map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+
+          <select 
+            value={selectedStockStatus} 
+            onChange={(e) => setSelectedStockStatus(e.target.value)}
+            style={{ width: '160px', height: '42px' }}
+          >
+            <option value="">All Stock Status</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="LOW_STOCK">Low Stock</option>
           </select>
 
           {canModify && (
@@ -383,7 +408,7 @@ const Medicines = () => {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="price">Unit Price (USD) *</label>
+                  <label htmlFor="price">Unit Price (INR) *</label>
                   <input
                     type="number"
                     step="0.01"

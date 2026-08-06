@@ -19,6 +19,8 @@ public class DashboardSummaryDto {
     private long totalPurchaseOrders;
     private long lowStockCount;
     private BigDecimal totalInventoryValue;
+    @Builder.Default
+    private String currency = "INR";
     private List<InventoryResponse> lowStockItems;
     private List<PurchaseOrderResponse> recentOrders;
 }

@@ -62,6 +62,9 @@ public class InventoryServiceImpl implements InventoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory not found with id: " + id));
 
         if (request.getQuantity() != null) {
+            if (request.getQuantity() < 0) {
+                throw new BadRequestException("Inventory quantity cannot be negative");
+            }
             inventory.setQuantity(request.getQuantity());
         }
         if (request.getReorderLevel() != null) {

@@ -12,7 +12,7 @@ import {
   ShoppingCart, 
   AlertTriangle, 
   Calendar, 
-  DollarSign, 
+  IndianRupee, 
   RefreshCw,
   TrendingDown,
   ShieldCheck,
@@ -149,7 +149,7 @@ export const LiveDashboard = ({ roleTitle = 'Administrator' }) => {
     { title: 'Purchase Orders', value: metrics.totalOrders, icon: ShoppingCart, color: '#6366f1', bg: 'rgba(99, 102, 241, 0.15)' },
     { title: 'Low Stock Alerts', value: metrics.lowStockCount, icon: TrendingDown, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
     { title: 'Expiring Medicines', value: metrics.expiringCount, icon: Calendar, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
-    { title: 'Inventory Total Value', value: `₹${Number(metrics.totalInventoryValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, icon: DollarSign, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' }
+    { title: 'Inventory Total Value', value: `₹${Number(metrics.totalInventoryValue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, icon: IndianRupee, color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' }
   ];
 
   return (
