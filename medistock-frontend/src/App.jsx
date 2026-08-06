@@ -12,6 +12,7 @@ import Medicines from './pages/Medicines';
 import Categories from './pages/Categories';
 import Suppliers from './pages/Suppliers';
 import Inventory from './pages/Inventory';
+import StockMovements from './pages/StockMovements';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Users from './pages/Users';
 
@@ -46,6 +47,11 @@ function App() {
               {/* Inventory accessible by Admin, Pharmacist, Doctor, User, and Staff */}
               <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_USER', 'ROLE_STAFF']} />}>
                 <Route path="/inventory" element={<Inventory />} />
+              </Route>
+
+              {/* Stock Movements accessible by Admin, Pharmacist, and Staff */}
+              <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']} />}>
+                <Route path="/stock-movements" element={<StockMovements />} />
               </Route>
 
               {/* Purchase Orders accessible by Admin, Pharmacist, Supplier, and Staff */}

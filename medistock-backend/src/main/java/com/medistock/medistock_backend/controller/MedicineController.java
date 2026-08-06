@@ -45,6 +45,7 @@ public class MedicineController {
     }
 
     @PostMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PHARMACIST')")
     public ResponseEntity<ApiResponse<MedicineResponse>> createMedicine(@Valid @RequestBody MedicineRequest medicineRequest) {
         MedicineResponse created = medicineService.createMedicine(medicineRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -52,11 +53,13 @@ public class MedicineController {
     }
 
     @PutMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PHARMACIST')")
     public ResponseEntity<ApiResponse<MedicineResponse>> updateMedicine(@PathVariable Long id, @Valid @RequestBody MedicineRequest medicineRequest) {
         return ResponseEntity.ok(ApiResponse.success("Medicine updated successfully", medicineService.updateMedicine(id, medicineRequest)));
     }
 
     @DeleteMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PHARMACIST')")
     public ResponseEntity<ApiResponse<Void>> deleteMedicine(@PathVariable Long id) {
         medicineService.deleteMedicine(id);
         return ResponseEntity.ok(ApiResponse.success("Medicine deleted successfully", null));

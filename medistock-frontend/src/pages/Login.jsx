@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Activity } from 'lucide-react';
+import { Activity, User, Lock, Shield, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState('ROLE_STAFF');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
-  
+
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -30,6 +31,7 @@ const Login = () => {
     setLocalError('');
 
     try {
+      // Forward-compatible selectedRole parameter
       await login(username, password, selectedRole);
       navigate('/', { replace: true });
     } catch (err) {
@@ -54,61 +56,86 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="form-group">
             <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              required
-              disabled={submitting}
-            />
+            <div className="input-with-icon">
+              <input
+                type="text"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                required
+                disabled={submitting}
+              />
+              <User className="input-icon" />
+            </div>
           </div>
 
           <div className="form-group">
             <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              disabled={submitting}
-            />
+            <div className="input-with-icon password-input">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                disabled={submitting}
+              />
+              <Lock className="input-icon" />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword((prev) => !prev)}
+                disabled={submitting}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
             <label htmlFor="role">Select Role</label>
-            <select
-              id="role"
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              disabled={submitting}
-            >
-              <option value="ROLE_ADMIN">Admin</option>
-              <option value="ROLE_PHARMACIST">Pharmacist</option>
-              <option value="ROLE_STAFF">Staff</option>
-            </select>
+            <div className="input-with-icon">
+              <select
+                id="role"
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                disabled={submitting}
+              >
+                <option value="ROLE_ADMIN">Admin</option>
+                <option value="ROLE_PHARMACIST">Pharmacist</option>
+                <option value="ROLE_STAFF">Staff</option>
+              </select>
+              <Shield className="input-icon" />
+            </div>
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            style={{ width: '100%', marginTop: '10px', height: '44px' }}
+
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: '6px', height: '44px' }}
             disabled={submitting}
+
           >
             {submitting ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
-        
-        <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          New staff or pharmacist accounts can be created from the registration page.
+
+        <div className="login-divider">OR</div>
+
+        <div className="register-section">
+          Need a Staff or Pharmacist account?
           <br />
-          <Link to="/register" style={{ color: 'var(--primary)', marginTop: '6px', display: 'inline-block' }}>Create account</Link>
+          <Link to="/register" className="register-link">
+            Create one here →
+          </Link>
         </div>
       </div>
     </div>

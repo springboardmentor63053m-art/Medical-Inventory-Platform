@@ -7,6 +7,8 @@ import com.medistock.medistock_backend.entity.Medicine;
 import com.medistock.medistock_backend.exception.BadRequestException;
 import com.medistock.medistock_backend.exception.ResourceNotFoundException;
 import com.medistock.medistock_backend.repository.InventoryRepository;
+import com.medistock.medistock_backend.service.StockMovementService;
+import com.medistock.medistock_backend.entity.MovementType;
 import com.medistock.medistock_backend.repository.MedicineRepository;
 import com.medistock.medistock_backend.service.InventoryService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final MedicineRepository medicineRepository;
+    private final StockMovementService stockMovementService;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,10 +65,14 @@ public class InventoryServiceImpl implements InventoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory not found with id: " + id));
 
         if (request.getQuantity() != null) {
-            if (request.getQuantity() < 0) {
-                throw new BadRequestException("Inventory quantity cannot be negative");
+            int oldQty = inventory.getQuantity();
+            int newQty = request.getQuantity();
+            int diff = newQty - oldQty;
+            inventory.setQuantity(newQty);
+            if (diff != 0) {
+                MovementType type = diff > 0 ? MovementType.IN : MovementType.OUT;
+                stockMovementService.logMovement(inventory.getMedicine().getId(), null, type, Math.abs(diff), null);
             }
-            inventory.setQuantity(request.getQuantity());
         }
         if (request.getReorderLevel() != null) {
             inventory.setReorderLevel(request.getReorderLevel());
@@ -100,7 +107,12 @@ public class InventoryServiceImpl implements InventoryService {
             throw new BadRequestException("Insufficient inventory quantity for medicine id: " + medicineId);
         }
         inventory.setQuantity(newQty);
-        return mapToResponse(inventoryRepository.save(inventory));
+        Inventory savedInventory = inventoryRepository.save(inventory);
+        if (quantityDelta != 0) {
+            MovementType type = quantityDelta > 0 ? MovementType.IN : MovementType.OUT;
+            stockMovementService.logMovement(medicineId, null, type, Math.abs(quantityDelta), null);
+        }
+        return mapToResponse(savedInventory);
     }
 
     private InventoryResponse mapToResponse(Inventory inventory) {
