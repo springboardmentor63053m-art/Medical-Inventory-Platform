@@ -6,7 +6,7 @@ import {
   Truck, 
   ClipboardList, 
   AlertTriangle, 
-  DollarSign,
+  IndianRupee,
   TrendingDown
 } from 'lucide-react';
 
@@ -35,8 +35,8 @@ const Dashboard = () => {
   }, []);
 
   const formatCurrency = (val) => {
-    if (val === undefined || val === null) return '$0.00';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+    if (val === undefined || val === null) return '₹0.00';
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
   };
 
   if (loading) {
@@ -78,7 +78,7 @@ const Dashboard = () => {
             <span className="stat-value">{formatCurrency(metrics?.totalInventoryValue)}</span>
           </div>
           <div className="stat-icon">
-            <DollarSign size={24} />
+            <IndianRupee size={24} />
           </div>
         </div>
 

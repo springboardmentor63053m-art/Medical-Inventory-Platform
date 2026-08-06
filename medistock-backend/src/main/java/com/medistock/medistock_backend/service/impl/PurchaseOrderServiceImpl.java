@@ -125,8 +125,9 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         order.setStatus(status);
 
-        // If status changes to RECEIVED, update inventory stock
-        if (oldStatus != OrderStatus.RECEIVED && status == OrderStatus.RECEIVED) {
+        // If status changes to APPROVED or RECEIVED (and was not previously APPROVED or RECEIVED), update inventory stock
+        if ((status == OrderStatus.APPROVED || status == OrderStatus.RECEIVED)
+                && oldStatus != OrderStatus.APPROVED && oldStatus != OrderStatus.RECEIVED) {
             for (PurchaseOrderItem item : order.getItems()) {
                 inventoryService.updateStockQuantity(item.getMedicine().getId(), item.getQuantity());
             }

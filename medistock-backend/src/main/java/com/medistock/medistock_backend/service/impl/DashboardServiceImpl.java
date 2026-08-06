@@ -59,6 +59,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .totalPurchaseOrders(totalOrders)
                 .lowStockCount(lowStockCount)
                 .totalInventoryValue(totalValue)
+                .currency("INR")
                 .lowStockItems(lowStockItems)
                 .recentOrders(recentOrders)
                 .build();
