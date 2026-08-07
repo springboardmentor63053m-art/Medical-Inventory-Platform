@@ -1,6 +1,7 @@
 package com.medistock.medistock_backend.controller;
 
 import com.medistock.medistock_backend.dto.ApiResponse;
+import com.medistock.medistock_backend.dto.MedicineFilterRequest;
 import com.medistock.medistock_backend.dto.MedicineRequest;
 import com.medistock.medistock_backend.dto.MedicineResponse;
 import com.medistock.medistock_backend.service.MedicineService;
@@ -20,8 +21,12 @@ public class MedicineController {
     private final MedicineService medicineService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<MedicineResponse>>> getAllMedicines() {
-        return ResponseEntity.ok(ApiResponse.success("Medicines retrieved successfully", medicineService.getAllMedicines()));
+    public ResponseEntity<ApiResponse<?>> getAllMedicines(MedicineFilterRequest filter) {
+        if (filter.getPage() == null || filter.getSize() == null) {
+            return ResponseEntity.ok(ApiResponse.success("Medicines retrieved successfully", medicineService.getAllMedicinesList(filter)));
+        } else {
+            return ResponseEntity.ok(ApiResponse.success("Medicines retrieved successfully", medicineService.getAllMedicines(filter)));
+        }
     }
 
     @GetMapping("/{id}")

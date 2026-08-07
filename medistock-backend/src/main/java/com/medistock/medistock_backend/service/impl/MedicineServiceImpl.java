@@ -1,6 +1,7 @@
 package com.medistock.medistock_backend.service.impl;
 
 import com.medistock.medistock_backend.dto.CategoryDto;
+import com.medistock.medistock_backend.dto.MedicineFilterRequest;
 import com.medistock.medistock_backend.dto.MedicineRequest;
 import com.medistock.medistock_backend.dto.MedicineResponse;
 import com.medistock.medistock_backend.dto.SupplierDto;
@@ -8,6 +9,7 @@ import com.medistock.medistock_backend.entity.Category;
 import com.medistock.medistock_backend.entity.Inventory;
 import com.medistock.medistock_backend.entity.Medicine;
 import com.medistock.medistock_backend.entity.Supplier;
+import com.medistock.medistock_backend.entity.StockStatus;
 import com.medistock.medistock_backend.exception.BadRequestException;
 import com.medistock.medistock_backend.exception.ResourceNotFoundException;
 import com.medistock.medistock_backend.repository.CategoryRepository;
@@ -18,9 +20,15 @@ import com.medistock.medistock_backend.entity.MovementType;
 import com.medistock.medistock_backend.repository.SupplierRepository;
 import com.medistock.medistock_backend.service.MedicineService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,10 +42,78 @@ public class MedicineServiceImpl implements MedicineService {
     private final InventoryRepository inventoryRepository;
     private final StockMovementService stockMovementService;
 
+    @Value("${inventory.near-expiry-days:30}")
+    private int nearExpiryDays;
+
     @Override
     @Transactional(readOnly = true)
-    public List<MedicineResponse> getAllMedicines() {
-        return medicineRepository.findAll().stream()
+    public Page<MedicineResponse> getAllMedicines(MedicineFilterRequest filter) {
+        int pageNum = filter.getPage() != null ? filter.getPage() : 0;
+        int pageSize = filter.getSize() != null ? filter.getSize() : 10;
+
+        Sort sort = Sort.unsorted();
+        if (filter.getSortBy() != null) {
+            String sortByProperty = "name"; // Default sort property
+            switch (filter.getSortBy()) {
+                case NAME:
+                    sortByProperty = "name";
+                    break;
+                case QUANTITY:
+                    sortByProperty = "inventory.quantity";
+                    break;
+                case EXPIRY_DATE:
+                    sortByProperty = "expiryDate";
+                    break;
+                case CATEGORY:
+                    sortByProperty = "category.name";
+                    break;
+                case SUPPLIER:
+                    sortByProperty = "supplier.name";
+                    break;
+            }
+
+            Sort.Direction direction = Sort.Direction.ASC;
+            if (filter.getSortDirection() != null && filter.getSortDirection() == com.medistock.medistock_backend.entity.SortDirection.DESC) {
+                direction = Sort.Direction.DESC;
+            }
+            sort = Sort.by(direction, sortByProperty);
+        }
+
+        Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
+        LocalDate today = LocalDate.now();
+        LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
+        String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
+
+        Page<Medicine> page = medicineRepository.filterMedicines(
+            filter.getSearch(),
+            filter.getCategoryId(),
+            filter.getSupplierId(),
+            statusStr,
+            today,
+            nearExpiryDate,
+            pageable
+        );
+
+        return page.map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MedicineResponse> getAllMedicinesList(MedicineFilterRequest filter) {
+        LocalDate today = LocalDate.now();
+        LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
+        String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
+
+        List<Medicine> list = medicineRepository.filterMedicinesList(
+            filter.getSearch(),
+            filter.getCategoryId(),
+            filter.getSupplierId(),
+            statusStr,
+            today,
+            nearExpiryDate
+        );
+
+        return list.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -162,6 +238,28 @@ public class MedicineServiceImpl implements MedicineService {
         medicineRepository.deleteById(id);
     }
 
+    private StockStatus calculateStockStatus(Medicine medicine) {
+        Integer quantity = medicine.getInventory() != null ? medicine.getInventory().getQuantity() : 0;
+        Integer reorderLevel = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
+        LocalDate expiryDate = medicine.getExpiryDate();
+        LocalDate today = LocalDate.now();
+        LocalDate nearExpiryLimit = today.plusDays(nearExpiryDays);
+
+        if (expiryDate != null && expiryDate.isBefore(today)) {
+            return StockStatus.EXPIRED;
+        }
+        if (expiryDate != null && !expiryDate.isBefore(today) && !expiryDate.isAfter(nearExpiryLimit)) {
+            return StockStatus.NEAR_EXPIRY;
+        }
+        if (quantity == 0) {
+            return StockStatus.OUT_OF_STOCK;
+        }
+        if (quantity <= reorderLevel) {
+            return StockStatus.LOW_STOCK;
+        }
+        return StockStatus.AVAILABLE;
+    }
+
     private MedicineResponse mapToResponse(Medicine medicine) {
         CategoryDto categoryDto = medicine.getCategory() != null ?
                 CategoryDto.builder()
@@ -196,6 +294,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .supplier(supplierDto)
                 .currentStock(stock)
                 .reorderLevel(reorder)
+                .stockStatus(calculateStockStatus(medicine))
                 .build();
     }
 }

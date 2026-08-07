@@ -23,4 +23,10 @@ public class DashboardSummaryDto {
     private String currency = "INR";
     private List<InventoryResponse> lowStockItems;
     private List<PurchaseOrderResponse> recentOrders;
+    
+    private long availableMedicinesCount;
+    private long lowStockMedicinesCount;
+    private long outOfStockMedicinesCount;
+    private long nearExpiryMedicinesCount;
+    private long expiredMedicinesCount;
 }

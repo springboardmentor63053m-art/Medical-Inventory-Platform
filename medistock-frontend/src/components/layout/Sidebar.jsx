@@ -1,13 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { 
-  LayoutDashboard, 
-  Pill, 
-  Layers, 
-  Truck, 
-  Boxes, 
-  ShoppingCart, 
+import {
+  LayoutDashboard,
+  Pill,
+  Layers,
+  Truck,
+  Boxes,
+  ShoppingCart,
   Users,
   Lock
 } from 'lucide-react';
@@ -22,14 +22,14 @@ export const Sidebar = ({ isCollapsed }) => {
     { label: 'Medicines', path: '/admin/medicines', icon: Pill },
     { label: 'Categories', path: '/admin/categories', icon: Layers },
     { label: 'Suppliers', path: '/admin/suppliers', icon: Truck },
-    { label: 'Inventory', path: '/admin/inventory', icon: Boxes },
+
     { label: 'Purchase Orders', path: '/admin/orders', icon: ShoppingCart },
     { label: 'Users', path: '/admin/users', icon: Users },
   ];
 
   const pharmacistNav = [
     { label: 'Pharmacist Dashboard', path: '/pharmacist/dashboard', icon: LayoutDashboard },
-    { label: 'Stock Search', path: '/pharmacist/stock', icon: Boxes },
+
     { label: 'Medicines Catalogue', path: '/pharmacist/medicines', icon: Pill },
     { label: 'Orders', path: '/pharmacist/orders', icon: ShoppingCart },
   ];

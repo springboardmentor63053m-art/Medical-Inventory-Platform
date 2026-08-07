@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../api/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Edit2, Trash2, Search, X, Filter } from 'lucide-react';
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Search, 
+  X, 
+  Filter, 
+  ChevronUp, 
+  ChevronDown, 
+  ChevronsUpDown, 
+  RotateCcw 
+} from 'lucide-react';
 
 const Medicines = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -12,9 +26,19 @@ const Medicines = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
-  const [selectedStockStatus, setSelectedStockStatus] = useState('');
+  const [selectedStockStatus, setSelectedStockStatus] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+
+  // Sorting State
+  const [sortField, setSortField] = useState('');
+  const [sortDirection, setSortDirection] = useState('');
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -41,18 +65,42 @@ const Medicines = () => {
   // Permission Checks: ADMIN and PHARMACIST can modify
   const canModify = user?.roles?.some(role => ['ROLE_ADMIN', 'ROLE_PHARMACIST'].includes(role));
 
-  const fetchData = async () => {
+  const fetchInitialFilters = async () => {
     try {
-      setLoading(true);
-      const [medRes, catRes, supRes] = await Promise.all([
-        api.get('/medicines'),
+      const [catRes, supRes] = await Promise.all([
         api.get('/categories'),
         api.get('/suppliers')
       ]);
-
-      if (medRes.data.success) setMedicines(medRes.data.data);
       if (catRes.data.success) setCategories(catRes.data.data);
       if (supRes.data.success) setSuppliers(supRes.data.data);
+    } catch (err) {
+      console.error('Error loading filter options', err);
+    }
+  };
+
+  const fetchMedicines = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page: currentPage - 1,
+        size: pageSize
+      };
+      if (searchQuery.trim()) params.search = searchQuery;
+      if (selectedCategory) params.categoryId = selectedCategory;
+      if (selectedSupplier) params.supplierId = selectedSupplier;
+      if (selectedStockStatus && selectedStockStatus !== 'ALL') params.stockStatus = selectedStockStatus;
+      if (sortField) {
+        params.sortBy = sortField;
+        params.sortDirection = sortDirection || 'ASC';
+      }
+
+      const response = await api.get('/medicines', { params });
+      if (response.data.success) {
+        const pageData = response.data.data;
+        setMedicines(pageData.content || []);
+        setTotalPages(pageData.totalPages || 1);
+        setTotalElements(pageData.totalElements || 0);
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Error loading medicines catalog');
     } finally {
@@ -61,8 +109,71 @@ const Medicines = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchInitialFilters();
   }, []);
+
+  // Sync dashboard links quick actions
+  useEffect(() => {
+    if (location.state && location.state.filterStatus) {
+      setSelectedStockStatus(location.state.filterStatus);
+      setSearchQuery('');
+      setSelectedCategory('');
+      setSelectedSupplier('');
+      setSortField('');
+      setSortDirection('');
+      setCurrentPage(1);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Dynamic filter trigger with debouncing on search query
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      fetchMedicines();
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [currentPage, pageSize, searchQuery, selectedCategory, selectedSupplier, selectedStockStatus, sortField, sortDirection]);
+
+  // Whenever filters change (except pagination), reset page to 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, selectedSupplier, selectedStockStatus]);
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('');
+    setSelectedSupplier('');
+    setSelectedStockStatus('ALL');
+    setSortField('');
+    setSortDirection('');
+    setCurrentPage(1);
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      if (sortDirection === 'ASC') {
+        setSortDirection('DESC');
+      } else {
+        setSortField('');
+        setSortDirection('');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('ASC');
+    }
+    setCurrentPage(1);
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) {
+      return <ChevronsUpDown size={14} style={{ color: 'var(--text-secondary)', opacity: 0.5 }} />;
+    }
+    if (sortDirection === 'ASC') {
+      return <ChevronUp size={14} style={{ color: 'var(--primary)' }} />;
+    }
+    return <ChevronDown size={14} style={{ color: 'var(--primary)' }} />;
+  };
 
   const openCreateModal = () => {
     setEditingMedicine(null);
@@ -99,8 +210,8 @@ const Medicines = () => {
       supplierId: medicine.supplier?.id || '',
       initialQuantity: medicine.currentStock || 0,
       reorderLevel: medicine.reorderLevel || 10,
-      maxQuantity: 100, // standard default
-      locationRack: '' // updated via inventory
+      maxQuantity: 100,
+      locationRack: ''
     });
     setFormError('');
     setModalOpen(true);
@@ -139,7 +250,7 @@ const Medicines = () => {
       if (editingMedicine) {
         const response = await api.put(`/medicines/${editingMedicine.id}`, payload);
         if (response.data.success) {
-          setMedicines(prev => prev.map(m => m.id === editingMedicine.id ? response.data.data : m));
+          fetchMedicines();
           setModalOpen(false);
         } else {
           setFormError(response.data.message || 'Failed to update medicine');
@@ -147,7 +258,7 @@ const Medicines = () => {
       } else {
         const response = await api.post('/medicines', payload);
         if (response.data.success) {
-          setMedicines(prev => [...prev, response.data.data]);
+          fetchMedicines();
           setModalOpen(false);
         } else {
           setFormError(response.data.message || 'Failed to create medicine');
@@ -165,7 +276,7 @@ const Medicines = () => {
       try {
         const response = await api.delete(`/medicines/${id}`);
         if (response.data.success) {
-          setMedicines(prev => prev.filter(m => m.id !== id));
+          fetchMedicines();
         } else {
           alert(response.data.message || 'Deletion failed');
         }
@@ -175,33 +286,56 @@ const Medicines = () => {
     }
   };
 
-  const filteredMedicines = medicines.filter(m => {
-    const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = !query || (
-      (m.name && m.name.toLowerCase().includes(query)) ||
-      (m.code && m.code.toLowerCase().includes(query)) ||
-      (m.genericName && m.genericName.toLowerCase().includes(query)) ||
-      (m.manufacturer && m.manufacturer.toLowerCase().includes(query)) ||
-      (m.batchNumber && m.batchNumber.toLowerCase().includes(query))
-    );
+  const renderStockBadge = (med) => {
+    const status = med.stockStatus;
+    if (status === 'AVAILABLE') {
+      return <span className="badge badge-success">Available</span>;
+    }
+    if (status === 'NEAR_EXPIRY') {
+      return <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }}>Near Expiry</span>;
+    }
+    if (status === 'LOW_STOCK') {
+      return <span className="badge" style={{ backgroundColor: 'rgba(249, 115, 22, 0.15)', color: '#f97316', fontWeight: 600 }}>Low Stock</span>;
+    }
+    if (status === 'EXPIRED') {
+      return <span className="badge badge-danger pulse-red">Expired</span>;
+    }
+    if (status === 'OUT_OF_STOCK') {
+      return <span className="badge" style={{ backgroundColor: 'rgba(107, 114, 128, 0.15)', color: '#9ca3af', fontWeight: 600 }}>Out Of Stock</span>;
+    }
+    return <span className="badge">{status}</span>;
+  };
 
-    const matchesCategory = selectedCategory === '' || m.category?.id?.toString() === selectedCategory;
-    const matchesSupplier = selectedSupplier === '' || m.supplier?.id?.toString() === selectedSupplier;
-
-    const isLowStock = (m.currentStock || 0) <= (m.reorderLevel || 0);
-    const matchesStockStatus = 
-      selectedStockStatus === '' ||
-      (selectedStockStatus === 'AVAILABLE' && !isLowStock) ||
-      (selectedStockStatus === 'LOW_STOCK' && isLowStock);
-
-    return matchesSearch && matchesCategory && matchesSupplier && matchesStockStatus;
-  });
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - 2);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button
+          key={i}
+          className={`btn ${currentPage === i ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setCurrentPage(i)}
+          style={{ padding: '6px 12px', fontSize: '0.85rem', minWidth: '32px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          {i}
+        </button>
+      );
+    }
+    return pages;
+  };
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
   };
 
-  if (loading) {
+  if (loading && medicines.length === 0) {
     return <div style={{ color: 'var(--text-secondary)' }}>Loading catalog...</div>;
   }
 
@@ -222,7 +356,7 @@ const Medicines = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <select 
             value={selectedCategory} 
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -250,10 +384,23 @@ const Medicines = () => {
             onChange={(e) => setSelectedStockStatus(e.target.value)}
             style={{ width: '160px', height: '42px' }}
           >
-            <option value="">All Stock Status</option>
+            <option value="ALL">All Stock Status</option>
             <option value="AVAILABLE">Available</option>
             <option value="LOW_STOCK">Low Stock</option>
+            <option value="OUT_OF_STOCK">Out Of Stock</option>
+            <option value="NEAR_EXPIRY">Near Expiry</option>
+            <option value="EXPIRED">Expired</option>
           </select>
+
+          <button 
+            className="btn btn-secondary" 
+            onClick={handleResetFilters} 
+            title="Reset Filters"
+            style={{ height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+          >
+            <RotateCcw size={16} />
+            <span>Reset</span>
+          </button>
 
           {canModify && (
             <button className="btn btn-primary" onClick={openCreateModal} style={{ height: '42px' }}>
@@ -265,29 +412,61 @@ const Medicines = () => {
       </div>
 
       <div className="card">
-        {filteredMedicines.length === 0 ? (
+        {medicines.length === 0 ? (
           <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '40px 0' }}>
             No medicines listed.
           </div>
         ) : (
-          <div className="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Brand Name</th>
-                  <th>Generic Name</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Expiry Date</th>
-                  {canModify && <th style={{ width: '120px', textAlign: 'right' }}>Actions</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMedicines.map((med) => {
-                  const isLow = med.currentStock <= med.reorderLevel;
-                  return (
+          <>
+            <div className="table-responsive" style={{ maxHeight: 'calc(100vh - 290px)', overflowY: 'auto' }}>
+              <table style={{ position: 'relative' }}>
+                <thead>
+                  <tr>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Code</th>
+                    <th 
+                      onClick={() => handleSort('NAME')} 
+                      style={{ cursor: 'pointer', position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', userSelect: 'none' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        Brand Name
+                        {getSortIcon('NAME')}
+                      </div>
+                    </th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Generic Formula</th>
+                    <th 
+                      onClick={() => handleSort('CATEGORY')} 
+                      style={{ cursor: 'pointer', position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', userSelect: 'none' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        Category
+                        {getSortIcon('CATEGORY')}
+                      </div>
+                    </th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Price</th>
+                    <th 
+                      onClick={() => handleSort('QUANTITY')} 
+                      style={{ cursor: 'pointer', position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', userSelect: 'none' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        Stock
+                        {getSortIcon('QUANTITY')}
+                      </div>
+                    </th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Status</th>
+                    <th 
+                      onClick={() => handleSort('EXPIRY_DATE')} 
+                      style={{ cursor: 'pointer', position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', userSelect: 'none' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        Expiry Date
+                        {getSortIcon('EXPIRY_DATE')}
+                      </div>
+                    </th>
+                    {canModify && <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', width: '120px', textAlign: 'right' }}>Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {medicines.map((med) => (
                     <tr key={med.id}>
                       <td><span className="badge badge-info">{med.code}</span></td>
                       <td>
@@ -297,11 +476,8 @@ const Medicines = () => {
                       <td style={{ color: 'var(--text-secondary)' }}>{med.genericName || 'N/A'}</td>
                       <td>{med.category?.name || 'Unassigned'}</td>
                       <td><strong>{formatCurrency(med.price)}</strong></td>
-                      <td>
-                        <span className={`badge ${isLow ? 'badge-danger pulse-red' : 'badge-success'}`}>
-                          {med.currentStock || 0} unit(s)
-                        </span>
-                      </td>
+                      <td><strong>{med.currentStock || 0} unit(s)</strong></td>
+                      <td>{renderStockBadge(med)}</td>
                       <td>{med.expiryDate || 'N/A'}</td>
                       {canModify && (
                         <td>
@@ -324,11 +500,39 @@ const Medicines = () => {
                         </td>
                       )}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '12px 16px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--border-radius-md)', borderTop: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Showing <strong>{((currentPage - 1) * pageSize) + 1}</strong> to <strong>{Math.min(currentPage * pageSize, totalElements)}</strong> of <strong>{totalElements}</strong> medicines
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+                  disabled={currentPage === 1}
+                  style={{ padding: '6px 12px', fontSize: '0.85rem', height: '34px' }}
+                >
+                  Previous
+                </button>
+                
+                {renderPageNumbers()}
+                
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+                  disabled={currentPage === totalPages}
+                  style={{ padding: '6px 12px', fontSize: '0.85rem', height: '34px' }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

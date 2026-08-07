@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Pill, 
-  Tags, 
-  Truck, 
-  Warehouse, 
-  ClipboardList, 
-  Users as UsersIcon, 
+import {
+  LayoutDashboard,
+  Pill,
+  Tags,
+  Truck,
+  Warehouse,
+  ClipboardList,
+  Users as UsersIcon,
   LogOut,
   Activity
 } from 'lucide-react';
@@ -42,12 +42,7 @@ const Layout = () => {
       icon: <Truck />,
       roles: ['ROLE_ADMIN', 'ROLE_STAFF']
     },
-    {
-      path: '/inventory',
-      label: 'Inventory',
-      icon: <Warehouse />,
-      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_USER', 'ROLE_STAFF']
-    },
+
     {
       path: '/stock-movements',
       label: 'Stock Movements',
@@ -69,7 +64,7 @@ const Layout = () => {
   ];
 
   // Filter items matching user's roles
-  const filteredMenuItems = menuItems.filter(item => 
+  const filteredMenuItems = menuItems.filter(item =>
     item.roles.some(role => user?.roles?.includes(role))
   );
 
@@ -91,9 +86,9 @@ const Layout = () => {
           {filteredMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
-              <Link 
-                key={item.path} 
-                to={item.path} 
+              <Link
+                key={item.path}
+                to={item.path}
                 className={`menu-item ${isActive ? 'active' : ''}`}
               >
                 {item.icon}
@@ -113,9 +108,9 @@ const Layout = () => {
               <div className="user-role">{user?.roles?.join(', ')}</div>
             </div>
           </div>
-          <button 
-            onClick={logout} 
-            className="btn btn-secondary" 
+          <button
+            onClick={logout}
+            className="btn btn-secondary"
             style={{ width: '100%', gap: '8px' }}
           >
             <LogOut size={16} />
