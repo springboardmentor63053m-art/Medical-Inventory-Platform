@@ -1,5 +1,6 @@
 package com.medistock.medistock_backend.dto;
 
+import com.medistock.medistock_backend.entity.StockStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +26,5 @@ public class MedicineResponse {
     private SupplierDto supplier;
     private Integer currentStock;
     private Integer reorderLevel;
+    private StockStatus stockStatus;
 }

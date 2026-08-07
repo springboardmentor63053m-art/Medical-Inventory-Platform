@@ -1,12 +1,15 @@
 package com.medistock.medistock_backend.service;
 
+import com.medistock.medistock_backend.dto.MedicineFilterRequest;
 import com.medistock.medistock_backend.dto.MedicineRequest;
 import com.medistock.medistock_backend.dto.MedicineResponse;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
 public interface MedicineService {
-    List<MedicineResponse> getAllMedicines();
+    Page<MedicineResponse> getAllMedicines(MedicineFilterRequest filter);
+    List<MedicineResponse> getAllMedicinesList(MedicineFilterRequest filter);
     MedicineResponse getMedicineById(Long id);
     MedicineResponse getMedicineByCode(String code);
     List<MedicineResponse> searchMedicines(String query);

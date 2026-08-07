@@ -9,10 +9,12 @@ import com.medistock.medistock_backend.service.DashboardService;
 import com.medistock.medistock_backend.service.InventoryService;
 import com.medistock.medistock_backend.service.PurchaseOrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +30,9 @@ public class DashboardServiceImpl implements DashboardService {
     private final InventoryService inventoryService;
     private final PurchaseOrderService purchaseOrderService;
 
+    @Value("${inventory.near-expiry-days:30}")
+    private int nearExpiryDays;
+
     @Override
     @Transactional(readOnly = true)
     public DashboardSummaryDto getDashboardSummary() {
@@ -36,8 +41,16 @@ public class DashboardServiceImpl implements DashboardService {
         long totalSuppliers = supplierRepository.count();
         long totalOrders = purchaseOrderRepository.count();
 
+        LocalDate today = LocalDate.now();
+        LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
+
+        long availableCount = medicineRepository.countAvailableMedicines(nearExpiryDate);
+        long lowStockMedicinesCount = medicineRepository.countLowStockMedicines(nearExpiryDate);
+        long outOfStockCount = medicineRepository.countOutOfStockMedicines(today);
+        long nearExpiryCount = medicineRepository.countNearExpiryMedicines(today, nearExpiryDate);
+        long expiredCount = medicineRepository.countExpiredMedicines(today);
+
         List<InventoryResponse> lowStockItems = inventoryService.getLowStockInventory();
-        long lowStockCount = lowStockItems.size();
 
         // Calculate total inventory monetary value
         List<Inventory> allInventory = inventoryRepository.findAll();
@@ -57,11 +70,16 @@ public class DashboardServiceImpl implements DashboardService {
                 .totalMedicines(totalMedicines)
                 .totalSuppliers(totalSuppliers)
                 .totalPurchaseOrders(totalOrders)
-                .lowStockCount(lowStockCount)
+                .lowStockCount(lowStockMedicinesCount) // Keep synced with low stock definition
                 .totalInventoryValue(totalValue)
                 .currency("INR")
                 .lowStockItems(lowStockItems)
                 .recentOrders(recentOrders)
+                .availableMedicinesCount(availableCount)
+                .lowStockMedicinesCount(lowStockMedicinesCount)
+                .outOfStockMedicinesCount(outOfStockCount)
+                .nearExpiryMedicinesCount(nearExpiryCount)
+                .expiredMedicinesCount(expiredCount)
                 .build();
     }
 }

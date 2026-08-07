@@ -8,7 +8,6 @@ import { PharmacistDashboard } from '../pages/pharmacist/PharmacistDashboard';
 import { CategoryManagement } from '../pages/categories/CategoryManagement';
 import { MedicineManagement } from '../pages/medicines/MedicineManagement';
 import { SupplierManagement } from '../pages/suppliers/SupplierManagement';
-import { InventoryManagement } from '../pages/inventory/InventoryManagement';
 import { PurchaseOrderManagement } from '../pages/orders/PurchaseOrderManagement';
 import { UserManagement } from '../pages/users/UserManagement';
 import { Unauthorized } from '../pages/Unauthorized';
@@ -57,7 +56,7 @@ export const AppRoutes = () => {
         <Route path="medicines" element={<MedicineManagement />} />
         <Route path="categories" element={<CategoryManagement />} />
         <Route path="suppliers" element={<SupplierManagement />} />
-        <Route path="inventory" element={<InventoryManagement />} />
+
         <Route path="orders" element={<PurchaseOrderManagement />} />
         <Route path="users" element={<UserManagement />} />
       </Route>
@@ -74,7 +73,7 @@ export const AppRoutes = () => {
         }
       >
         <Route path="dashboard" element={<PharmacistDashboard />} />
-        <Route path="stock" element={<InventoryManagement />} />
+
         <Route path="medicines" element={<MedicineManagement />} />
         <Route path="categories" element={<CategoryManagement />} />
         <Route path="orders" element={<PurchaseOrderManagement />} />

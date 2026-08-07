@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
 import { 
   Users, 
@@ -7,13 +9,22 @@ import {
   ClipboardList, 
   AlertTriangle, 
   IndianRupee,
-  TrendingDown
+  TrendingDown,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -43,7 +54,7 @@ const Dashboard = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div className="stats-grid">
-          {[1, 2, 3, 4].map(n => (
+          {[1, 2, 3, 4, 5, 6, 7].map(n => (
             <div key={n} className="card" style={{ height: '100px', display: 'flex', alignItems: 'center' }}>
               <div style={{ width: '100%', height: '20px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }} />
             </div>
@@ -60,12 +71,19 @@ const Dashboard = () => {
 
   return (
     <div>
-      {/* Statistics Header cards */}
-      <div className="stats-grid">
+      {/* Inventory Metrics Row */}
+      <h3 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'Outfit, sans-serif' }}>Inventory Metrics</h3>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginBottom: '28px' }}>
         <div className="card stat-card blue">
           <div className="stat-info">
             <span className="stat-label">Total Medicines</span>
             <span className="stat-value">{metrics?.totalMedicines || 0}</span>
+            <span 
+              onClick={() => navigate('/medicines', { state: { filterStatus: 'ALL' } })} 
+              style={{ fontSize: '0.8rem', color: 'var(--primary)', cursor: 'pointer', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              View Catalogue <ArrowRight size={12} />
+            </span>
           </div>
           <div className="stat-icon">
             <Pill size={24} />
@@ -76,54 +94,133 @@ const Dashboard = () => {
           <div className="stat-info">
             <span className="stat-label">Inventory Valuation</span>
             <span className="stat-value">{formatCurrency(metrics?.totalInventoryValue)}</span>
+            <span 
+              style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              Total Assets Value
+            </span>
           </div>
           <div className="stat-icon">
             <IndianRupee size={24} />
           </div>
         </div>
+      </div>
+
+      {/* Stock Level Metrics Row */}
+      <h3 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'Outfit, sans-serif' }}>Stock Metrics</h3>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginBottom: '28px' }}>
+        <div className="card stat-card emerald">
+          <div className="stat-info">
+            <span className="stat-label">Available Medicines</span>
+            <span className="stat-value">{metrics?.availableMedicinesCount || 0}</span>
+            <span 
+              onClick={() => navigate('/medicines', { state: { filterStatus: 'AVAILABLE' } })} 
+              style={{ fontSize: '0.8rem', color: 'var(--success)', cursor: 'pointer', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              View Available <ArrowRight size={12} />
+            </span>
+          </div>
+          <div className="stat-icon">
+            <CheckCircle size={24} />
+          </div>
+        </div>
 
         <div className="card stat-card amber">
           <div className="stat-info">
-            <span className="stat-label">Low Stock Alarms</span>
-            <span className="stat-value">{metrics?.lowStockCount || 0}</span>
+            <span className="stat-label">Low Stock Medicines</span>
+            <span className="stat-value">{metrics?.lowStockMedicinesCount || 0}</span>
+            <span 
+              onClick={() => navigate('/medicines', { state: { filterStatus: 'LOW_STOCK' } })} 
+              style={{ fontSize: '0.8rem', color: 'var(--warning)', cursor: 'pointer', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              Restock Now <ArrowRight size={12} />
+            </span>
           </div>
           <div className="stat-icon">
             <TrendingDown size={24} />
           </div>
         </div>
 
-        <div className="card stat-card rose">
+        <div className="card stat-card blue" style={{ borderColor: 'rgba(107, 114, 128, 0.3)' }}>
           <div className="stat-info">
-            <span className="stat-label">Purchase Orders</span>
-            <span className="stat-value">{metrics?.totalPurchaseOrders || 0}</span>
+            <span className="stat-label">Out Of Stock Medicines</span>
+            <span className="stat-value">{metrics?.outOfStockMedicinesCount || 0}</span>
+            <span 
+              onClick={() => navigate('/medicines', { state: { filterStatus: 'OUT_OF_STOCK' } })} 
+              style={{ fontSize: '0.8rem', color: '#9ca3af', cursor: 'pointer', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              View Out Of Stock <ArrowRight size={12} />
+            </span>
+          </div>
+          <div className="stat-icon" style={{ color: '#9ca3af', backgroundColor: 'rgba(107, 114, 128, 0.1)', borderColor: 'rgba(107, 114, 128, 0.2)' }}>
+            <XCircle size={24} />
+          </div>
+        </div>
+      </div>
+
+      {/* Expiry Metrics Row */}
+      <h3 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'Outfit, sans-serif' }}>Expiry Metrics</h3>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginBottom: '28px' }}>
+        <div className="card stat-card amber">
+          <div className="stat-info">
+            <span className="stat-label">Near Expiry Medicines</span>
+            <span className="stat-value">{metrics?.nearExpiryMedicinesCount || 0}</span>
+            <span 
+              onClick={() => navigate('/medicines', { state: { filterStatus: 'NEAR_EXPIRY' } })} 
+              style={{ fontSize: '0.8rem', color: 'var(--warning)', cursor: 'pointer', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              Monitor Expiry <ArrowRight size={12} />
+            </span>
           </div>
           <div className="stat-icon">
-            <ClipboardList size={24} />
+            <Clock size={24} />
+          </div>
+        </div>
+
+        <div className="card stat-card rose">
+          <div className="stat-info">
+            <span className="stat-label">Expired Medicines</span>
+            <span className="stat-value">{metrics?.expiredMedicinesCount || 0}</span>
+            <span 
+              onClick={() => navigate('/medicines', { state: { filterStatus: 'EXPIRED' } })} 
+              style={{ fontSize: '0.8rem', color: 'var(--danger)', cursor: 'pointer', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              Dispose Expired <ArrowRight size={12} />
+            </span>
+          </div>
+          <div className="stat-icon">
+            <AlertCircle size={24} />
           </div>
         </div>
       </div>
 
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '28px' }}>
-        <div className="card stat-card blue" style={{ padding: '16px' }}>
-          <div className="stat-info">
-            <span className="stat-label">Registered Suppliers</span>
-            <span className="stat-value" style={{ fontSize: '1.4rem' }}>{metrics?.totalSuppliers || 0}</span>
-          </div>
-          <div className="stat-icon" style={{ width: '38px', height: '38px' }}>
-            <Truck size={18} />
-          </div>
-        </div>
+      {/* Auxiliary Metrics Row */}
+      {isAdmin && (
+        <>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'Outfit, sans-serif' }}>System Registry</h3>
+          <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '28px' }}>
+            <div className="card stat-card blue" style={{ padding: '16px' }}>
+              <div className="stat-info">
+                <span className="stat-label">Registered Suppliers</span>
+                <span className="stat-value" style={{ fontSize: '1.4rem' }}>{metrics?.totalSuppliers || 0}</span>
+              </div>
+              <div className="stat-icon" style={{ width: '38px', height: '38px' }}>
+                <Truck size={18} />
+              </div>
+            </div>
 
-        <div className="card stat-card emerald" style={{ padding: '16px' }}>
-          <div className="stat-info">
-            <span className="stat-label">Registered Users</span>
-            <span className="stat-value" style={{ fontSize: '1.4rem' }}>{metrics?.totalUsers || 0}</span>
+            <div className="card stat-card emerald" style={{ padding: '16px' }}>
+              <div className="stat-info">
+                <span className="stat-label">Registered Users</span>
+                <span className="stat-value" style={{ fontSize: '1.4rem' }}>{metrics?.totalUsers || 0}</span>
+              </div>
+              <div className="stat-icon" style={{ width: '38px', height: '38px' }}>
+                <Users size={18} />
+              </div>
+            </div>
           </div>
-          <div className="stat-icon" style={{ width: '38px', height: '38px' }}>
-            <Users size={18} />
-          </div>
-        </div>
-      </div>
+        </>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         {/* Low Stock Watch Section */}
