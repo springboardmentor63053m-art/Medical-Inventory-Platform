@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # MediStock — Medical Inventory Management Platform
 
 A full-stack web app for pharmacies, hospitals, and clinics to manage medicine
@@ -312,3 +313,8 @@ the codebase):
 Each of these follows the same layered structure (entity → repository →
 service → controller / component → page), so they're a natural continuation
 rather than a redesign.
+=======
+# Medical-Inventory-Platform
+Infosys Springboard Project
+
+>>>>>>> 3e4cae2702c03c87e5f5886a050bddcb2cc31691
