@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS expiry_trackings CASCADE;

@@ -11,6 +11,7 @@ import java.util.List;
 @Service
 public class ExpiryTrackingServiceImpl implements ExpiryTrackingService {
     private final ExpiryTrackingRepository repository;
+    private final com.medistock.medistockbackend.repository.InventoryRepository inventoryRepository;
 
     @Override
     public List<ExpiryTracking> findAll() {
@@ -34,11 +35,22 @@ public class ExpiryTrackingServiceImpl implements ExpiryTrackingService {
 
     @Override
     public List<ExpiryTracking> getUpcomingExpirys() {
-        return repository.findByStatus("EXPIRING_SOON");
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate threshold = today.plusDays(30);
+        
+        return inventoryRepository.findUpcomingExpiries(threshold).stream().map(inv -> {
+            ExpiryTracking mock = new ExpiryTracking();
+            mock.setId(inv.getId());
+            mock.setMedicineName(inv.getMedicine() != null ? inv.getMedicine().getName() : "Unknown Medicine");
+            mock.setExpiryDate(inv.getExpiryDate());
+            mock.setStatus(inv.getExpiryDate().isBefore(today) ? "Expired" : "Near Expiry");
+            return mock;
+        }).collect(java.util.stream.Collectors.toList());
     }
 
     @java.lang.SuppressWarnings("all")
-    public ExpiryTrackingServiceImpl(final ExpiryTrackingRepository repository) {
+    public ExpiryTrackingServiceImpl(final ExpiryTrackingRepository repository, final com.medistock.medistockbackend.repository.InventoryRepository inventoryRepository) {
         this.repository = repository;
+        this.inventoryRepository = inventoryRepository;
     }
 }

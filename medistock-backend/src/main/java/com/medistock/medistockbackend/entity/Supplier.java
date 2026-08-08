@@ -14,8 +14,10 @@ public class Supplier {
     private String name;
     private String contact;
     private String email;
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL)
     private List<Medicine> medicines;
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "supplier", cascade = CascadeType.ALL)
     private List<PurchaseOrder> purchaseOrders;
 

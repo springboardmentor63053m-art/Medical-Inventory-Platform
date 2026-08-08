@@ -9,4 +9,7 @@ public interface MedicineService {
     Medicine save(Medicine entity);
     void deleteById(Long id);
     List<Medicine> searchByName(String name);
+    List<Medicine> findByCategory(String category);
+    List<Medicine> findBySupplier(Long supplierId);
+    List<Medicine> filterByStockStatus(String status);
 }

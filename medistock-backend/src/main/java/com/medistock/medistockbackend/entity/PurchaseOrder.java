@@ -16,6 +16,7 @@ public class PurchaseOrder {
     private Supplier supplier;
     private LocalDateTime orderDate = LocalDateTime.now();
     private String status; // e.g., PENDING, COMPLETED, CANCELLED
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL)
     private List<PurchaseOrderItem> items;
 

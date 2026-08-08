@@ -12,6 +12,7 @@ public class Role {
     private Long id;
     @Column(nullable = false, unique = true)
     private String name;
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL)
     private List<User> users;
 

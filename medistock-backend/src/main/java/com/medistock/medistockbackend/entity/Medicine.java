@@ -13,15 +13,19 @@ public class Medicine {
     @Column(nullable = false)
     private String name;
     private String description;
+    private String category;
     @Column(nullable = false)
     private Double price;
     @ManyToOne
     @JoinColumn(name = "supplier_id")
     private Supplier supplier;
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "medicine", cascade = CascadeType.ALL)
     private List<Inventory> inventories;
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "medicine", cascade = CascadeType.ALL)
     private List<StockLog> stockLogs;
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "medicine", cascade = CascadeType.ALL)
     private List<PurchaseOrderItem> purchaseOrderItems;
 
@@ -38,6 +42,11 @@ public class Medicine {
     @java.lang.SuppressWarnings("all")
     public String getDescription() {
         return this.description;
+    }
+
+    @java.lang.SuppressWarnings("all")
+    public String getCategory() {
+        return this.category;
     }
 
     @java.lang.SuppressWarnings("all")
@@ -81,6 +90,11 @@ public class Medicine {
     }
 
     @java.lang.SuppressWarnings("all")
+    public void setCategory(final String category) {
+        this.category = category;
+    }
+
+    @java.lang.SuppressWarnings("all")
     public void setPrice(final Double price) {
         this.price = price;
     }
@@ -110,10 +124,11 @@ public class Medicine {
     }
 
     @java.lang.SuppressWarnings("all")
-    public Medicine(final Long id, final String name, final String description, final Double price, final Supplier supplier, final List<Inventory> inventories, final List<StockLog> stockLogs, final List<PurchaseOrderItem> purchaseOrderItems) {
+    public Medicine(final Long id, final String name, final String description, final String category, final Double price, final Supplier supplier, final List<Inventory> inventories, final List<StockLog> stockLogs, final List<PurchaseOrderItem> purchaseOrderItems) {
         this.id = id;
         this.name = name;
         this.description = description;
+        this.category = category;
         this.price = price;
         this.supplier = supplier;
         this.inventories = inventories;

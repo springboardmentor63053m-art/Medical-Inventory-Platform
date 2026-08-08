@@ -37,6 +37,27 @@ public class MedicineServiceImpl implements MedicineService {
         return repository.findByNameContainingIgnoreCase(name);
     }
 
+    @Override
+    public List<Medicine> findByCategory(String category) {
+        return repository.findByCategoryIgnoreCase(category);
+    }
+
+    @Override
+    public List<Medicine> findBySupplier(Long supplierId) {
+        return repository.findBySupplierId(supplierId);
+    }
+
+    @Override
+    public List<Medicine> filterByStockStatus(String status) {
+        if ("available".equalsIgnoreCase(status)) {
+            return repository.findAvailableMedicines();
+        } else if ("low".equalsIgnoreCase(status) || "low stock".equalsIgnoreCase(status)) {
+            return repository.findLowStockMedicines();
+        }
+        // If unknown status, return empty list or all, let's just return all for fallback or maybe empty
+        return java.util.Collections.emptyList();
+    }
+
     @java.lang.SuppressWarnings("all")
     public MedicineServiceImpl(final MedicineRepository repository) {
         this.repository = repository;

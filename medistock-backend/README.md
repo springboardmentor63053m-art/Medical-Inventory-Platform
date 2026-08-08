@@ -77,7 +77,7 @@ Open your terminal, navigate to the project root, and execute the following Mave
 mvn clean compile spring-boot:run
 ```
 
-The server will successfully initialize and bind to **Port 8081**.
+The server will successfully initialize and bind to **Port 8080**.
 
 ---
 
@@ -87,7 +87,7 @@ This project uses SpringDoc OpenAPI to dynamically generate interactive document
 
 Once the Spring Boot application is running, open your web browser and navigate to:
 
-> 🌐 **[http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html)**
+> 🌐 **[http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)**
 
 From the Swagger UI dashboard, you can:
 1. Register a new user via the `/api/auth/register` endpoint.

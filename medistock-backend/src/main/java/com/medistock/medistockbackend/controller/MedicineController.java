@@ -23,13 +23,36 @@ public class MedicineController {
     }
 
     @PostMapping
-    public ResponseEntity<Medicine> create(@RequestBody Medicine entity) {
+    public ResponseEntity<Medicine> create(@RequestBody com.medistock.medistockbackend.dto.MedicineRequestDto dto) {
+        Medicine entity = new Medicine();
+        entity.setName(dto.getName());
+        entity.setDescription(dto.getDescription());
+        entity.setCategory(dto.getCategory());
+        entity.setPrice(dto.getPrice());
+        if (dto.getSupplier() != null) {
+            com.medistock.medistockbackend.entity.Supplier supplier = new com.medistock.medistockbackend.entity.Supplier();
+            supplier.setId(dto.getSupplier().getId());
+            entity.setSupplier(supplier);
+        } else {
+            entity.setSupplier(null);
+        }
         return ResponseEntity.ok(service.save(entity));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Medicine> update(@PathVariable Long id, @RequestBody Medicine entity) {
-        entity.setId(id);
+    public ResponseEntity<Medicine> update(@PathVariable Long id, @RequestBody com.medistock.medistockbackend.dto.MedicineRequestDto dto) {
+        Medicine entity = service.findById(id);
+        entity.setName(dto.getName());
+        entity.setDescription(dto.getDescription());
+        entity.setCategory(dto.getCategory());
+        entity.setPrice(dto.getPrice());
+        if (dto.getSupplier() != null) {
+            com.medistock.medistockbackend.entity.Supplier supplier = new com.medistock.medistockbackend.entity.Supplier();
+            supplier.setId(dto.getSupplier().getId());
+            entity.setSupplier(supplier);
+        } else {
+            entity.setSupplier(null);
+        }
         return ResponseEntity.ok(service.save(entity));
     }
 
@@ -42,6 +65,21 @@ public class MedicineController {
     @GetMapping("/search")
     public ResponseEntity<List<Medicine>> searchByName(@RequestParam String name) {
         return ResponseEntity.ok(service.searchByName(name));
+    }
+
+    @GetMapping("/filter/category")
+    public ResponseEntity<List<Medicine>> filterByCategory(@RequestParam String category) {
+        return ResponseEntity.ok(service.findByCategory(category));
+    }
+
+    @GetMapping("/filter/supplier")
+    public ResponseEntity<List<Medicine>> filterBySupplier(@RequestParam Long supplierId) {
+        return ResponseEntity.ok(service.findBySupplier(supplierId));
+    }
+
+    @GetMapping("/filter/stock")
+    public ResponseEntity<List<Medicine>> filterByStockStatus(@RequestParam String status) {
+        return ResponseEntity.ok(service.filterByStockStatus(status));
     }
 
     @java.lang.SuppressWarnings("all")

@@ -5,10 +5,11 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "inventories")
+@Table(name = "inventory")
 public class Inventory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "inventory_id")
     private Long id;
     @ManyToOne
     @JoinColumn(name = "medicine_id", nullable = false)
@@ -17,8 +18,9 @@ public class Inventory {
     @Column(nullable = false)
     private Integer quantity;
     private LocalDate expiryDate;
-    @OneToOne(mappedBy = "inventory", cascade = CascadeType.ALL)
-    private ExpiryTracking expiryTracking;
+
+    @Column(name = "minimum_stock")
+    private Integer minimumStock;
 
     @java.lang.SuppressWarnings("all")
     public Long getId() {
@@ -45,9 +47,10 @@ public class Inventory {
         return this.expiryDate;
     }
 
+
     @java.lang.SuppressWarnings("all")
-    public ExpiryTracking getExpiryTracking() {
-        return this.expiryTracking;
+    public Integer getMinimumStock() {
+        return this.minimumStock;
     }
 
     @java.lang.SuppressWarnings("all")
@@ -75,9 +78,10 @@ public class Inventory {
         this.expiryDate = expiryDate;
     }
 
+
     @java.lang.SuppressWarnings("all")
-    public void setExpiryTracking(final ExpiryTracking expiryTracking) {
-        this.expiryTracking = expiryTracking;
+    public void setMinimumStock(final Integer minimumStock) {
+        this.minimumStock = minimumStock;
     }
 
     @java.lang.SuppressWarnings("all")
@@ -85,12 +89,12 @@ public class Inventory {
     }
 
     @java.lang.SuppressWarnings("all")
-    public Inventory(final Long id, final Medicine medicine, final String batchNumber, final Integer quantity, final LocalDate expiryDate, final ExpiryTracking expiryTracking) {
+    public Inventory(final Long id, final Medicine medicine, final String batchNumber, final Integer quantity, final LocalDate expiryDate, final Integer minimumStock) {
         this.id = id;
         this.medicine = medicine;
         this.batchNumber = batchNumber;
         this.quantity = quantity;
         this.expiryDate = expiryDate;
-        this.expiryTracking = expiryTracking;
+        this.minimumStock = minimumStock;
     }
 }
