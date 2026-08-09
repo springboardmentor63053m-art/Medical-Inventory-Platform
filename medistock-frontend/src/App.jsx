@@ -14,6 +14,8 @@ import Suppliers from './pages/Suppliers';
 import StockMovements from './pages/StockMovements';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Users from './pages/Users';
+import Billing from './pages/Billing';
+import SalesHistory from './pages/SalesHistory';
 
 function App() {
   return (
@@ -33,9 +35,11 @@ function App() {
               {/* Medicines catalog accessible by all roles */}
               <Route path="/medicines" element={<Medicines />} />
 
-              {/* Categories accessible by Admin, Pharmacist, and Staff */}
+              {/* Category, Billing, Sales accessible by Admin, Pharmacist, and Staff */}
               <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']} />}>
                 <Route path="/categories" element={<Categories />} />
+                <Route path="/billing" element={<Billing />} />
+                <Route path="/sales" element={<SalesHistory />} />
               </Route>
 
               {/* Suppliers accessible by Admin, Staff */}

@@ -10,7 +10,9 @@ import {
   ClipboardList,
   Users as UsersIcon,
   LogOut,
-  Activity
+  Activity,
+  Receipt,
+  History
 } from 'lucide-react';
 
 const Layout = () => {
@@ -31,6 +33,18 @@ const Layout = () => {
       roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_SUPPLIER', 'ROLE_USER', 'ROLE_STAFF']
     },
     {
+      path: '/billing',
+      label: 'Billing / POS',
+      icon: <Receipt />,
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']
+    },
+    {
+      path: '/sales',
+      label: 'Sales History',
+      icon: <History />,
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']
+    },
+    {
       path: '/categories',
       label: 'Categories',
       icon: <Tags />,
@@ -40,7 +54,7 @@ const Layout = () => {
       path: '/suppliers',
       label: 'Suppliers',
       icon: <Truck />,
-      roles: ['ROLE_ADMIN', 'ROLE_STAFF']
+      roles: ['ROLE_ADMIN']
     },
 
     {
@@ -105,7 +119,22 @@ const Layout = () => {
             </div>
             <div className="user-details">
               <div className="user-name">{user?.username}</div>
-              <div className="user-role">{user?.roles?.join(', ')}</div>
+              <div className="user-role">{
+                user?.roles ? user.roles.map(role => {
+                  const upperRole = role.toUpperCase();
+                  switch (upperRole) {
+                    case 'ROLE_ADMIN': return 'Admin';
+                    case 'ROLE_PHARMACIST': return 'Pharmacist';
+                    case 'ROLE_STAFF': return 'Staff';
+                    case 'ROLE_SUPPLIER': return 'Supplier';
+                    case 'ROLE_DOCTOR': return 'Doctor';
+                    case 'ROLE_USER': return 'User';
+                    default:
+                      const clean = role.replace(/^ROLE_/i, '');
+                      return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+                  }
+                }).join(', ') : ''
+              }</div>
             </div>
           </div>
           <button

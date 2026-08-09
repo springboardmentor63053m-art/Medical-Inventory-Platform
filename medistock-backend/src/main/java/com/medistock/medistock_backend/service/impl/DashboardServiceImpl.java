@@ -44,9 +44,9 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate today = LocalDate.now();
         LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
 
-        long availableCount = medicineRepository.countAvailableMedicines(nearExpiryDate);
-        long lowStockMedicinesCount = medicineRepository.countLowStockMedicines(nearExpiryDate);
-        long outOfStockCount = medicineRepository.countOutOfStockMedicines(today);
+        long availableCount = medicineRepository.countAvailableMedicines();
+        long lowStockMedicinesCount = medicineRepository.countLowStockMedicines();
+        long outOfStockCount = medicineRepository.countOutOfStockMedicines();
         long nearExpiryCount = medicineRepository.countNearExpiryMedicines(today, nearExpiryDate);
         long expiredCount = medicineRepository.countExpiredMedicines(today);
 

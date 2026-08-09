@@ -287,23 +287,29 @@ const Medicines = () => {
   };
 
   const renderStockBadge = (med) => {
-    const status = med.stockStatus;
-    if (status === 'AVAILABLE') {
-      return <span className="badge badge-success">Available</span>;
-    }
-    if (status === 'NEAR_EXPIRY') {
-      return <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }}>Near Expiry</span>;
-    }
-    if (status === 'LOW_STOCK') {
-      return <span className="badge" style={{ backgroundColor: 'rgba(249, 115, 22, 0.15)', color: '#f97316', fontWeight: 600 }}>Low Stock</span>;
-    }
-    if (status === 'EXPIRED') {
-      return <span className="badge badge-danger pulse-red">Expired</span>;
-    }
-    if (status === 'OUT_OF_STOCK') {
-      return <span className="badge" style={{ backgroundColor: 'rgba(107, 114, 128, 0.15)', color: '#9ca3af', fontWeight: 600 }}>Out Of Stock</span>;
-    }
-    return <span className="badge">{status}</span>;
+    const statuses = Array.isArray(med.stockStatus) ? med.stockStatus : (med.stockStatus ? [med.stockStatus] : []);
+    return (
+      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+        {statuses.map((status, index) => {
+          if (status === 'AVAILABLE') {
+            return <span key={index} className="badge badge-success">Available</span>;
+          }
+          if (status === 'NEAR_EXPIRY') {
+            return <span key={index} className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }}>Near Expiry</span>;
+          }
+          if (status === 'LOW_STOCK') {
+            return <span key={index} className="badge" style={{ backgroundColor: 'rgba(249, 115, 22, 0.15)', color: '#f97316', fontWeight: 600 }}>Low Stock</span>;
+          }
+          if (status === 'EXPIRED') {
+            return <span key={index} className="badge badge-danger pulse-red">Expired</span>;
+          }
+          if (status === 'OUT_OF_STOCK') {
+            return <span key={index} className="badge" style={{ backgroundColor: 'rgba(107, 114, 128, 0.15)', color: '#9ca3af', fontWeight: 600 }}>Out Of Stock</span>;
+          }
+          return <span key={index} className="badge">{status}</span>;
+        })}
+      </div>
+    );
   };
 
   const renderPageNumbers = () => {
