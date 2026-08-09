@@ -22,6 +22,7 @@ public class MedicineResponse {
     private Integer reorderLevel;
     private String description;
     private String status;
+    private Boolean prescriptionRequired;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -17,6 +17,11 @@ import NotificationsPage from '../features/notifications/pages/NotificationsPage
 import ProfilePage from '../features/profile/pages/ProfilePage';
 import UsersPage from '../features/users/pages/UsersPage';
 
+// Prescription & Store POS Feature Pages
+import PrescriptionOrderPage from '../features/prescription/pages/PrescriptionOrderPage';
+import PharmacistVerificationPage from '../features/prescription/pages/PharmacistVerificationPage';
+import StoreCounterPurchasePage from '../features/prescription/pages/StoreCounterPurchasePage';
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -152,6 +157,39 @@ export default function AppRoutes() {
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <MainLayout>
               <UsersPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/prescription-orders"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PrescriptionOrderPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pharmacist/verify"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+            <MainLayout>
+              <PharmacistVerificationPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/store-counter"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+            <MainLayout>
+              <StoreCounterPurchasePage />
             </MainLayout>
           </ProtectedRoute>
         }

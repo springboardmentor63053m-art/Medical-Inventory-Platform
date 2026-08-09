@@ -1,0 +1,297 @@
+import React, { useState, useEffect } from 'react';
+import { prescriptionService } from '../../../services/api/prescriptionService';
+import { toast } from 'react-toastify';
+import Modal from '../../../components/common/Modal';
+import {
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  FileText,
+  User,
+  MapPin,
+  Phone,
+  ExternalLink,
+  Search,
+  Filter,
+  Loader2,
+  AlertCircle,
+  Building2
+} from 'lucide-react';
+
+export default function PharmacistVerificationPage() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('PENDING_VERIFICATION');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Review Modal State
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [statusFilter]);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const data = await prescriptionService.getAllOrders(statusFilter);
+      setOrders(data || []);
+    } catch (err) {
+      toast.error('Failed to load prescription orders queue');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredOrders = orders.filter(
+    (ord) =>
+      ord.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ord.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (ord.userEmail && ord.userEmail.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const openReviewModal = (ord) => {
+    setSelectedOrder(ord);
+    setReviewNotes(ord.pharmacistNotes || '');
+    setReviewModalOpen(true);
+  };
+
+  const handleVerifyOrReject = async (status) => {
+    if (!selectedOrder) return;
+    setActionLoading(true);
+
+    try {
+      await prescriptionService.verifyOrder(selectedOrder.id, {
+        status,
+        pharmacistNotes: reviewNotes.trim(),
+      });
+
+      toast.success(
+        status === 'VERIFIED'
+          ? `Order ${selectedOrder.orderNumber} verified and stock updated!`
+          : `Order ${selectedOrder.orderNumber} rejected.`
+      );
+
+      setReviewModalOpen(false);
+      fetchOrders();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update order verification status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 lg:p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-xl">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-black text-white tracking-tight">Pharmacist Rx Verification Hub</h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
+                  Pharmacist Portal
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Review uploaded doctor prescriptions, verify patient safety compliance, approve orders, and dispatch inventory.
+              </p>
+            </div>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800">
+            {['PENDING_VERIFICATION', 'VERIFIED', 'REJECTED', 'ALL'].map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                  statusFilter === st ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {st.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Order Queue */}
+      <div className="bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 border border-slate-800/80 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <Clock className="w-4 h-4 text-indigo-400" /> Queue Orders ({filteredOrders.length})
+          </h2>
+
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by order number or patient..."
+              className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="py-16 flex flex-col items-center justify-center text-slate-400 gap-2">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            <span className="text-xs">Fetching prescription queue...</span>
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="py-16 text-center text-slate-500 text-xs">
+            No prescription orders found matching current filter.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredOrders.map((ord) => (
+              <div
+                key={ord.id}
+                className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-indigo-500/40 transition flex flex-col justify-between gap-4 group"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-white group-hover:text-indigo-400 transition">
+                      {ord.orderNumber}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        ord.status === 'PENDING_VERIFICATION'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : ord.status === 'VERIFIED'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                      }`}
+                    >
+                      {ord.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 text-xs">
+                    <p className="text-slate-300">
+                      Patient: <strong className="text-white">{ord.patientName}</strong>
+                    </p>
+                    <p className="text-slate-400 text-[11px]">
+                      Doctor: {ord.doctorName || 'Not specified'}
+                    </p>
+                    <p className="text-slate-400 text-[11px]">
+                      Address: {ord.deliveryAddress}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">{ord.items?.length || 0} items</span>
+                    <span className="text-sm font-black text-emerald-400">${(ord.totalAmount || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => openReviewModal(ord)}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-2"
+                >
+                  <FileText className="w-4 h-4" /> Review Prescription
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Review Prescription Modal */}
+      {reviewModalOpen && selectedOrder && (
+        <Modal
+          isOpen={true}
+          onClose={() => setReviewModalOpen(false)}
+          title={`Verify Prescription Order #${selectedOrder.orderNumber}`}
+          subtitle={`Patient: ${selectedOrder.patientName} | Doctor: ${selectedOrder.doctorName || 'N/A'}`}
+          icon={ShieldCheck}
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-5 py-2">
+            {/* Prescription Document Box */}
+            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+              <h4 className="text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>Uploaded Prescription Document</span>
+                {selectedOrder.prescriptionFileUrl && (
+                  <a
+                    href={selectedOrder.prescriptionFileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-indigo-400 hover:underline flex items-center gap-1 text-[11px]"
+                  >
+                    Open Document <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </h4>
+              <p className="text-xs text-slate-400 font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800 truncate">
+                {selectedOrder.prescriptionFileUrl || 'No prescription image provided'}
+              </p>
+            </div>
+
+            {/* Medicine Items Breakdown */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-700">Prescribed Medicines ({selectedOrder.items?.length})</h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {selectedOrder.items?.map((item) => (
+                  <div key={item.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                    <div>
+                      <p className="font-bold text-slate-900">{item.medicineName} ({item.medicineCode})</p>
+                      <p className="text-[11px] text-slate-500">{item.genericName}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-slate-800">Qty: {item.quantity}</span>
+                      <p className="text-[11px] text-emerald-600 font-bold">${item.subtotal?.toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Review Notes */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Pharmacist Review Notes & Compliance Comments
+              </label>
+              <textarea
+                rows={3}
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                placeholder="Enter pharmacist notes regarding dosage approval, safety checks, or reason for rejection..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => handleVerifyOrReject('REJECTED')}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow"
+              >
+                <XCircle className="w-4 h-4" /> Reject Prescription
+              </button>
+              <button
+                onClick={() => handleVerifyOrReject('VERIFIED')}
+                disabled={actionLoading}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-600/20"
+              >
+                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Approve & Verify Order
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

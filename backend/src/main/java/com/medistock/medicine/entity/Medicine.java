@@ -52,6 +52,10 @@ public class Medicine {
     @Column(nullable = false, length = 20)
     private String status = "ACTIVE";
 
+    @Builder.Default
+    @Column(name = "prescription_required", nullable = false)
+    private Boolean prescriptionRequired = true;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

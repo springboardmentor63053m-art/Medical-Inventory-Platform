@@ -235,6 +235,14 @@ public class DataSeeder implements CommandLineRunner {
 
             Category cat = catMap.getOrDefault(categoryName, catMap.values().iterator().next());
 
+            boolean rxRequired = !("Vitamins & Clinical Nutrition".equals(categoryName)
+                    || "Dermatology & Skincare".equals(categoryName)
+                    || conciseName.contains("Paracetamol")
+                    || conciseName.contains("Crocin")
+                    || conciseName.contains("Dolo")
+                    || conciseName.contains("Calamine")
+                    || conciseName.contains("Shampoo"));
+
             Medicine med = Medicine.builder()
                     .medicineCode("MED-" + codeCounter++)
                     .name(conciseName)
@@ -245,6 +253,7 @@ public class DataSeeder implements CommandLineRunner {
                     .reorderLevel(minStock)
                     .description(dosageForm + " formulation of " + generic + " by " + mfr)
                     .status("ACTIVE")
+                    .prescriptionRequired(rxRequired)
                     .category(cat)
                     .build();
 
