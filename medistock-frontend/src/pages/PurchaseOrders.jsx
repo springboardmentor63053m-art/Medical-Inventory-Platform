@@ -32,6 +32,7 @@ const PurchaseOrders = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // Role permissions
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
   const isAdminOrPharmacist = user?.roles?.some(role => ['ROLE_ADMIN', 'ROLE_PHARMACIST'].includes(role));
   const isSupplier = user?.roles?.includes('ROLE_SUPPLIER');
 
@@ -239,7 +240,7 @@ const PurchaseOrders = () => {
             <option value="CANCELLED">CANCELLED</option>
           </select>
 
-          {isAdminOrPharmacist && (
+          {isAdmin && (
             <button className="btn btn-primary" onClick={openCreateModal} style={{ height: '42px' }}>
               <Plus size={16} />
               <span>Create PO</span>
@@ -264,7 +265,7 @@ const PurchaseOrders = () => {
                   <th>Order Date</th>
                   <th>Total Cost</th>
                   <th>Status</th>
-                  <th style={{ width: '150px', textAlign: 'right' }}>Actions</th>
+                  {isAdmin && <th style={{ width: '150px', textAlign: 'right' }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -285,35 +286,37 @@ const PurchaseOrders = () => {
                           {order.status}
                         </span>
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                          <button 
-                            className="btn-icon" 
-                            onClick={() => handleOpenDetails(order)}
-                            title="View Items"
-                          >
-                            <Eye size={14} />
-                          </button>
-                          {(isAdminOrPharmacist || isSupplier) && (
+                      {isAdmin && (
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             <button 
-                              className="btn-icon edit" 
-                              onClick={() => handleOpenStatusModal(order)}
-                              title="Update Status"
+                              className="btn-icon" 
+                              onClick={() => handleOpenDetails(order)}
+                              title="View Items"
                             >
-                              <Edit size={14} />
+                              <Eye size={14} />
                             </button>
-                          )}
-                          {isAdminOrPharmacist && (
-                            <button 
-                              className="btn-icon delete" 
-                              onClick={() => handleDelete(order.id, order.orderNumber)}
-                              title="Delete Order"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                            {(isAdminOrPharmacist || isSupplier) && (
+                              <button 
+                                className="btn-icon edit" 
+                                onClick={() => handleOpenStatusModal(order)}
+                                title="Update Status"
+                              >
+                                <Edit size={14} />
+                              </button>
+                            )}
+                            {isAdminOrPharmacist && (
+                              <button 
+                                className="btn-icon delete" 
+                                onClick={() => handleDelete(order.id, order.orderNumber)}
+                                title="Delete Order"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

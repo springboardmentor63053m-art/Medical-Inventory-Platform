@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -238,26 +239,34 @@ public class MedicineServiceImpl implements MedicineService {
         medicineRepository.deleteById(id);
     }
 
-    private StockStatus calculateStockStatus(Medicine medicine) {
+    private List<StockStatus> calculateStockStatus(Medicine medicine) {
+        List<StockStatus> statuses = new ArrayList<>();
         Integer quantity = medicine.getInventory() != null ? medicine.getInventory().getQuantity() : 0;
         Integer reorderLevel = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
         LocalDate expiryDate = medicine.getExpiryDate();
         LocalDate today = LocalDate.now();
         LocalDate nearExpiryLimit = today.plusDays(nearExpiryDays);
 
-        if (expiryDate != null && expiryDate.isBefore(today)) {
-            return StockStatus.EXPIRED;
-        }
-        if (expiryDate != null && !expiryDate.isBefore(today) && !expiryDate.isAfter(nearExpiryLimit)) {
-            return StockStatus.NEAR_EXPIRY;
+        if (expiryDate != null) {
+            if (expiryDate.isBefore(today)) {
+                statuses.add(StockStatus.EXPIRED);
+            } else if (!expiryDate.isAfter(nearExpiryLimit)) {
+                statuses.add(StockStatus.NEAR_EXPIRY);
+            }
         }
         if (quantity == 0) {
-            return StockStatus.OUT_OF_STOCK;
+            statuses.add(StockStatus.OUT_OF_STOCK);
         }
         if (quantity <= reorderLevel) {
-            return StockStatus.LOW_STOCK;
+            statuses.add(StockStatus.LOW_STOCK);
+        } else {
+            statuses.add(StockStatus.AVAILABLE);
         }
-        return StockStatus.AVAILABLE;
+
+        if (statuses.isEmpty()) {
+            statuses.add(StockStatus.AVAILABLE);
+        }
+        return statuses;
     }
 
     private MedicineResponse mapToResponse(Medicine medicine) {

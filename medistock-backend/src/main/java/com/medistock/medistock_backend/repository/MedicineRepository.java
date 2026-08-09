@@ -38,9 +38,9 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
            "(:stockStatus IS NULL OR :stockStatus = '' OR :stockStatus = 'ALL' OR " +
            "   (:stockStatus = 'EXPIRED' AND m.expiryDate < :today) OR " +
            "   (:stockStatus = 'NEAR_EXPIRY' AND m.expiryDate >= :today AND m.expiryDate <= :nearExpiryDate) OR " +
-           "   (:stockStatus = 'OUT_OF_STOCK' AND COALESCE(i.quantity, 0) = 0 AND (m.expiryDate IS NULL OR m.expiryDate >= :today)) OR " +
-           "   (:stockStatus = 'LOW_STOCK' AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 0) AND COALESCE(i.quantity, 0) > 0 AND (m.expiryDate IS NULL OR m.expiryDate > :nearExpiryDate)) OR " +
-           "   (:stockStatus = 'AVAILABLE' AND COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 0) AND (m.expiryDate IS NULL OR m.expiryDate > :nearExpiryDate)))")
+           "   (:stockStatus = 'OUT_OF_STOCK' AND COALESCE(i.quantity, 0) = 0) OR " +
+           "   (:stockStatus = 'LOW_STOCK' AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 0)) OR " +
+           "   (:stockStatus = 'AVAILABLE' AND COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 0)))")
     Page<Medicine> filterMedicines(
         @Param("search") String search,
         @Param("categoryId") Long categoryId,
@@ -63,9 +63,9 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
            "(:stockStatus IS NULL OR :stockStatus = '' OR :stockStatus = 'ALL' OR " +
            "   (:stockStatus = 'EXPIRED' AND m.expiryDate < :today) OR " +
            "   (:stockStatus = 'NEAR_EXPIRY' AND m.expiryDate >= :today AND m.expiryDate <= :nearExpiryDate) OR " +
-           "   (:stockStatus = 'OUT_OF_STOCK' AND COALESCE(i.quantity, 0) = 0 AND (m.expiryDate IS NULL OR m.expiryDate >= :today)) OR " +
-           "   (:stockStatus = 'LOW_STOCK' AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 0) AND COALESCE(i.quantity, 0) > 0 AND (m.expiryDate IS NULL OR m.expiryDate > :nearExpiryDate)) OR " +
-           "   (:stockStatus = 'AVAILABLE' AND COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 0) AND (m.expiryDate IS NULL OR m.expiryDate > :nearExpiryDate)))")
+           "   (:stockStatus = 'OUT_OF_STOCK' AND COALESCE(i.quantity, 0) = 0) OR " +
+           "   (:stockStatus = 'LOW_STOCK' AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 0)) OR " +
+           "   (:stockStatus = 'AVAILABLE' AND COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 0)))")
     List<Medicine> filterMedicinesList(
         @Param("search") String search,
         @Param("categoryId") Long categoryId,
@@ -75,14 +75,14 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
         @Param("nearExpiryDate") LocalDate nearExpiryDate
     );
 
-    @Query("SELECT COUNT(m) FROM Medicine m LEFT JOIN m.inventory i WHERE COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 0) AND (m.expiryDate IS NULL OR m.expiryDate > :nearExpiryDate)")
-    long countAvailableMedicines(@Param("nearExpiryDate") LocalDate nearExpiryDate);
+    @Query("SELECT COUNT(m) FROM Medicine m LEFT JOIN m.inventory i WHERE COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 0)")
+    long countAvailableMedicines();
 
-    @Query("SELECT COUNT(m) FROM Medicine m LEFT JOIN m.inventory i WHERE COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 0) AND COALESCE(i.quantity, 0) > 0 AND (m.expiryDate IS NULL OR m.expiryDate > :nearExpiryDate)")
-    long countLowStockMedicines(@Param("nearExpiryDate") LocalDate nearExpiryDate);
+    @Query("SELECT COUNT(m) FROM Medicine m LEFT JOIN m.inventory i WHERE COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 0)")
+    long countLowStockMedicines();
 
-    @Query("SELECT COUNT(m) FROM Medicine m LEFT JOIN m.inventory i WHERE COALESCE(i.quantity, 0) = 0 AND (m.expiryDate IS NULL OR m.expiryDate >= :today)")
-    long countOutOfStockMedicines(@Param("today") LocalDate today);
+    @Query("SELECT COUNT(m) FROM Medicine m LEFT JOIN m.inventory i WHERE COALESCE(i.quantity, 0) = 0")
+    long countOutOfStockMedicines();
 
     @Query("SELECT COUNT(m) FROM Medicine m WHERE m.expiryDate >= :today AND m.expiryDate <= :nearExpiryDate")
     long countNearExpiryMedicines(@Param("today") LocalDate today, @Param("nearExpiryDate") LocalDate nearExpiryDate);

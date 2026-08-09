@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -26,5 +27,5 @@ public class MedicineResponse {
     private SupplierDto supplier;
     private Integer currentStock;
     private Integer reorderLevel;
-    private StockStatus stockStatus;
+    private List<StockStatus> stockStatus;
 }
