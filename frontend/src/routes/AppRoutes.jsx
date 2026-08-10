@@ -257,6 +257,39 @@ export default function AppRoutes() {
         }
       />
 
+      <Route
+        path="/prescription-orders"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <PrescriptionOrderPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pharmacist/verify"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+            <MainLayout>
+              <PharmacistVerificationPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/store-counter"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+            <MainLayout>
+              <StoreCounterPurchasePage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
       {/* Fallback Catch-all Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

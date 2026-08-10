@@ -14,7 +14,9 @@ import {
   User,
   Users,
   X,
-  Activity
+  Activity,
+  ShieldCheck,
+  Store
 } from 'lucide-react';
 
 export default function SidebarLayout({ isOpen, onClose }) {

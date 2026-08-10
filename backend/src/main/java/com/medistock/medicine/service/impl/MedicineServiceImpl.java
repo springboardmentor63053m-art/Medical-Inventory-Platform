@@ -149,6 +149,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .reorderLevel(medicine.getReorderLevel())
                 .description(medicine.getDescription())
                 .status(medicine.getStatus())
+                .prescriptionRequired(medicine.getPrescriptionRequired() != null ? medicine.getPrescriptionRequired() : true)
                 .createdAt(medicine.getCreatedAt())
                 .updatedAt(medicine.getUpdatedAt())
                 .build();
