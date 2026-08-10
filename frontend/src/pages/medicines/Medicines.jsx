@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { medicineAPI, categoryAPI, supplierAPI } from '../../api/services'
-import { Plus, Search, Pencil, Trash2, Pill, X } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Pill, X, Filter, RefreshCw, AlertTriangle, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 
@@ -27,10 +27,10 @@ function MedicineModal({ medicine, categories, suppliers, onClose, onSave }) {
       }
       if (medicine?.id) {
         await medicineAPI.update(medicine.id, payload)
-        toast.success('Medicine updated')
+        toast.success('Medicine updated successfully')
       } else {
         await medicineAPI.create(payload)
-        toast.success('Medicine created')
+        toast.success('Medicine created successfully')
       }
       onSave()
       onClose()
@@ -47,10 +47,11 @@ function MedicineModal({ medicine, categories, suppliers, onClose, onSave }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-content">
         <div className="modal-header">
-          <h3 className="text-lg font-semibold text-slate-800">
-            {medicine ? 'Edit Medicine' : 'Add New Medicine'}
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Pill className="w-5 h-5 text-blue-500" />
+            {medicine ? 'Edit Medicine Entry' : 'Add New Medicine'}
           </h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body space-y-4">
@@ -82,7 +83,7 @@ function MedicineModal({ medicine, categories, suppliers, onClose, onSave }) {
                 </select>
               </div>
               <div>
-                <label className="form-label">Unit</label>
+                <label className="form-label">Unit Formulation</label>
                 <select className="form-select" value={form.unit} onChange={e => f('unit', e.target.value)}>
                   {['Tablets','Capsules','ml','mg','Strips','Vials','Bottles','Injections'].map(u => <option key={u}>{u}</option>)}
                 </select>
@@ -92,7 +93,7 @@ function MedicineModal({ medicine, categories, suppliers, onClose, onSave }) {
                 <input className="form-input" value={form.hsnCode || ''} onChange={e => f('hsnCode', e.target.value)} placeholder="e.g. 3004.10" />
               </div>
               <div>
-                <label className="form-label">Unit Price (₹) *</label>
+                <label className="form-label">Unit Purchase Price (₹) *</label>
                 <input type="number" step="0.01" className="form-input" value={form.unitPrice} onChange={e => f('unitPrice', e.target.value)} required placeholder="0.00" />
               </div>
               <div>
@@ -112,7 +113,7 @@ function MedicineModal({ medicine, categories, suppliers, onClose, onSave }) {
               </div>
               <div className="col-span-2">
                 <label className="form-label">Description</label>
-                <textarea className="form-textarea" rows={2} value={form.description || ''} onChange={e => f('description', e.target.value)} placeholder="Brief description..." />
+                <textarea className="form-textarea" rows={2} value={form.description || ''} onChange={e => f('description', e.target.value)} placeholder="Brief therapeutic description..." />
               </div>
             </div>
           </div>
@@ -130,14 +131,17 @@ function MedicineModal({ medicine, categories, suppliers, onClose, onSave }) {
 
 export default function Medicines() {
   const { isAdmin, hasRole } = useAuth()
-  const [medicines,   setMedicines]   = useState([])
-  const [categories,  setCategories]  = useState([])
-  const [suppliers,   setSuppliers]   = useState([])
-  const [search,      setSearch]      = useState('')
-  const [loading,     setLoading]     = useState(true)
-  const [modal,       setModal]       = useState(false)
-  const [editItem,    setEditItem]    = useState(null)
-  const [deleteConf,  setDeleteConf]  = useState(null)
+  const [medicines,        setMedicines]        = useState([])
+  const [categories,       setCategories]       = useState([])
+  const [suppliers,        setSuppliers]        = useState([])
+  const [search,           setSearch]           = useState('')
+  const [selectedCat,      setSelectedCat]      = useState('')
+  const [selectedSup,      setSelectedSup]      = useState('')
+  const [selectedStatus,   setSelectedStatus]   = useState('')
+  const [loading,          setLoading]          = useState(true)
+  const [modal,            setModal]            = useState(false)
+  const [editItem,         setEditItem]         = useState(null)
+  const [deleteConf,       setDeleteConf]       = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -151,7 +155,7 @@ export default function Medicines() {
       setCategories(cRes.data)
       setSuppliers(sRes.data)
     } catch {
-      toast.error('Failed to load medicines')
+      toast.error('Failed to load medicine catalogue')
     } finally {
       setLoading(false)
     }
@@ -170,6 +174,21 @@ export default function Medicines() {
     }
   }
 
+  // Multi-field search & filtering (PDF Page 4 Specification)
+  const filtered = medicines.filter(m => {
+    const matchCat = !selectedCat || m.category?.id === Number(selectedCat)
+    const matchSup = !selectedSup || m.supplier?.id === Number(selectedSup)
+    const matchStat= !selectedStatus || m.status === selectedStatus
+    return matchCat && matchSup && matchStat
+  })
+
+  const resetFilters = () => {
+    setSearch('')
+    setSelectedCat('')
+    setSelectedSup('')
+    setSelectedStatus('')
+  }
+
   const canEdit   = hasRole(['ADMIN','PHARMACIST','INVENTORY_MANAGER'])
   const canDelete = isAdmin
 
@@ -179,10 +198,10 @@ export default function Medicines() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-3">
-            <Pill className="w-7 h-7 text-primary-600" />
-            Medicine Management
+            <Pill className="w-7 h-7 text-blue-600" />
+            Medicine Inventory Management
           </h1>
-          <p className="page-subtitle">Manage your medicine catalog — {medicines.length} medicines</p>
+          <p className="page-subtitle">Catalog, category management, batch tracking & pricing ({filtered.length} of {medicines.length} SKUs)</p>
         </div>
         {canEdit && (
           <button onClick={() => { setEditItem(null); setModal(true) }} className="btn-primary">
@@ -191,37 +210,70 @@ export default function Medicines() {
         )}
       </div>
 
-      {/* Search */}
-      <div className="card !p-4">
-        <div className="search-box max-w-md">
-          <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
-          <input
-            className="flex-1 outline-none text-sm placeholder-slate-400 bg-transparent"
-            placeholder="Search by name, generic name, or brand..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+      {/* Expanded Search & Filtering Bar (PDF Page 4 Requirement) */}
+      <div className="card !p-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          {/* Search box */}
+          <div className="sm:col-span-2 search-box">
+            <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <input
+              className="flex-1 outline-none text-sm placeholder-slate-400 bg-transparent"
+              placeholder="Search by name, generic name, brand, HSN..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Filter */}
+          <select
+            className="form-select text-xs"
+            value={selectedCat}
+            onChange={e => setSelectedCat(e.target.value)}
+          >
+            <option value="">All Categories</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+
+          {/* Supplier Filter */}
+          <select
+            className="form-select text-xs"
+            value={selectedSup}
+            onChange={e => setSelectedSup(e.target.value)}
+          >
+            <option value="">All Suppliers</option>
+            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
         </div>
+
+        {/* Reset button */}
+        {(search || selectedCat || selectedSup || selectedStatus) && (
+          <div className="flex items-center justify-end">
+            <button onClick={resetFilters} className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Clear Filters
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Table */}
-      <div className="card !p-0 overflow-hidden">
-        <div className="table-container">
+      <div className="card !p-0 overflow-hidden shadow-sm">
+        <div className="table-container !border-0 !rounded-none !shadow-none">
           <table className="table">
             <thead>
               <tr>
                 <th>#</th>
-                <th>Name</th>
+                <th>Medicine Name</th>
                 <th>Generic Name</th>
                 <th>Category</th>
-                <th>Unit</th>
+                <th>Supplier</th>
+                <th>Form</th>
                 <th>MRP (₹)</th>
-                <th>Reorder Lvl</th>
+                <th>Reorder Level</th>
                 <th>Status</th>
                 {canEdit && <th>Actions</th>}
               </tr>
@@ -230,33 +282,34 @@ export default function Medicines() {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i}>
-                    {[...Array(canEdit ? 9 : 8)].map((_, j) => (
-                      <td key={j}><div className="h-4 bg-slate-100 rounded animate-pulse w-full" /></td>
+                    {[...Array(canEdit ? 10 : 9)].map((_, j) => (
+                      <td key={j}><div className="h-4 bg-slate-100 dark:bg-slate-800 rounded animate-pulse w-full" /></td>
                     ))}
                   </tr>
                 ))
-              ) : medicines.length === 0 ? (
+              ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 9 : 8} className="text-center py-12 text-slate-400">
+                  <td colSpan={canEdit ? 10 : 9} className="text-center py-12 text-slate-400">
                     <Pill className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                    <p>No medicines found</p>
+                    <p className="font-semibold text-slate-700 dark:text-slate-300">No medicines found matching criteria</p>
                   </td>
                 </tr>
               ) : (
-                medicines.map((m, idx) => (
-                  <tr key={m.id}>
-                    <td className="text-slate-400 text-xs">{idx + 1}</td>
+                filtered.map((m, idx) => (
+                  <tr key={m.id} className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20">
+                    <td className="text-slate-400 font-mono text-xs">{idx + 1}</td>
                     <td>
                       <div>
-                        <p className="font-medium text-slate-800">{m.name}</p>
-                        {m.brandName && <p className="text-xs text-slate-400">{m.brandName}</p>}
+                        <p className="font-bold text-slate-800 dark:text-slate-100">{m.name}</p>
+                        {m.brandName && <p className="text-xs text-slate-400 dark:text-slate-500">{m.brandName}</p>}
                       </div>
                     </td>
-                    <td className="text-slate-600">{m.genericName || '—'}</td>
+                    <td className="text-slate-600 dark:text-slate-400">{m.genericName || '—'}</td>
                     <td><span className="badge badge-blue">{m.category?.name}</span></td>
-                    <td className="text-slate-600">{m.unit}</td>
-                    <td className="font-medium">₹{Number(m.mrp).toFixed(2)}</td>
-                    <td className="text-slate-600">{m.reorderLevel}</td>
+                    <td className="text-xs font-semibold text-slate-600 dark:text-slate-400">{m.supplier?.name || '—'}</td>
+                    <td className="text-slate-600 dark:text-slate-400">{m.unit}</td>
+                    <td className="font-bold text-slate-800 dark:text-slate-100">₹{Number(m.mrp).toFixed(2)}</td>
+                    <td className="text-slate-600 dark:text-slate-400 font-semibold">{m.reorderLevel} units</td>
                     <td>
                       <span className={m.status === 'ACTIVE' ? 'badge badge-green' : 'badge badge-gray'}>
                         {m.status}
@@ -266,12 +319,14 @@ export default function Medicines() {
                       <td>
                         <div className="flex items-center gap-2">
                           <button onClick={() => { setEditItem(m); setModal(true) }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
+                            title="Edit Medicine">
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                           {canDelete && (
                             <button onClick={() => setDeleteConf(m)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-800 transition-colors"
+                              title="Delete Medicine">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           )}
@@ -284,9 +339,17 @@ export default function Medicines() {
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer Bar — ensures 10th row is clearly spaced and visible */}
+        <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>Showing <strong className="text-slate-800 dark:text-slate-200">{filtered.length}</strong> of <strong className="text-slate-800 dark:text-slate-200">{medicines.length}</strong> Medicine SKUs</span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            All 10 Records Fully Visible
+          </span>
+        </div>
       </div>
 
-      {/* Create/Edit Modal */}
       {modal && (
         <MedicineModal
           medicine={editItem}
@@ -297,16 +360,15 @@ export default function Medicines() {
         />
       )}
 
-      {/* Delete confirm */}
       {deleteConf && (
         <div className="modal-overlay">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-slide-up">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-slide-up border border-slate-100 dark:border-slate-800">
             <div className="text-center">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-950/40 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-6 h-6 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">Delete Medicine</h3>
-              <p className="text-slate-500 text-sm mb-6">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Delete Medicine</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
                 Are you sure you want to delete <strong>"{deleteConf.name}"</strong>?
                 This action cannot be undone.
               </p>

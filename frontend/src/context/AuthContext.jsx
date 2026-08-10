@@ -8,13 +8,30 @@ export function AuthProvider({ children }) {
   const [token,   setToken]   = useState(() => localStorage.getItem('token'))
   const [loading, setLoading] = useState(true)
 
-  // On mount, restore user from localStorage
+  // On mount, restore user from localStorage if token is valid
   useEffect(() => {
     const storedUser  = localStorage.getItem('user')
     const storedToken = localStorage.getItem('token')
     if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser))
-      setToken(storedToken)
+      try {
+        // Decode JWT payload (middle segment)
+        const payload = JSON.parse(atob(storedToken.split('.')[1]))
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          console.warn('JWT token expired on mount. Clearing session.')
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          setUser(null)
+          setToken(null)
+        } else {
+          setUser(JSON.parse(storedUser))
+          setToken(storedToken)
+        }
+      } catch (e) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        setUser(null)
+        setToken(null)
+      }
     }
     setLoading(false)
   }, [])

@@ -58,15 +58,52 @@ export default function Alerts() {
             <Bell className="w-7 h-7 text-primary-600" />
             Alerts & Notifications
           </h1>
-          <p className="page-subtitle">{alerts.length} alert{alerts.length !== 1 ? 's' : ''} found</p>
+          <p className="page-subtitle">Real-time system notifications and stock warning alerts</p>
         </div>
         <div className="flex gap-2">
           {['ACTIVE','ALL'].map(f => (
             <button key={f} onClick={() => setFilter(f)}
               className={`btn-sm ${filter === f ? 'btn-primary' : 'btn-secondary'}`}>
-              {f}
+              {f} ALERTS
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Summary KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="card p-4 flex items-center gap-4 bg-gradient-to-br from-red-50 to-rose-50 border-red-100">
+          <div className="w-12 h-12 rounded-xl bg-red-500 text-white flex items-center justify-center shadow-md">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-red-700">
+              {alerts.filter(a => a.alertType === 'LOW_STOCK' || a.alertType === 'OUT_OF_STOCK').length}
+            </p>
+            <p className="text-xs font-medium text-red-600">Low Stock Warnings</p>
+          </div>
+        </div>
+
+        <div className="card p-4 flex items-center gap-4 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100">
+          <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md">
+            <Calendar className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-amber-700">
+              {alerts.filter(a => a.alertType?.startsWith('EXPIRY')).length}
+            </p>
+            <p className="text-xs font-medium text-amber-600">Expiration Warnings</p>
+          </div>
+        </div>
+
+        <div className="card p-4 flex items-center gap-4 bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+          <div className="w-12 h-12 rounded-xl bg-slate-700 text-white flex items-center justify-center shadow-md">
+            <Bell className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-slate-800">{alerts.length}</p>
+            <p className="text-xs font-medium text-slate-500">Total {filter} Notifications</p>
+          </div>
         </div>
       </div>
 

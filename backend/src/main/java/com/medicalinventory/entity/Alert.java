@@ -29,7 +29,8 @@ public class Alert {
     @Column(nullable = false)
     private AlertStatus status = AlertStatus.ACTIVE;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "acknowledged_by")
     private User acknowledgedBy;
 

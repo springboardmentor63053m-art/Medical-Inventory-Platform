@@ -1,180 +1,159 @@
-# Medical Inventory Management Platform
-## Diagrams — Week 1
+# MediStock Pro � Medical Inventory Management Platform
+## Diagrams & Architecture Documentation
+### Infosys Springboard Internship | B.Tech Computer Science Engineering
 
 ---
 
-## 1. Workflow Diagram
+## 1. Application Workflow Diagram
 
 ```mermaid
 flowchart TD
-    A([👤 User]) --> B{Has Account?}
+    A([?? User]) --> B{Has Account?}
     B -- No --> C[Register with Role]
-    C --> D[Admin Approves Account]
+    C --> D[Account Created]
     D --> E
-    B -- Yes --> E[Login with Email + Password]
+    B -- Yes --> E[Login: Email + Password]
     E --> F{JWT Valid?}
-    F -- No --> G[❌ Authentication Error\nRedirect to Login]
-    F -- Yes --> H[JWT Token Issued]
-    H --> I[🏠 Dashboard]
+    F -- No --> G[? Auth Error ? Redirect to Login]
+    F -- Yes --> H[JWT Token Issued & Stored]
+    H --> I[?? Dashboard � KPI Cards + Charts]
 
     I --> J{Select Module}
 
-    J --> K[💊 Medicine Management]
-    K --> K1[Add/Edit/Delete Medicine]
-    K1 --> K2[Update Category & Supplier]
+    J --> K[?? Medicine Management]
+    K --> K1[Search / Filter / CRUD]
+    K1 --> K2[Update Category & Supplier links]
 
-    J --> L[📦 Inventory Management]
-    L --> L1[View Stock Levels]
+    J --> L[?? Inventory Management]
+    L --> L1[View All / Low Stock / Expiring tabs]
     L1 --> L2{Stock Low?}
-    L2 -- Yes --> L3[🔔 Generate LOW_STOCK Alert]
-    L2 --> L4{Near Expiry?}
-    L4 -- Yes --> L5[🔔 Generate EXPIRY Alert]
+    L2 -- Yes --> L3[?? LOW_STOCK Alert Generated]
+    L1 --> L4{Near Expiry?}
+    L4 -- Yes --> L5[?? EXPIRY Alert Generated]
+    L1 --> L6[Manual Stock Adjustment with Reason]
 
-    J --> M[🏭 Supplier Management]
-    M --> M1[Add/Edit Supplier]
-    M1 --> M2[Link Supplier to Medicines]
+    J --> M[?? Supplier Management]
+    M --> M1[CRUD Supplier Profiles]
+    M1 --> M2[GST, License, Contact, City, Rating]
 
-    J --> N[🛒 Purchase Management]
+    J --> N[?? Purchase Management]
     N --> N1[Create Purchase Order]
-    N1 --> N2[Link to Supplier + Items]
-    N2 --> N3[Mark as RECEIVED]
-    N3 --> N4[🔄 Auto-Update Inventory +]
-    N4 --> N5[Log Stock Movement: PURCHASE_IN]
+    N1 --> N2[Select Supplier + Add Medicine Items]
+    N2 --> N3{Mark as RECEIVED?}
+    N3 -- Yes --> N4[? Auto Increase Inventory +qty]
+    N4 --> N5[?? Log StockMovement: PURCHASE_IN]
+    N3 -- Cancel --> N6[? Purchase CANCELLED]
 
-    J --> O[💰 Sales Management]
-    O --> O1[Create Sale Transaction]
-    O1 --> O2{Stock Available?}
-    O2 -- No --> O3[❌ Block Sale\nInsufficient Stock]
-    O2 -- Yes --> O4[Record Sale Items]
-    O4 --> O5[🔄 Auto-Deduct Inventory -]
-    O5 --> O6[Log Stock Movement: SALE_OUT]
+    J --> O[?? Sales Management]
+    O --> O1[Create Sale: Multi-item cart]
+    O1 --> O2{Sufficient Stock?}
+    O2 -- No --> O3[? Block Sale: Insufficient Stock]
+    O2 -- Yes --> O4[Record Sale Items + Payment Method]
+    O4 --> O5[? Auto Deduct Inventory -qty]
+    O5 --> O6[?? Log StockMovement: SALE_OUT]
+    O6 --> O7{qty < reorderLevel?}
+    O7 -- Yes --> O8[?? Auto-create LOW_STOCK Alert]
 
-    J --> P[📊 Reports & Analytics]
+    J --> P[?? Reports & Analytics]
     P --> P1[Select Report Type]
-    P1 --> P2[Apply Date Filters]
-    P2 --> P3[Generate Report from DB]
-    P3 --> P4[Display / Export PDF]
+    P1 --> P2[Set Date Range Filter]
+    P2 --> P3[Generate Report from Database]
+    P3 --> P4[Export PDF / CSV Download]
 
-    J --> Q[👥 Employee Management]
+    J --> Q[?? Employee Management]
     Q --> Q1[CRUD Employee Profiles]
-    Q1 --> Q2[Assign User Account & Role]
+    Q1 --> Q2[Link User Account & Role]
 
-    N5 --> DB[(🗄️ MySQL Database)]
-    O6 --> DB
-    K2 --> DB
-    L3 --> DB
-    L5 --> DB
-    P3 --> DB
+    J --> R[?? Alert Center]
+    R --> R1[View Active Alerts]
+    R1 --> R2[Acknowledge Alert]
+    R2 --> R3[Resolve Alert]
 
-    DB --> R[📈 Dashboard Metrics Refresh]
-    R --> I
+    J --> S[?? Scheduled Alert Engine]
+    S --> S1[@Scheduled - Daily at 6 AM]
+    S1 --> S2[Scan all Inventory Records]
+    S2 --> S3{qty < reorderLevel?}
+    S3 -- Yes --> S4[Create LOW_STOCK Alert]
+    S2 --> S5{Expiry = 30/60/90 days?}
+    S5 -- Yes --> S6[Create EXPIRY Alert]
 ```
 
 ---
 
-## 2. System Architecture Diagram
+## 2. System Architecture Layers
 
 ```mermaid
-graph TB
-    subgraph CLIENT["🖥️ Client Layer — React 18 + Vite"]
+flowchart TB
+    subgraph CLIENT["CLIENT LAYER � React 18 + Vite 5"]
         direction TB
-        UI1[Login / Register Page]
-        UI2[Dashboard Page]
-        UI3[Medicine / Inventory Pages]
-        UI4[Purchase / Sales Pages]
-        UI5[Reports / Alerts Pages]
-        AUTH_CTX[AuthContext — JWT Storage]
-        AX[Axios Interceptor — Bearer Token]
+        UI["Pages: Dashboard, Medicines, Inventory, Suppliers\nPurchases, Sales, Alerts, Reports, Employees\nProfile, Settings, Project Plan"]
+        CTX["Contexts: AuthContext (JWT) � ThemeContext (Dark/Light)"]
+        AX["Axios Instance: Bearer Token Interceptor + 401 Auto-Logout"]
     end
 
-    subgraph GATEWAY["🔒 Security Gateway"]
-        CORS[CORS Filter]
-        JWT_FILTER[JWT Authentication Filter]
-        SPRING_SEC[Spring Security Filter Chain]
-    end
-
-    subgraph BACKEND["☕ Spring Boot 3 Backend — Java 21"]
+    subgraph SECURITY["SECURITY GATEWAY � Spring Security"]
         direction TB
-        subgraph CTRL["Controller Layer — REST APIs"]
-            C1[AuthController]
-            C2[MedicineController]
-            C3[InventoryController]
-            C4[PurchaseController]
-            C5[SalesController]
-            C6[ReportController]
-            C7[DashboardController]
-            C8[AlertController]
-        end
-
-        subgraph SVC["Service Layer — Business Logic"]
-            S1[AuthService]
-            S2[MedicineService]
-            S3[InventoryService]
-            S4[PurchaseService]
-            S5[SalesService]
-            S6[ReportService]
-            S7[AlertService]
-        end
-
-        subgraph REPO["Repository Layer — Spring Data JPA"]
-            R1[UserRepository]
-            R2[MedicineRepository]
-            R3[InventoryRepository]
-            R4[PurchaseRepository]
-            R5[SalesRepository]
-            R6[StockMovementRepository]
-            R7[AlertRepository]
-        end
-
-        JWT_UTIL[JwtUtil — Token Gen/Validate]
-        ERR_HANDLER[GlobalExceptionHandler]
+        CORS["CORS Filter: whitelisted origins (:5173, :3000)"]
+        JWT["JwtAuthFilter: extract ? validate ? set SecurityContext"]
+        ROLE["Role Authorization: @PreAuthorize / Method Security"]
     end
 
-    subgraph DB["🗄️ Persistence Layer"]
-        MYSQL[(MySQL 8\nDatabase)]
-        HCP[HikariCP Connection Pool]
+    subgraph API["API CONTROLLER LAYER � Spring Boot 3.2.5"]
+        direction LR
+        AUTH["AuthController"]
+        DASH["DashboardController"]
+        MED["MedicineController"]
+        INV["InventoryController"]
+        SUP["SupplierController"]
+        PUR["PurchaseController"]
+        SAL["SalesController"]
+        ALE["AlertController"]
+        EMP["EmployeeController"]
+        CAT["CategoryController"]
     end
 
-    subgraph ALERT_MOD["🔔 Alert Engine"]
-        SCHED[Spring @Scheduled Tasks]
-        ALERT_CHECK[Low Stock Checker\nExpiry Checker]
+    subgraph SERVICE["SERVICE LAYER � Business Logic"]
+        direction LR
+        SS["StockService: qty calculations"]
+        AS["AlertService: create/update alerts"]
+        RS["ReportService: aggregations"]
+        SCH["@Scheduled: AlertEngine (6 AM daily)"]
     end
 
-    CLIENT -- HTTPS REST Calls --> GATEWAY
-    GATEWAY --> CTRL
-    CTRL --> SVC
-    SVC --> REPO
-    REPO --> HCP
-    HCP --> MYSQL
-    JWT_UTIL -.-> JWT_FILTER
-    SVC -.-> ALERT_MOD
-    ALERT_MOD --> MYSQL
+    subgraph DB["DATABASE LAYER � H2 / MySQL 8"]
+        direction LR
+        T1["roles � users � employees"]
+        T2["categories � suppliers � medicines"]
+        T3["inventory � purchases � purchase_items"]
+        T4["sales � sale_items � stock_movements � alerts"]
+    end
+
+    CLIENT -->|HTTP REST / Vite proxy| SECURITY
+    SECURITY --> API
+    API --> SERVICE
+    SERVICE -->|JPA / Hibernate| DB
 ```
 
 ---
 
-## 3. ER Diagram (Entity Relationship)
+## 3. Entity Relationship Diagram (ERD)
 
 ```mermaid
 erDiagram
     ROLES {
         bigint id PK
-        varchar name UK
+        varchar name UK "ADMIN|PHARMACIST|INVENTORY_MANAGER|STAFF"
         varchar description
-        datetime created_at
     }
-
     USERS {
         bigint id PK
         varchar username UK
         varchar email UK
-        varchar password
+        varchar password "BCrypt"
         bigint role_id FK
         boolean is_active
         datetime last_login
-        datetime created_at
     }
-
     EMPLOYEES {
         bigint id PK
         bigint user_id FK
@@ -185,19 +164,28 @@ erDiagram
         varchar department
         varchar designation
         date date_of_joining
-        text address
-        enum status
-        datetime created_at
+        enum status "ACTIVE|INACTIVE"
     }
-
     CATEGORIES {
         bigint id PK
         varchar name UK
-        text description
-        bigint parent_id FK
-        boolean is_active
+        varchar description
+        bigint parent_id FK "self-reference"
+        enum status "ACTIVE|INACTIVE"
     }
-
+    SUPPLIERS {
+        bigint id PK
+        varchar name
+        varchar contact_person
+        varchar email
+        varchar phone
+        varchar city
+        varchar state
+        varchar gst_number
+        varchar license_number
+        enum status "ACTIVE|INACTIVE"
+        decimal credit_limit
+    }
     MEDICINES {
         bigint id PK
         varchar name
@@ -205,49 +193,37 @@ erDiagram
         varchar brand_name
         bigint category_id FK
         bigint supplier_id FK
-        varchar unit
+        varchar unit "tablets|capsules|ml|mg"
         varchar hsn_code
         decimal unit_price
         decimal mrp
         int reorder_level
-        enum status
+        enum status "ACTIVE|DISCONTINUED"
     }
-
-    SUPPLIERS {
-        bigint id PK
-        varchar name
-        varchar contact_person
-        varchar email
-        varchar phone
-        text address
-        varchar gst_number
-        boolean is_active
-    }
-
     INVENTORY {
         bigint id PK
         bigint medicine_id FK
         varchar batch_number
         int quantity
-        int min_quantity
-        date manufacturing_dt
+        int minimum_quantity
+        date manufacture_date
         date expiry_date
         varchar location
-        datetime last_updated
+        decimal purchase_price
+        decimal selling_price
     }
-
     PURCHASES {
         bigint id PK
         varchar invoice_number UK
         bigint supplier_id FK
         date purchase_date
-        decimal total_amount
+        decimal subtotal
+        decimal discount
+        decimal tax_amount
         decimal net_amount
-        enum status
+        enum status "PENDING|RECEIVED|CANCELLED"
         bigint created_by FK
-        datetime created_at
     }
-
     PURCHASE_ITEMS {
         bigint id PK
         bigint purchase_id FK
@@ -258,20 +234,20 @@ erDiagram
         decimal total_cost
         date expiry_date
     }
-
     SALES {
         bigint id PK
         varchar sale_number UK
         varchar customer_name
+        varchar customer_phone
         date sale_date
-        decimal total_amount
+        enum payment_method "CASH|CARD|UPI|INSURANCE"
+        decimal subtotal
+        decimal discount
+        decimal tax_amount
         decimal net_amount
-        enum payment_method
-        enum status
+        enum status "COMPLETED|CANCELLED"
         bigint created_by FK
-        datetime created_at
     }
-
     SALE_ITEMS {
         bigint id PK
         bigint sale_id FK
@@ -280,172 +256,203 @@ erDiagram
         decimal unit_price
         decimal total_price
     }
-
     STOCK_MOVEMENTS {
         bigint id PK
         bigint medicine_id FK
-        enum movement_type
+        enum movement_type "PURCHASE_IN|SALE_OUT|ADJUSTMENT_IN|ADJUSTMENT_OUT|RETURN_IN|EXPIRED_OUT"
         int quantity
-        int quantity_before
-        int quantity_after
-        varchar reference_type
         bigint reference_id
-        text reason
+        varchar reference_type
+        varchar reason
         bigint performed_by FK
-        datetime created_at
+        datetime movement_date
     }
-
     ALERTS {
         bigint id PK
-        enum alert_type
         bigint medicine_id FK
-        text message
-        enum status
+        enum alert_type "LOW_STOCK|EXPIRY_30_DAYS|EXPIRY_60_DAYS|EXPIRY_90_DAYS|OUT_OF_STOCK"
+        varchar message
+        enum status "ACTIVE|ACKNOWLEDGED|RESOLVED"
         bigint acknowledged_by FK
         datetime acknowledged_at
-        datetime created_at
+        bigint resolved_by FK
+        datetime resolved_at
     }
 
-    %% Relationships
     ROLES ||--o{ USERS : "has"
-    USERS ||--o| EMPLOYEES : "has profile"
-    CATEGORIES ||--o{ MEDICINES : "classifies"
-    CATEGORIES ||--o{ CATEGORIES : "parent of"
+    USERS ||--o| EMPLOYEES : "linked to"
+    CATEGORIES ||--o{ MEDICINES : "categorizes"
+    CATEGORIES ||--o{ CATEGORIES : "parent-child"
     SUPPLIERS ||--o{ MEDICINES : "supplies"
-    MEDICINES ||--|| INVENTORY : "tracked in"
-    SUPPLIERS ||--o{ PURCHASES : "sourced from"
-    USERS ||--o{ PURCHASES : "created by"
+    MEDICINES ||--o| INVENTORY : "tracked in"
+    SUPPLIERS ||--o{ PURCHASES : "fulfills"
     PURCHASES ||--|{ PURCHASE_ITEMS : "contains"
-    MEDICINES ||--o{ PURCHASE_ITEMS : "included in"
-    USERS ||--o{ SALES : "created by"
+    MEDICINES ||--o{ PURCHASE_ITEMS : "in"
     SALES ||--|{ SALE_ITEMS : "contains"
-    MEDICINES ||--o{ SALE_ITEMS : "sold as"
+    MEDICINES ||--o{ SALE_ITEMS : "sold in"
     MEDICINES ||--o{ STOCK_MOVEMENTS : "tracked by"
-    USERS ||--o{ STOCK_MOVEMENTS : "performed by"
     MEDICINES ||--o{ ALERTS : "triggers"
-    USERS ||--o{ ALERTS : "acknowledged by"
+    USERS ||--o{ PURCHASES : "creates"
+    USERS ||--o{ SALES : "creates"
+    USERS ||--o{ STOCK_MOVEMENTS : "performs"
+    USERS ||--o{ ALERTS : "acknowledges"
 ```
 
 ---
 
-## 4. Use Case Diagram (Textual with Mermaid)
+## 4. JWT Authentication Sequence Diagram
 
 ```mermaid
-graph LR
-    ADMIN((Admin))
-    PHARM((Pharmacist))
-    INV((Inventory Manager))
-    STAFF((Staff))
+sequenceDiagram
+    participant User
+    participant React
+    participant Axios
+    participant SpringSecurity
+    participant AuthController
+    participant JwtUtil
+    participant DB
 
-    subgraph AUTH["Authentication"]
-        UC1[Login]
-        UC2[Register]
-        UC3[Change Password]
-    end
+    User->>React: Enter email + password
+    React->>Axios: POST /api/auth/login
+    Axios->>SpringSecurity: Request (no JWT � public endpoint)
+    SpringSecurity->>AuthController: Forward (public)
+    AuthController->>DB: Find user by email
+    DB-->>AuthController: User entity
+    AuthController->>SpringSecurity: loadUserByUsername()
+    SpringSecurity->>AuthController: BCrypt verify password
+    AuthController->>JwtUtil: generateToken(userDetails)
+    JwtUtil-->>AuthController: Signed JWT (30 days)
+    AuthController-->>Axios: { token, username, role }
+    Axios-->>React: Response
+    React->>React: localStorage.setItem('token', jwt)
+    React->>React: AuthContext.setUser({ role, username })
+    React-->>User: Redirect to /dashboard
 
-    subgraph MED["Medicine Module"]
-        UC4[View Medicines]
-        UC5[Add Medicine]
-        UC6[Edit Medicine]
-        UC7[Delete Medicine]
-    end
-
-    subgraph INV_MOD["Inventory Module"]
-        UC8[View Inventory]
-        UC9[Adjust Stock]
-        UC10[View Stock Movements]
-    end
-
-    subgraph PURCH["Purchase Module"]
-        UC11[Create Purchase]
-        UC12[Receive Purchase]
-        UC13[Cancel Purchase]
-    end
-
-    subgraph SALE["Sales Module"]
-        UC14[Create Sale]
-        UC15[Cancel Sale]
-        UC16[View Sales History]
-    end
-
-    subgraph REPORT["Reports"]
-        UC17[View Dashboard]
-        UC18[Generate Reports]
-    end
-
-    subgraph ALERT["Alerts"]
-        UC19[View Alerts]
-        UC20[Acknowledge Alert]
-    end
-
-    ADMIN --> UC1 & UC2 & UC3 & UC4 & UC5 & UC6 & UC7
-    ADMIN --> UC8 & UC9 & UC10 & UC11 & UC12 & UC13
-    ADMIN --> UC14 & UC15 & UC16 & UC17 & UC18 & UC19 & UC20
-
-    PHARM --> UC1 & UC3 & UC4 & UC8 & UC10
-    PHARM --> UC14 & UC15 & UC16 & UC17 & UC19 & UC20
-
-    INV --> UC1 & UC3 & UC4 & UC8 & UC9 & UC10
-    INV --> UC11 & UC12 & UC13 & UC17 & UC18 & UC19 & UC20
-
-    STAFF --> UC1 & UC3 & UC4 & UC8 & UC17 & UC19
+    Note over React,DB: Subsequent authenticated requests
+    User->>React: Navigate to /medicines
+    React->>Axios: GET /api/medicines
+    Axios->>Axios: Interceptor adds: Authorization: Bearer <jwt>
+    Axios->>SpringSecurity: Request with Bearer token
+    SpringSecurity->>JwtUtil: validateToken(token)
+    JwtUtil-->>SpringSecurity: valid = true, username = "admin"
+    SpringSecurity->>SpringSecurity: Set SecurityContext
+    SpringSecurity->>AuthController: Forward to MedicineController
+    AuthController->>DB: medicineRepository.findAll()
+    DB-->>AuthController: List<Medicine>
+    AuthController-->>Axios: 200 OK [ medicines... ]
+    Axios-->>React: Response data
+    React-->>User: Display medicines table
 ```
 
 ---
 
-## 5. Activity Diagram — Purchase Receiving Flow
+## 5. Purchase ? Stock Update Flow
+
+```mermaid
+sequenceDiagram
+    participant IM as Inventory Manager
+    participant UI as React Frontend
+    participant PC as PurchaseController
+    participant PS as PurchaseService
+    participant IS as InventoryService
+    participant SM as StockMovementRepo
+    participant DB as Database
+
+    IM->>UI: Create Purchase Order (Supplier + Items)
+    UI->>PC: POST /api/purchases
+    PC->>PS: createPurchase(dto)
+    PS->>DB: Save Purchase (status: PENDING)
+    PS->>DB: Save PurchaseItems
+    PS-->>PC: Purchase created
+    PC-->>UI: 201 Created
+
+    IM->>UI: Click "Mark Received"
+    UI->>PC: PUT /api/purchases/{id}/receive
+    PC->>PS: receivePurchase(id)
+    loop For each PurchaseItem
+        PS->>IS: findInventoryByMedicine(medicineId)
+        IS->>DB: SELECT inventory WHERE medicine_id = ?
+        DB-->>IS: InventoryRecord
+        IS->>IS: inventory.quantity += item.quantity
+        IS->>DB: SAVE inventory (updated quantity)
+        PS->>SM: save(StockMovement{type: PURCHASE_IN})
+        SM->>DB: INSERT stock_movements
+    end
+    PS->>DB: UPDATE purchase SET status = RECEIVED
+    PS-->>PC: success
+    PC-->>UI: 200 OK
+    UI->>UI: Reload purchases + inventory data
+    UI-->>IM: ? Stock updated successfully
+```
+
+---
+
+## 6. Sale ? Auto Stock Deduction Flow
+
+```mermaid
+sequenceDiagram
+    participant PH as Pharmacist
+    participant UI as React Frontend
+    participant SC as SalesController
+    participant SS as SalesService
+    participant IS as InventoryService
+    participant AS as AlertService
+
+    PH->>UI: Create Sale (customer + items)
+    UI->>SC: POST /api/sales
+    SC->>SS: createSale(dto)
+    
+    loop For each SaleItem
+        SS->>IS: getInventory(medicineId)
+        IS-->>SS: InventoryRecord
+        alt Insufficient Stock
+            SS-->>SC: throw InsufficientStockException
+            SC-->>UI: 400 Bad Request
+            UI-->>PH: ? Insufficient stock
+        else Sufficient Stock
+            SS->>IS: inventory.qty -= item.qty
+            IS->>IS: Save updated inventory
+            SS->>IS: logMovement(SALE_OUT)
+            
+            IS->>IS: Check: qty < reorderLevel?
+            alt qty < reorderLevel
+                IS->>AS: createLowStockAlert(medicine)
+                AS->>AS: Save Alert (type: LOW_STOCK)
+            end
+        end
+    end
+    
+    SS->>SS: Save Sale (status: COMPLETED)
+    SS-->>SC: Sale created
+    SC-->>UI: 201 Created
+    UI-->>PH: ? Sale recorded, stock deducted
+```
+
+---
+
+## 7. Scheduled Alert Engine Flow
 
 ```mermaid
 flowchart TD
-    A([Start]) --> B[Inventory Manager creates Purchase Order]
-    B --> C[Select Supplier]
-    C --> D[Add Medicine Line Items\nQuantity + Unit Cost + Batch + Expiry]
-    D --> E[Submit Purchase Order]
-    E --> F[System saves with status = PENDING]
-    F --> G{Purchase Arrived?}
-    G -- No --> H[Wait / Follow Up with Supplier]
-    H --> G
-    G -- Yes --> I[Mark Purchase as RECEIVED]
-    I --> J{For each Purchase Item}
-    J --> K{Medicine in Inventory?}
-    K -- Yes --> L[Add quantity to existing record]
-    K -- No --> M[Create new Inventory record]
-    L --> N[Log StockMovement: PURCHASE_IN]
-    M --> N
-    N --> O{More Items?}
-    O -- Yes --> J
-    O -- No --> P[Update Purchase total amounts]
-    P --> Q[Check Low Stock Alerts — resolve if applicable]
-    Q --> R([End])
+    CRON["? @Scheduled cron = 0 0 6 * * ?<br/>Fires every day at 6:00 AM"]
+    CRON --> LOAD["Load ALL inventory records from DB"]
+    LOAD --> LOOP["For each InventoryRecord"]
+    
+    LOOP --> C1{qty < medicine.reorderLevel?}
+    C1 -- Yes --> A1["Create/Update LOW_STOCK Alert<br/>status: ACTIVE"]
+    
+    LOOP --> C2{expiry = 30 days?}
+    C2 -- Yes --> A2["Create EXPIRY_30_DAYS Alert<br/>status: ACTIVE"]
+    
+    LOOP --> C3{expiry = 60 days?}
+    C3 -- Yes --> A3["Create EXPIRY_60_DAYS Alert<br/>status: ACTIVE"]
+    
+    LOOP --> C4{expiry = 90 days?}
+    C4 -- Yes --> A4["Create EXPIRY_90_DAYS Alert<br/>status: ACTIVE"]
+    
+    A1 & A2 & A3 & A4 --> DONE["? Alert sweep complete<br/>Dashboard badge count updated"]
 ```
 
 ---
 
-## 6. Activity Diagram — Sale Transaction Flow
-
-```mermaid
-flowchart TD
-    A([Start]) --> B[Pharmacist initiates Sale]
-    B --> C[Enter Customer Name & Payment Method]
-    C --> D[Add Medicine Items to Cart]
-    D --> E{For each Medicine}
-    E --> F[Check Inventory]
-    F --> G{Sufficient Stock?}
-    G -- No --> H[❌ Show Error: Insufficient Stock]
-    H --> D
-    G -- Yes --> I{More Items?}
-    I -- Yes --> E
-    I -- No --> J[Calculate Totals\nSubtotal + Tax - Discount]
-    J --> K[Confirm & Submit Sale]
-    K --> L{For each Sale Item}
-    L --> M[Deduct Quantity from Inventory]
-    M --> N[Log StockMovement: SALE_OUT]
-    N --> O{More Items?}
-    O -- Yes --> L
-    O -- No --> P{Inventory Below Reorder Level?}
-    P -- Yes --> Q[🔔 Generate LOW_STOCK Alert]
-    P --> R[Save Sale with status = COMPLETED]
-    Q --> R
-    R --> S[Generate Sale Number]
-    S --> T([End])
-```
+*MediStock Pro � Diagrams & Architecture | Infosys Springboard Internship | B.Tech CSE*

@@ -52,6 +52,9 @@ public class DashboardService {
 
         int year = LocalDate.now().getYear();
         List<Object[]> monthlySales = saleRepository.monthlySalesRevenue(year);
+        if (monthlySales.isEmpty()) {
+            monthlySales = saleRepository.allMonthlySalesRevenue();
+        }
         stats.put("monthlySalesTrend", monthlySales.stream()
                 .map(row -> Map.of("month", row[0], "revenue", row[1]))
                 .collect(Collectors.toList()));

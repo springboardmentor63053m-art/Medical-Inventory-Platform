@@ -39,7 +39,8 @@ public class StockMovement {
     @Column(columnDefinition = "TEXT")
     private String reason;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "performed_by", nullable = false)
     private User performedBy;
 

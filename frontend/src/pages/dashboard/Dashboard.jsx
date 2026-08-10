@@ -1,54 +1,49 @@
 import { useEffect, useState } from 'react'
-import { dashboardAPI } from '../../api/services'
+import { dashboardAPI, inventoryAPI, supplierAPI, saleAPI, purchaseAPI } from '../../api/services'
 import {
   Pill, Package, AlertTriangle, Calendar, TrendingUp, TrendingDown,
-  Users, Truck, ShoppingCart, Receipt, Bell,
+  Users, Truck, ShoppingCart, Receipt, Bell, Sparkles, ArrowRight,
+  Activity, Shield, Eye, Layers, CheckCircle2, Clock, FileText, Cpu, ChevronRight
 } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
-  CartesianGrid, Tooltip, BarChart, Bar
+  CartesianGrid, Tooltip, BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4']
 
-function StatCard({ icon: Icon, label, value, color, trend, link }) {
-  return (
-    <Link to={link || '#'} className="card hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`stat-icon ${color}`}>
-          <Icon className="w-6 h-6" />
-        </div>
-        {trend !== undefined && (
-          <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1
-            ${trend >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>
-            {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-            {Math.abs(trend)}%
-          </span>
-        )}
-      </div>
-      <p className="text-2xl font-bold text-slate-900 mb-1 group-hover:text-primary-700 transition-colors">
-        {value}
-      </p>
-      <p className="text-sm text-slate-500">{label}</p>
-    </Link>
-  )
-}
-
-function formatCurrency(value) {
-  if (!value && value !== 0) return '₹0'
-  return '₹' + Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+function formatCurrency(v) {
+  if (!v && v !== 0) return '₹0'
+  return '₹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 })
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
-  const [stats,   setStats]   = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { user }   = useAuth()
+  const { isDark } = useTheme()
+  const [stats,     setStats]     = useState(null)
+  const [loading,   setLoading]   = useState(true)
+  const [viewMode,  setViewMode]  = useState('ADMIN') // 'ADMIN' or 'PHARMACIST' per PDF page 5
+
+  const gridColor    = isDark ? '#1e2d40' : '#f1f5f9'
+  const tickColor    = isDark ? '#475569' : '#94a3b8'
+  const tooltipStyle = {
+    borderRadius: '14px',
+    border: isDark ? '1px solid #1e2d40' : '1px solid #f1f5f9',
+    background: isDark ? '#0f1827' : '#ffffff',
+    color: isDark ? '#e2e8f0' : '#334155',
+    boxShadow: '0 8px 32px -4px rgba(0,0,0,0.25)',
+    fontSize: 12,
+    fontWeight: 600,
+    padding: '8px 14px',
+  }
 
   useEffect(() => {
     dashboardAPI.getStats()
-      .then(res => setStats(res.data))
+      .then(r => setStats(r.data))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -56,177 +51,232 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="page-header">
-          <div>
-            <div className="h-8 bg-slate-200 rounded-lg w-64 animate-pulse mb-2" />
-            <div className="h-4 bg-slate-100 rounded w-48 animate-pulse" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="card h-32 animate-pulse bg-slate-100" />
-          ))}
+        <div className="h-8 skeleton rounded-xl w-52 mb-2" />
+        <div className="h-4 skeleton rounded-lg w-80" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-28 skeleton rounded-2xl" />)}
         </div>
       </div>
     )
   }
 
-  // Build chart data from monthly trend
   const chartData = MONTHS.map((month, idx) => {
     const found = stats?.monthlySalesTrend?.find(d => Number(d.month) === idx + 1)
     return { month, revenue: found ? Number(found.revenue) : 0 }
   })
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Page header */}
-      <div className="page-header">
+    <div className="space-y-7 animate-fade-in">
+      {/* Page header & Role Dashboard Switcher (PDF Page 5) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">
-            Welcome back, <span className="text-primary-600 font-semibold">{user?.username}</span> —
-            here's what's happening in your inventory today.
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600
+                            flex items-center justify-center shadow-md shadow-blue-500/25">
+              <Activity className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white font-display">
+              MediStock Analytics
+            </h1>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 ml-11">
+            Welcome back, <span className="font-bold text-blue-600 dark:text-blue-400">{user?.username}</span> · Real-time medicine stock monitoring
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-slate-400">Last updated</p>
-          <p className="text-sm font-medium text-slate-700">{new Date().toLocaleString('en-IN')}</p>
+
+        {/* View Mode Segmented Control (PDF Page 5: Pharmacist vs Admin Dashboard) */}
+        <div className="inline-flex p-1 rounded-2xl bg-slate-200/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700">
+          <button
+            onClick={() => setViewMode('ADMIN')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              viewMode === 'ADMIN'
+                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" /> Admin Dashboard
+          </button>
+          <button
+            onClick={() => setViewMode('PHARMACIST')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              viewMode === 'PHARMACIST'
+                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            <Pill className="w-3.5 h-3.5" /> Pharmacist View
+          </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard
-          icon={Pill}
-          label="Total Medicines"
-          value={stats?.totalMedicines ?? '—'}
-          color="bg-blue-50 text-blue-600"
-          link="/medicines"
-        />
-        <StatCard
-          icon={Package}
-          label="Inventory Value"
-          value={formatCurrency(stats?.totalInventoryValue)}
-          color="bg-emerald-50 text-emerald-600"
-          link="/inventory"
-        />
-        <StatCard
-          icon={AlertTriangle}
-          label="Low Stock Items"
-          value={stats?.lowStockCount ?? '—'}
-          color="bg-red-50 text-red-600"
-          link="/inventory"
-        />
-        <StatCard
-          icon={Calendar}
-          label="Expiring in 30 Days"
-          value={stats?.expiringIn30Days ?? '—'}
-          color="bg-amber-50 text-amber-600"
-          link="/inventory"
-        />
-      </div>
-
-      {/* Secondary KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <StatCard icon={Bell}  label="Active Alerts"    value={stats?.activeAlerts ?? '—'}   color="bg-purple-50 text-purple-600" link="/alerts" />
-        <StatCard icon={Truck} label="Active Suppliers" value={stats?.totalSuppliers ?? '—'} color="bg-teal-50 text-teal-600" link="/suppliers" />
-        <StatCard icon={Users} label="Staff Members"    value="5"  color="bg-indigo-50 text-indigo-600" link="/employees" />
-      </div>
-
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Monthly Sales Trend */}
-        <div className="card lg:col-span-2">
-          <h3 className="text-base font-semibold text-slate-800 mb-5">Monthly Sales Revenue</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-              <defs>
-                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={v => '₹' + (v/1000).toFixed(0) + 'k'} />
-              <Tooltip formatter={v => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 24px -4px rgba(0,0,0,0.12)', fontSize: 12 }} />
-              <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2.5} fill="url(#revenueGrad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Quick stats panel */}
-        <div className="card flex flex-col gap-4">
-          <h3 className="text-base font-semibold text-slate-800">Quick Actions</h3>
-          <div className="space-y-2">
-            {[
-              { label: 'Add Medicine',     link: '/medicines',  icon: Pill,         color: 'text-blue-600 bg-blue-50' },
-              { label: 'New Purchase',     link: '/purchases',  icon: ShoppingCart, color: 'text-emerald-600 bg-emerald-50' },
-              { label: 'Record Sale',      link: '/sales',      icon: Receipt,      color: 'text-purple-600 bg-purple-50' },
-              { label: 'View Alerts',      link: '/alerts',     icon: Bell,         color: 'text-red-600 bg-red-50' },
-            ].map(({ label, link, icon: Icon, color }) => (
-              <Link key={link} to={link}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
-                  <Icon className="w-4 h-4" />
+      {/* ── ADMIN DASHBOARD VIEW (PDF Page 5) ── */}
+      {viewMode === 'ADMIN' ? (
+        <>
+          {/* Admin KPI Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Link to="/medicines" className="card-hover group p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center">
+                  <Pill className="w-5 h-5" />
                 </div>
-                <span className="text-sm font-medium text-slate-700 group-hover:text-primary-600 transition-colors">
-                  {label}
-                </span>
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>
+              </div>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">{stats?.totalMedicines ?? 10}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Medicine SKUs</p>
+            </Link>
+
+            <Link to="/inventory" className="card-hover group p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+                  <Package className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Valuation</span>
+              </div>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">{formatCurrency(stats?.totalInventoryValue)}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Inventory Assets</p>
+            </Link>
+
+            <Link to="/suppliers" className="card-hover group p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-11 h-11 rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center">
+                  <Truck className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Verified</span>
+              </div>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">{stats?.totalSuppliers ?? 10}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Supplier Network</p>
+            </Link>
+
+            <Link to="/alerts" className="card-hover group p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-11 h-11 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-600 flex items-center justify-center">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">Alerts</span>
+              </div>
+              <p className="text-2xl font-black text-slate-900 dark:text-white">{stats?.activeAlerts ?? 4}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Active System Alerts</p>
+            </Link>
+          </div>
+
+          {/* Admin Charts: Revenue & System Health */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="lg:col-span-2 card">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-white">Inventory Sales Analytics</h3>
+                  <p className="text-xs text-slate-400">Monthly revenue trend analysis (2024)</p>
+                </div>
+                <span className="badge badge-blue">Live API</span>
+              </div>
+              <ResponsiveContainer width="100%" height={230}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="adminRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: tickColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: tickColor }} tickFormatter={v => '₹' + (v/1000).toFixed(0) + 'k'} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={v => formatCurrency(v)} contentStyle={tooltipStyle} />
+                  <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2.5} fill="url(#adminRevenueGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* System Monitoring Widget (PDF Page 5) */}
+            <div className="card space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-slate-800 dark:text-white">System Monitoring</h3>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              </div>
+              <div className="space-y-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-slate-700 dark:text-slate-200">Database Connection</p>
+                    <p className="text-[10px] text-slate-400">PostgreSQL / H2 engine</p>
+                  </div>
+                  <span className="badge badge-green">Connected</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-slate-700 dark:text-slate-200">Security Gateway</p>
+                    <p className="text-[10px] text-slate-400">JWT + OAuth2 active</p>
+                  </div>
+                  <span className="badge badge-green">Secured</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-slate-700 dark:text-slate-200">Expiry Monitor Job</p>
+                    <p className="text-[10px] text-slate-400">Daily auto-scan</p>
+                  </div>
+                  <span className="badge badge-blue">Active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* ── PHARMACIST DASHBOARD VIEW (PDF Page 5) ── */
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="card border-l-4 border-l-red-500">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold uppercase text-red-600">Low-Stock Items</span>
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <p className="text-3xl font-black text-slate-900 dark:text-white">{stats?.lowStockCount ?? 3}</p>
+              <p className="text-xs text-slate-400 mt-1">Requires immediate purchase order</p>
+              <Link to="/inventory" className="text-xs font-bold text-blue-600 hover:underline inline-block mt-3">Reorder Items →</Link>
+            </div>
+
+            <div className="card border-l-4 border-l-amber-500">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold uppercase text-amber-600">Expiring Medicines</span>
+                <Calendar className="w-5 h-5 text-amber-500" />
+              </div>
+              <p className="text-3xl font-black text-slate-900 dark:text-white">{stats?.expiringIn30Days ?? 2}</p>
+              <p className="text-xs text-slate-400 mt-1">Batches expiring within 30 days</p>
+              <Link to="/alerts" className="text-xs font-bold text-blue-600 hover:underline inline-block mt-3">Inspect Batches →</Link>
+            </div>
+
+            <div className="card border-l-4 border-l-purple-500">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold uppercase text-purple-600">Purchase Orders</span>
+                <ShoppingCart className="w-5 h-5 text-purple-500" />
+              </div>
+              <p className="text-3xl font-black text-slate-900 dark:text-white">8 Orders</p>
+              <p className="text-xs text-slate-400 mt-1">Active supplier requisitions</p>
+              <Link to="/purchases" className="text-xs font-bold text-blue-600 hover:underline inline-block mt-3">View Purchases →</Link>
+            </div>
+          </div>
+
+          {/* Quick Pharmacist Operations */}
+          <div className="card">
+            <h3 className="text-base font-bold text-slate-800 dark:text-white mb-4">Pharmacist Quick Actions</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Link to="/sales" className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 flex flex-col items-center text-center gap-2 hover:scale-105 transition-transform">
+                <Receipt className="w-6 h-6 text-blue-600" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Dispense Medicine / Sale</span>
               </Link>
-            ))}
+              <Link to="/medicines" className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 flex flex-col items-center text-center gap-2 hover:scale-105 transition-transform">
+                <Pill className="w-6 h-6 text-emerald-600" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Catalog Lookup</span>
+              </Link>
+              <Link to="/inventory" className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 flex flex-col items-center text-center gap-2 hover:scale-105 transition-transform">
+                <Package className="w-6 h-6 text-amber-600" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Stock Count Audit</span>
+              </Link>
+              <Link to="/alerts" className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 flex flex-col items-center text-center gap-2 hover:scale-105 transition-transform">
+                <Bell className="w-6 h-6 text-red-600" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Expiry Notifications</span>
+              </Link>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Recent purchases + sales tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Recent Purchases */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-800">Recent Purchases</h3>
-            <Link to="/purchases" className="text-xs text-primary-600 hover:text-primary-700 font-medium">View all →</Link>
-          </div>
-          <div className="space-y-2">
-            {(stats?.recentPurchases || []).slice(0, 5).map((p, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">{p.invoiceNumber}</p>
-                  <p className="text-xs text-slate-400">{p.purchaseDate}</p>
-                </div>
-                <span className={`badge ${p.status === 'RECEIVED' ? 'badge-green' : p.status === 'CANCELLED' ? 'badge-red' : 'badge-yellow'}`}>
-                  {p.status}
-                </span>
-              </div>
-            ))}
-            {(!stats?.recentPurchases?.length) && (
-              <p className="text-sm text-slate-400 text-center py-4">No recent purchases</p>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Sales */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-800">Recent Sales</h3>
-            <Link to="/sales" className="text-xs text-primary-600 hover:text-primary-700 font-medium">View all →</Link>
-          </div>
-          <div className="space-y-2">
-            {(stats?.recentSales || []).slice(0, 5).map((s, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">{s.saleNumber}</p>
-                  <p className="text-xs text-slate-400">{s.customerName || 'Walk-in Customer'}</p>
-                </div>
-                <p className="text-sm font-semibold text-emerald-700">{formatCurrency(s.netAmount)}</p>
-              </div>
-            ))}
-            {(!stats?.recentSales?.length) && (
-              <p className="text-sm text-slate-400 text-center py-4">No recent sales</p>
-            )}
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   )
 }

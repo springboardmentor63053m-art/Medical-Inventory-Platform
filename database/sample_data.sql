@@ -50,64 +50,49 @@ INSERT INTO categories (name, description, parent_id, is_active) VALUES
 ('NSAIDs',              'Non-Steroidal Anti-Inflammatory Drugs',                               2,    TRUE);
 
 -- ============================================================
--- Suppliers
+-- Suppliers (10 Records)
 -- ============================================================
-INSERT INTO suppliers (name, contact_person, email, phone, address, city, state, pincode, gst_number, license_number, is_active) VALUES
-('MedLine Pharma Distributors', 'Anil Mehta',    'anil@medline.com',     '9811223344', '45, Industrial Area Phase 2',  'Delhi',     'Delhi',         '110001', '07AABCM1234A1ZX', 'DL-PH-2021-001', TRUE),
-('HealthFirst Supplies Pvt Ltd','Geeta Singh',   'geeta@healthfirst.com','9822334455', '12, MIDC, Andheri East',       'Mumbai',    'Maharashtra',   '400069', '27AABCH5678B1ZY', 'MH-PH-2020-045', TRUE),
-('PharmaCare Solutions',        'Kumar Rajan',   'kumar@pharmacare.com', '9833445566', '78, Koramangala 4th Block',    'Bangalore', 'Karnataka',     '560034', '29AABCP9012C1ZZ', 'KA-PH-2019-012', TRUE),
-('CureMed Wholesale',           'Lakshmi Iyer',  'lakshmi@curemed.com',  '9844556677', '23, Anna Salai',               'Chennai',   'Tamil Nadu',    '600002', '33AABCC3456D1ZA', 'TN-PH-2022-078', TRUE),
-('National Drug Corporation',   'Vijay Gupta',   'vijay@ndc.com',        '9855667788', '56, MG Road, Sector 5',        'Hyderabad', 'Telangana',     '500003', '36AABCN7890E1ZB', 'TS-PH-2021-034', TRUE);
+INSERT INTO suppliers (id, name, contact_person, email, phone, address, city, state, pincode, gst_number, license_number, is_active) VALUES
+(1,  'Sun Pharma Distributors',     'Rajesh Kumar',  'rajesh@sunpharma.com',    '+91 9876543210', 'Plot 12, MIDC Industrial Area',           'Mumbai',    'Maharashtra',   '400093', '27AABCS1234A1Z5', 'MH-DL-2021-001', TRUE),
+(2,  'Cipla MedCorp',              'Priya Sharma',  'contact@ciplamed.com',    '+91 9123456789', '22, Hosur Road, Electronic City',        'Bengaluru', 'Karnataka',     '560100', '29AABCC5678B1Z3', 'KA-DL-2020-045', TRUE),
+(3,  'Dr. Reddy\'s Pharma Supply', 'Venkat Reddy',  'venkat@drreddys.com',     '+91 9988776655', '8-2-337, Road No. 3, Banjara Hills',      'Hyderabad', 'Telangana',     '500034', '36AAACR4567C1Z1', 'TS-DL-2019-088', TRUE),
+(4,  'Mankind Pharma Ltd',         'Suresh Patel',  'suresh@mankind.in',       '+91 9811223344', 'A-35, Sector 60, Noida',                 'Noida',     'Uttar Pradesh', '201301', '09AAAIM3456D1Z2', 'UP-DL-2022-012', TRUE),
+(5,  'Lupin Healthcare Distributors','Meena Joshi', 'meena@lupinhc.com',       '+91 9765432100', 'Kalpataru Point, Sion-Trombay Road',     'Mumbai',    'Maharashtra',   '400071', '27AAACL5678E1Z4', 'MH-DL-2020-078', TRUE),
+(6,  'Alkem Laboratories',         'Amit Singhania','amit@alkem.com',          '+91 9654321098', 'Devashish, Premises Co-op Society',       'Mumbai',    'Maharashtra',   '400059', '27AAACA6789F1Z6', 'MH-DL-2021-033', TRUE),
+(7,  'Abbott India Pharma',        'Kavitha Nair',  'kavitha@abbottindia.com', '+91 9543210987', '3/F, Godrej BKC, Bandra Kurla Complex',   'Mumbai',    'Maharashtra',   '400051', '27AAACA7890G1Z7', 'MH-DL-2018-099', TRUE),
+(8,  'Torrent Pharmaceuticals',    'Bhavesh Mehta', 'bhavesh@torrentpharma.com','+91 9432109876', 'Torrent House, Off Ashram Road',          'Ahmedabad', 'Gujarat',       '380009', '24AAACT8901H1Z8', 'GJ-DL-2020-056', TRUE),
+(9,  'Himalaya Drug Company',      'Deepak Rao',    'deepak@himalayawellness.com','+91 9321098765','Makali, Tumkur Road',                     'Bengaluru', 'Karnataka',     '562123', '29AAACH9012I1Z9', 'KA-DL-2019-021', TRUE),
+(10, 'Zydus Healthcare Ltd',       'Pooja Verma',   'pooja@zydus.com',         '+91 9210987654', 'Zydus Corporate Park, SG Highway',        'Ahmedabad', 'Gujarat',       '382210', '24AAACZ0123J1Z0', 'GJ-DL-2021-077', TRUE);
 
 -- ============================================================
--- Medicines
+-- Medicines (10 Records)
 -- ============================================================
-INSERT INTO medicines (name, generic_name, brand_name, category_id, supplier_id, unit, hsn_code, description, unit_price, mrp, reorder_level, status) VALUES
-('Amoxicillin 500mg Capsules',    'Amoxicillin',       'Amoxil',         1,  1, 'Capsules', '3004.10', 'Broad-spectrum antibiotic for bacterial infections',       8.50,  12.00, 50,  'ACTIVE'),
-('Azithromycin 250mg Tablets',    'Azithromycin',      'Zithromax',      1,  2, 'Tablets',  '3004.10', 'Macrolide antibiotic for respiratory and skin infections',  28.00, 45.00, 30,  'ACTIVE'),
-('Ciprofloxacin 500mg Tablets',   'Ciprofloxacin',     'Cipro',          1,  3, 'Tablets',  '3004.10', 'Fluoroquinolone antibiotic for urinary and GI infections',  12.00, 18.50, 40,  'ACTIVE'),
-('Paracetamol 500mg Tablets',     'Paracetamol',       'Crocin',         2,  1, 'Tablets',  '3004.90', 'Analgesic and antipyretic for pain and fever',               2.50,  4.00,  100, 'ACTIVE'),
-('Ibuprofen 400mg Tablets',       'Ibuprofen',         'Brufen',         10, 2, 'Tablets',  '3004.90', 'NSAID for pain, inflammation, and fever',                    5.00,  8.00,  80,  'ACTIVE'),
-('Diclofenac 50mg Tablets',       'Diclofenac Sodium', 'Voveran',        10, 4, 'Tablets',  '3004.90', 'NSAID for musculoskeletal pain and arthritis',               6.50,  10.00, 60,  'ACTIVE'),
-('Omeprazole 20mg Capsules',      'Omeprazole',        'Omez',           4,  5, 'Capsules', '3004.90', 'Proton pump inhibitor for acidity and ulcers',               9.00,  14.50, 70,  'ACTIVE'),
-('Pantoprazole 40mg Tablets',     'Pantoprazole',      'Pantocid',       4,  1, 'Tablets',  '3004.90', 'PPI for GERD and peptic ulcers',                            12.00, 18.00, 50,  'ACTIVE'),
-('Vitamin C 500mg Tablets',       'Ascorbic Acid',     'Limcee',         5,  3, 'Tablets',  '3004.50', 'Essential vitamin for immune support',                        3.00,  5.00,  120, 'ACTIVE'),
-('Vitamin D3 60000 IU Capsules',  'Cholecalciferol',   'Uprise-D3',      5,  2, 'Capsules', '3004.50', 'Vitamin D supplement for bone health',                      35.00, 55.00, 30,  'ACTIVE'),
-('Metformin 500mg Tablets',       'Metformin HCl',     'Glycomet',       6,  4, 'Tablets',  '3004.90', 'First-line antidiabetic for Type 2 Diabetes',                4.50,  7.50,  100, 'ACTIVE'),
-('Glimepiride 2mg Tablets',       'Glimepiride',       'Amaryl',         6,  5, 'Tablets',  '3004.90', 'Sulfonylurea for blood glucose control',                     15.00, 25.00, 40,  'ACTIVE'),
-('Amlodipine 5mg Tablets',        'Amlodipine',        'Amlip',          7,  1, 'Tablets',  '3004.90', 'Calcium channel blocker for hypertension',                    8.00, 13.00, 60,  'ACTIVE'),
-('Telmisartan 40mg Tablets',      'Telmisartan',       'Telmikind',      7,  3, 'Tablets',  '3004.90', 'ARB for hypertension and cardiovascular protection',         14.00, 22.00, 50,  'ACTIVE'),
-('Cetirizine 10mg Tablets',       'Cetirizine HCl',    'Zyrtec',         8,  2, 'Tablets',  '3004.90', 'Antihistamine for allergic rhinitis and urticaria',           4.00,  6.50,  80,  'ACTIVE'),
-('Loratadine 10mg Tablets',       'Loratadine',        'Clarityn',       8,  4, 'Tablets',  '3004.90', 'Non-sedating antihistamine for allergy relief',               5.50,  8.50,  70,  'ACTIVE'),
-('Atorvastatin 10mg Tablets',     'Atorvastatin',      'Lipitor',        7,  5, 'Tablets',  '3004.90', 'Statin for cholesterol management',                          18.00, 28.00, 40,  'ACTIVE'),
-('Doxycycline 100mg Capsules',    'Doxycycline HCl',   'Doxee',          1,  1, 'Capsules', '3004.10', 'Tetracycline antibiotic for broad-spectrum infections',      22.00, 35.00, 30,  'ACTIVE'),
-('Rabeprazole 20mg Tablets',      'Rabeprazole Sodium','Razo',           4,  2, 'Tablets',  '3004.90', 'PPI for acid reflux and gastric ulcers',                     11.00, 17.00, 55,  'ACTIVE'),
-('Calcium + D3 Tablets',          'Calcium Carbonate + D3','Shelcal',    5,  3, 'Tablets',  '3004.50', 'Calcium supplement with Vitamin D3 for bone strength',       8.00, 13.00, 90,  'ACTIVE');
+INSERT INTO medicines (id, name, generic_name, brand_name, category_id, supplier_id, unit, hsn_code, description, unit_price, mrp, reorder_level, status) VALUES
+(1,  'Amoxicillin 500mg',          'Amoxicillin Trihydrate', 'Mox 500',   1, 1,  'Capsules', '3004.10', 'Broad-spectrum antibacterial medication',   12.50,  15.00, 100, 'ACTIVE'),
+(2,  'Paracetamol 650mg',          'Acetaminophen',          'Dolo 650',  2, 2,  'Tablets',  '3004.90', 'Analgesic and antipyretic fever reducer',    2.00,   3.50, 200, 'ACTIVE'),
+(3,  'Atorvastatin 10mg',          'Atorvastatin Calcium',   'Lipitor',   3, 3,  'Tablets',  '3004.90', 'Statin for cardiovascular & cholesterol',     8.00,  10.50,  50, 'ACTIVE'),
+(4,  'Metformin 500mg',            'Metformin Hydrochloride','Glycomet',  4, 4,  'Tablets',  '3004.90', 'Blood sugar management for Type 2 Diabetes', 3.50,   5.00, 150, 'ACTIVE'),
+(5,  'Vitamin D3 60000 IU',        'Cholecalciferol',        'D-Rise',    5, 5,  'Capsules', '3004.50', 'Nutritional vitamin D supplement',          18.00,  25.00,  80, 'ACTIVE'),
+(6,  'Azithromycin 500mg',         'Azithromycin Dihydrate', 'Zithromax', 1, 6,  'Tablets',  '3004.10', 'Macrolide antibiotic for respiratory infection',22.00, 30.00,  60, 'ACTIVE'),
+(7,  'Amlodipine 5mg',             'Amlodipine Besylate',    'Norvasc',   3, 7,  'Tablets',  '3004.90', 'Calcium channel blocker for hypertension',   5.00,   7.50, 120, 'ACTIVE'),
+(8,  'Insulin Glargine 100IU/mL',  'Insulin Glargine',       'Lantus',    4, 8,  'Vials',    '3004.31', 'Long-acting insulin analogue for diabetes', 350.00, 420.00,  30, 'ACTIVE'),
+(9,  'Ibuprofen 400mg',            'Ibuprofen',              'Brufen',    2, 9,  'Tablets',  '3004.90', 'NSAID pain reliever and anti-inflammatory',   3.00,   4.50, 180, 'ACTIVE'),
+(10, 'Multivitamin & Multimineral','Multivitamin Complex',   'Supradyn',  5, 10, 'Tablets',  '3004.50', 'Daily essential multivitamin complex',       9.00,  13.00, 100, 'ACTIVE');
 
 -- ============================================================
--- Inventory (initial stock)
+-- Inventory (10 Records)
 -- ============================================================
-INSERT INTO inventory (medicine_id, batch_number, quantity, min_quantity, manufacturing_dt, expiry_date, location) VALUES
-(1,  'AMX-2024-001', 350,  50,  '2024-01-15', '2026-01-14', 'Rack-A-1'),
-(2,  'AZI-2024-002', 200,  30,  '2024-02-01', '2026-01-31', 'Rack-A-2'),
-(3,  'CIP-2024-003', 280,  40,  '2024-01-10', '2026-01-09', 'Rack-A-3'),
-(4,  'PAR-2024-004', 800, 100,  '2024-03-01', '2026-08-31', 'Rack-B-1'),
-(5,  'IBU-2024-005', 500,  80,  '2024-02-15', '2026-02-14', 'Rack-B-2'),
-(6,  'DIC-2024-006', 180,  60,  '2024-01-20', '2025-08-31', 'Rack-B-3'),
-(7,  'OME-2024-007', 420,  70,  '2024-04-01', '2026-03-31', 'Rack-C-1'),
-(8,  'PAN-2024-008', 300,  50,  '2024-03-15', '2026-03-14', 'Rack-C-2'),
-(9,  'VTC-2024-009', 650, 120,  '2024-01-01', '2026-12-31', 'Rack-D-1'),
-(10, 'VTD-2024-010', 150,  30,  '2024-02-01', '2026-01-31', 'Rack-D-2'),
-(11, 'MET-2024-011', 600, 100,  '2024-03-01', '2026-02-28', 'Rack-E-1'),
-(12, 'GLI-2024-012', 180,  40,  '2024-01-15', '2025-09-30', 'Rack-E-2'),
-(13, 'AML-2024-013', 350,  60,  '2024-04-01', '2026-03-31', 'Rack-F-1'),
-(14, 'TEL-2024-014', 250,  50,  '2024-02-20', '2026-02-19', 'Rack-F-2'),
-(15, 'CET-2024-015', 400,  80,  '2024-03-10', '2026-03-09', 'Rack-G-1'),
-(16, 'LOR-2024-016', 250,  70,  '2024-01-25', '2026-01-24', 'Rack-G-2'),
-(17, 'ATO-2024-017', 200,  40,  '2024-02-05', '2026-02-04', 'Rack-H-1'),
-(18, 'DOX-2024-018', 120,  30,  '2024-04-10', '2025-10-31', 'Rack-A-4'),
-(19, 'RAB-2024-019', 280,  55,  '2024-03-20', '2026-03-19', 'Rack-C-3'),
-(20, 'CAL-2024-020', 450,  90,  '2024-01-30', '2026-01-29', 'Rack-D-3');
+INSERT INTO inventory (id, medicine_id, batch_number, quantity, min_quantity, manufacturing_dt, expiry_date, location) VALUES
+(1,  1,  'AMX-2026-001', 500, 100, '2026-01-01', '2027-01-30', 'Shelf A1'),
+(2,  2,  'DOL-2026-088',  45, 200, '2026-01-10', '2026-08-29', 'Shelf B2'),
+(3,  3,  'LIP-2026-012', 300,  50, '2026-02-01', '2027-08-04', 'Shelf C3'),
+(4,  4,  'GLI-2026-045', 620, 150, '2026-01-15', '2027-05-01', 'Shelf D1'),
+(5,  5,  'DRS-2026-019', 200,  80, '2026-02-10', '2028-01-26', 'Shelf E2'),
+(6,  6,  'ZIT-2026-033',  25,  60, '2026-01-20', '2026-08-19', 'Shelf A3'),
+(7,  7,  'NOR-2026-007', 480, 120, '2026-03-01', '2027-09-08', 'Shelf C1'),
+(8,  8,  'LAN-2026-062',  18,  30, '2026-02-15', '2026-11-02', 'Refrigerator R1'),
+(9,  9,  'BRU-2026-041', 750, 180, '2026-01-05', '2027-05-31', 'Shelf B4'),
+(10, 10, 'SUP-2026-028', 310, 100, '2026-03-10', '2028-08-03', 'Shelf F1');
 
 -- ============================================================
 -- Purchases

@@ -8,10 +8,11 @@ public class AuthResponse {
     private String email;
     private String role;
     private Long expiresIn;
+    private String warning;
 
     public AuthResponse() {}
 
-    public AuthResponse(String token, String tokenType, Long userId, String username, String email, String role, Long expiresIn) {
+    public AuthResponse(String token, String tokenType, Long userId, String username, String email, String role, Long expiresIn, String warning) {
         this.token = token;
         this.tokenType = tokenType != null ? tokenType : "Bearer";
         this.userId = userId;
@@ -19,6 +20,7 @@ public class AuthResponse {
         this.email = email;
         this.role = role;
         this.expiresIn = expiresIn;
+        this.warning = warning;
     }
 
     public static AuthResponseBuilder builder() { return new AuthResponseBuilder(); }
@@ -31,6 +33,7 @@ public class AuthResponse {
         private String email;
         private String role;
         private Long expiresIn;
+        private String warning;
 
         public AuthResponseBuilder token(String token) { this.token = token; return this; }
         public AuthResponseBuilder tokenType(String tokenType) { this.tokenType = tokenType; return this; }
@@ -39,9 +42,10 @@ public class AuthResponse {
         public AuthResponseBuilder email(String email) { this.email = email; return this; }
         public AuthResponseBuilder role(String role) { this.role = role; return this; }
         public AuthResponseBuilder expiresIn(Long expiresIn) { this.expiresIn = expiresIn; return this; }
+        public AuthResponseBuilder warning(String warning) { this.warning = warning; return this; }
 
         public AuthResponse build() {
-            return new AuthResponse(token, tokenType, userId, username, email, role, expiresIn);
+            return new AuthResponse(token, tokenType, userId, username, email, role, expiresIn, warning);
         }
     }
 
@@ -59,4 +63,6 @@ public class AuthResponse {
     public void setRole(String role) { this.role = role; }
     public Long getExpiresIn() { return expiresIn; }
     public void setExpiresIn(Long expiresIn) { this.expiresIn = expiresIn; }
+    public String getWarning() { return warning; }
+    public void setWarning(String warning) { this.warning = warning; }
 }

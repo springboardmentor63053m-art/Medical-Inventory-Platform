@@ -77,8 +77,8 @@ export default function Inventory() {
       </div>
 
       {/* Table */}
-      <div className="card !p-0 overflow-hidden">
-        <div className="table-container">
+      <div className="card !p-0 overflow-hidden shadow-sm">
+        <div className="table-container !border-0 !rounded-none !shadow-none">
           <table className="table">
             <thead>
               <tr>
@@ -98,7 +98,7 @@ export default function Inventory() {
                 [...Array(6)].map((_, i) => (
                   <tr key={i}>
                     {[...Array(9)].map((_, j) => (
-                      <td key={j}><div className="h-4 bg-slate-100 rounded animate-pulse" /></td>
+                      <td key={j}><div className="h-4 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" /></td>
                     ))}
                   </tr>
                 ))
@@ -115,24 +115,24 @@ export default function Inventory() {
                   const isExpiring = inv.expiryDate && new Date(inv.expiryDate) <= new Date(Date.now() + 90*24*60*60*1000)
                   const isExpired  = inv.expiryDate && new Date(inv.expiryDate) < new Date()
                   return (
-                    <tr key={inv.id} className={isLow ? 'bg-red-50/30' : isExpiring ? 'bg-amber-50/30' : ''}>
-                      <td className="text-slate-400 text-xs">{idx+1}</td>
-                      <td className="font-medium text-slate-800">{inv.medicine?.name}</td>
-                      <td className="text-slate-500 text-xs">{inv.batchNumber || '—'}</td>
+                    <tr key={inv.id} className={isLow ? 'bg-red-50/30 dark:bg-red-950/20' : isExpiring ? 'bg-amber-50/30 dark:bg-amber-950/20' : 'hover:bg-blue-50/50 dark:hover:bg-blue-950/20'}>
+                      <td className="text-slate-400 font-mono text-xs">{idx+1}</td>
+                      <td className="font-bold text-slate-800 dark:text-slate-100">{inv.medicine?.name}</td>
+                      <td className="text-slate-500 dark:text-slate-400 font-mono text-xs">{inv.batchNumber || '—'}</td>
                       <td>
-                        <span className={`font-bold ${isLow ? 'text-red-600' : 'text-slate-800'}`}>
+                        <span className={`font-bold ${isLow ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
                           {inv.quantity}
                         </span>
                       </td>
-                      <td className="text-slate-500">{inv.minQuantity}</td>
+                      <td className="text-slate-500 dark:text-slate-400">{inv.minQuantity}</td>
                       <td>
                         {inv.expiryDate ? (
-                          <span className={`text-sm ${isExpired ? 'text-red-600 font-semibold' : isExpiring ? 'text-amber-600 font-medium' : 'text-slate-600'}`}>
+                          <span className={`text-sm ${isExpired ? 'text-red-600 dark:text-red-400 font-semibold' : isExpiring ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>
                             {inv.expiryDate}
                           </span>
                         ) : '—'}
                       </td>
-                      <td className="text-slate-500 text-xs">{inv.location || '—'}</td>
+                      <td className="text-slate-500 dark:text-slate-400 text-xs font-semibold">{inv.location || '—'}</td>
                       <td>
                         {isExpired ? <span className="badge badge-red">Expired</span>
                           : isLow  ? <span className="badge badge-red">Low Stock</span>
@@ -153,6 +153,15 @@ export default function Inventory() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Table Footer Bar */}
+        <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>Showing <strong className="text-slate-800 dark:text-slate-200">{inventory.length}</strong> Inventory Batches</span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            All Records Fully Loaded
+          </span>
         </div>
       </div>
 

@@ -26,4 +26,9 @@ public interface SaleRepository extends JpaRepository<Sale, Long> {
     @Query("SELECT MONTH(s.saleDate) as month, COALESCE(SUM(s.netAmount), 0) as revenue " +
            "FROM Sale s WHERE s.status = 'COMPLETED' AND YEAR(s.saleDate) = :year GROUP BY MONTH(s.saleDate)")
     List<Object[]> monthlySalesRevenue(@Param("year") int year);
+
+    @Query("SELECT MONTH(s.saleDate) as month, COALESCE(SUM(s.netAmount), 0) as revenue " +
+           "FROM Sale s WHERE s.status = 'COMPLETED' GROUP BY MONTH(s.saleDate) ORDER BY MONTH(s.saleDate)")
+    List<Object[]> allMonthlySalesRevenue();
 }
+

@@ -43,7 +43,7 @@ server:
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:MedicalInventoryManagementPlatformSecretKey2024BtechProjectSecure256BitKey}
-  expiration: ${JWT_EXPIRATION:86400000}  # 24 hours in milliseconds
+  expiration: ${JWT_EXPIRATION:2592000000}  # 30 days in milliseconds
 
 # CORS
 cors:
