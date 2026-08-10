@@ -14,4 +14,6 @@ public interface MedicineService {
     void deleteMedicine(Long id);
     List<MedicineResponse> searchMedicines(String name);
     List<MedicineResponse> getMedicinesByCategory(Long categoryId);
+    List<MedicineResponse.LinkedSupplierDto> getSuppliersByMedicine(Long medicineId);
+    Page<MedicineResponse> getMasterMedicineCatalog(int page, int size, String search, Long categoryId);
 }

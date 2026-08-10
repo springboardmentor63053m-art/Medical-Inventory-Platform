@@ -38,13 +38,13 @@ apiClient.interceptors.response.use(
     if (status === 401) {
       clearAuthStorage();
       if (window.location.pathname !== '/login') {
-        toast.error('Session expired or unauthorized. Please log in again.');
+        toast.error('Session expired or unauthorized. Please log in again.', { toastId: 'session-expired' });
         window.location.href = '/login';
       }
     } else if (status === 403) {
-      toast.error('Access Denied: You do not have permission for this action.');
+      toast.error('Access Denied: You do not have permission for this action.', { toastId: 'access-denied' });
     } else if (status >= 500) {
-      toast.error(`Server Error (${status}): ${message}`);
+      toast.error(`Server Error (${status}): ${message}`, { toastId: 'server-error' });
     }
 
     return Promise.reject(error);

@@ -314,8 +314,10 @@ export default function ExpiringMedicinesPage() {
                       </td>
                       <td className="py-4 px-6">
                         <div className="font-bold text-slate-900">{item.medicine?.name || `Medicine #${item.medicineId}`}</div>
-                        <div className="text-[11px] text-slate-400 font-medium">
-                          {item.medicine?.category?.name || 'Category N/A'}
+                        <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <span>Medicine Code: <span className="font-mono font-semibold text-purple-700">{item.medicine?.medicineCode || 'N/A'}</span></span>
+                          <span>•</span>
+                          <span>{item.medicine?.category?.name || 'Category N/A'}</span>
                         </div>
                       </td>
                       <td className="py-4 px-6 font-mono font-medium text-slate-900">

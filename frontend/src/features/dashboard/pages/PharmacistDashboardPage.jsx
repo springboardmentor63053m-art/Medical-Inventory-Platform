@@ -64,6 +64,16 @@ export default function PharmacistDashboardPage() {
 
       const lowList = invs.filter((item) => Number(item.quantity || 0) <= Number(item.minimumStock || 10));
 
+      // Calculate monthly purchases and total spend from real POs
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const posThisMonth = pos.filter((po) => {
+        if (!po.orderDate) return false;
+        const d = new Date(po.orderDate);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
+      const spendThisMonth = posThisMonth.reduce((sum, po) => sum + Number(po.totalAmount || 0), 0);
+
       setStats({
         totalMedicines: Array.isArray(meds) ? meds.length : 0,
         totalCategories: Array.isArray(cats) ? cats.length : 0,
@@ -72,6 +82,8 @@ export default function PharmacistDashboardPage() {
         lowStockCount: lowList.length,
         expiringCount: 0,
         totalPOs: Array.isArray(pos) ? pos.length : 0,
+        purchasesThisMonth: posThisMonth.length,
+        spendThisMonth: spendThisMonth
       });
 
       setLowStockItems(lowList.slice(0, 5));
@@ -86,6 +98,14 @@ export default function PharmacistDashboardPage() {
   useEffect(() => {
     fetchPharmacistData();
   }, []);
+
+  const formatINR = (val) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 2,
+    }).format(val || 0);
+  };
 
   const empId = user?.employeeId || `PHA${String(user?.id || '001').padStart(3, '0')}`;
 
@@ -103,10 +123,10 @@ export default function PharmacistDashboardPage() {
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-2">
-            Pharmacy & Supplier Operations Hub
+            Pharmacy Operational & Purchasing Hub
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Medicine catalog management, batch stock levels, supplier integration, and purchase order tracking
+            Day-to-day medicine inventory management, purchase requisitions, Rx verification, and store counter checkout
           </p>
         </div>
 
@@ -118,15 +138,26 @@ export default function PharmacistDashboardPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
+      {/* Purchase & Inventory Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500">Purchases This Month</p>
+            <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.purchasesThisMonth || 0} Orders</h3>
+            <p className="text-[11px] font-bold text-blue-600 mt-0.5">{formatINR(stats.spendThisMonth)} Spend</p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <ShoppingCart className="w-6 h-6" />
+          </div>
+        </div>
+
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-slate-500">Medicines Catalog</p>
             <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.totalMedicines}</h3>
             <p className="text-[11px] text-slate-400 mt-0.5">{stats.totalCategories} Active Categories</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
             <Pill className="w-6 h-6" />
           </div>
         </div>
@@ -137,83 +168,89 @@ export default function PharmacistDashboardPage() {
             <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.totalInventory}</h3>
             <p className="text-[11px] text-slate-400 mt-0.5">{stats.lowStockCount} Low stock alerts</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
             <Package className="w-6 h-6" />
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-slate-500">Suppliers</p>
-            <h3 className="text-2xl font-bold text-purple-600 mt-1">{stats.totalSuppliers}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Verified pharma vendors</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-            <Truck className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Purchase Orders</p>
-            <h3 className="text-2xl font-bold text-amber-600 mt-1">{stats.totalPOs}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Active order requisitions</p>
+            <p className="text-xs font-semibold text-amber-700">Low Stock Alerts</p>
+            <h3 className="text-2xl font-bold text-amber-700 mt-1">{stats.lowStockCount}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Reorder Needed</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-            <ShoppingCart className="w-6 h-6" />
+            <AlertTriangle className="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Management Shortcuts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Operational Grid Shortcuts */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div
-          onClick={() => navigate('/medicines')}
-          className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-blue-400 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
+          onClick={() => navigate('/pharmacist/verify')}
+          className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-blue-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
         >
           <div>
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
-              <Pill className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
+              <Stethoscope className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mt-4">Medicine Management</h3>
-            <p className="text-xs text-slate-500 mt-1">Add, update, and manage pharmaceutical catalog & pricing</p>
+            <h3 className="text-sm font-bold text-slate-900 mt-3">Rx Verification Queue</h3>
+            <p className="text-xs text-slate-500 mt-1">Review &amp; verify uploaded customer prescriptions</p>
           </div>
-          <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-600">
-            <span>Manage Catalog</span>
+          <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-600">
+            <span>Verify Orders</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
           </div>
         </div>
 
         <div
-          onClick={() => navigate('/suppliers')}
-          className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-purple-400 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
+          onClick={() => navigate('/store-counter')}
+          className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
         >
           <div>
-            <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
-              <Truck className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
+              <ShoppingCart className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mt-4">Supplier Directory</h3>
-            <p className="text-xs text-slate-500 mt-1">Manage vendor contracts, contact details, and orders</p>
+            <h3 className="text-sm font-bold text-slate-900 mt-3">In-Store POS Counter</h3>
+            <p className="text-xs text-slate-500 mt-1">Process walk-in sales &amp; print receipts</p>
           </div>
-          <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-purple-600">
-            <span>Manage Suppliers</span>
+          <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-600">
+            <span>Open POS</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+          </div>
+        </div>
+
+        <div
+          onClick={() => navigate('/medicines')}
+          className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-purple-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
+        >
+          <div>
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
+              <Pill className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900 mt-3">Medicine Management</h3>
+            <p className="text-xs text-slate-500 mt-1">Browse catalog, check stock &amp; generic info</p>
+          </div>
+          <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-purple-600">
+            <span>View Medicines</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
           </div>
         </div>
 
         <div
           onClick={() => navigate('/purchase-orders')}
-          className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-amber-400 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
+          className="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-amber-500 hover:shadow-md transition cursor-pointer flex flex-col justify-between group"
         >
           <div>
-            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
-              <ShoppingCart className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold group-hover:scale-110 transition">
+              <FileText className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mt-4">Purchase Orders</h3>
-            <p className="text-xs text-slate-500 mt-1">Create purchase orders, track approvals, and receipts</p>
+            <h3 className="text-sm font-bold text-slate-900 mt-3">Purchase Orders</h3>
+            <p className="text-xs text-slate-500 mt-1">Requisition purchase orders &amp; track receipts</p>
           </div>
-          <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-amber-600">
-            <span>View Purchase Orders</span>
+          <div className="mt-4 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-amber-600">
+            <span>Manage Orders</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
           </div>
         </div>

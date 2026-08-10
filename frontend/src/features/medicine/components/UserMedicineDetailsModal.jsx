@@ -44,6 +44,7 @@ export default function UserMedicineDetailsModal({
   const manufacturer = medicine.manufacturer || 'Standard Manufacturer';
   const unitPrice = medicine.unitPrice;
   const description = medicine.description || 'Standard pharmaceutical medicine formulation.';
+  const prescriptionLabel = medicine.prescriptionRequired === false ? 'Over-The-Counter (OTC)' : 'Prescription Required (Rx)';
 
   // Determine Availability Status without exposing raw inventory quantity
   const getAvailabilityBadge = (status) => {
@@ -153,6 +154,7 @@ export default function UserMedicineDetailsModal({
             <div className="text-right">
               <span className="text-[10px] text-slate-400 block uppercase font-bold">Unit Price</span>
               <span className="text-base font-black text-blue-400">{formatINR(unitPrice)}</span>
+                <span className="text-[10px] text-slate-300 block mt-1">{prescriptionLabel}</span>
             </div>
           </div>
         </div>

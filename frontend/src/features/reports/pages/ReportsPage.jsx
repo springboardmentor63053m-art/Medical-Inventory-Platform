@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { purchaseOrderService } from '../../../services/api/purchaseOrderService';
+import { supplierService } from '../../../services/api/supplierService';
+import { inventoryService } from '../../../services/api/inventoryService';
 import {
   FileText,
   Download,
@@ -11,7 +14,8 @@ import {
   PieChart,
   IndianRupee,
   Package,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import {
   Chart as ChartJS,
@@ -42,6 +46,10 @@ ChartJS.register(
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('VALUATION'); // 'VALUATION' | 'EXPIRY' | 'SUPPLIERS'
   const [dateRange, setDateRange] = useState('30');
+  const [supplierShareData, setSupplierShareData] = useState(null);
+  const [supplierSummary, setSupplierSummary] = useState([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState([]);
 
   const formatINR = (val) => {
     return new Intl.NumberFormat('en-IN', {
@@ -59,25 +67,108 @@ export default function ReportsPage() {
     window.print();
   };
 
-  // Indian Rupee valuation data
+  // Fetch real supplier share data from backend APIs
+  useEffect(() => {
+    inventoryService.getAllInventory().then(data => setInventoryItems(Array.isArray(data) ? data : [])).catch(() => setInventoryItems([]));
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'SUPPLIERS') return;
+    const fetchSupplierShare = async () => {
+      setLoadingSuppliers(true);
+      try {
+        const [orders, suppliers] = await Promise.all([
+          purchaseOrderService.getAllPurchaseOrders().catch(() => []),
+          supplierService.getAllSuppliers().catch(() => [])
+        ]);
+
+        const orderList = Array.isArray(orders) ? orders : [];
+        const supplierList = Array.isArray(suppliers) ? suppliers : [];
+
+        // Build supplier ID → name lookup from actual supplier records
+        const supplierMap = {};
+        supplierList.forEach(s => {
+          supplierMap[s.id] = s.supplierName;
+        });
+
+        // Aggregate total procurement value per supplier from actual PO data
+        const supplierTotals = {};
+        let grandTotal = 0;
+        orderList.forEach(po => {
+          const supName = po.supplier?.supplierName || supplierMap[po.supplierId] || 'Unknown Supplier';
+          const amount = po.totalAmount || 0;
+          supplierTotals[supName] = (supplierTotals[supName] || 0) + amount;
+          grandTotal += amount;
+        });
+
+        // Sort by procurement value descending
+        const sorted = Object.entries(supplierTotals)
+          .sort((a, b) => b[1] - a[1]);
+
+        const chartColors = [
+          '#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444',
+          '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1'
+        ];
+
+        const labels = sorted.map(([name]) => name);
+        const data = sorted.map(([, val]) =>
+          grandTotal > 0 ? parseFloat(((val / grandTotal) * 100).toFixed(1)) : 0
+        );
+
+        setSupplierShareData({
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: chartColors.slice(0, labels.length),
+          }],
+        });
+
+        // Top suppliers summary (up to 5)
+        setSupplierSummary(
+          sorted.slice(0, 5).map(([name, val], idx) => ({
+            name,
+            share: grandTotal > 0 ? ((val / grandTotal) * 100).toFixed(1) : '0',
+            category: 'Purchase order supplier',
+          }))
+        );
+      } catch (err) {
+        console.error('Failed to load supplier share data:', err);
+      } finally {
+        setLoadingSuppliers(false);
+      }
+    };
+    fetchSupplierShare();
+  }, [activeTab]);
+
+  const categoryTotals = inventoryItems.reduce((totals, item) => {
+    const category = item.medicine?.category?.name || 'Uncategorised';
+    totals[category] = (totals[category] || 0) + Number(item.quantity || 0) * Number(item.medicine?.unitPrice || 0);
+    return totals;
+  }, {});
   const valuationData = {
-    labels: ['Antibiotics', 'Analgesics', 'Cardiovascular', 'Vitamins', 'Pediatrics'],
+    labels: Object.keys(categoryTotals),
     datasets: [
       {
         label: 'Stock Value (₹ INR)',
-        data: [245000, 182000, 310000, 95000, 148000],
+        data: Object.values(categoryTotals),
         backgroundColor: 'rgba(37, 99, 235, 0.8)',
         borderRadius: 8,
       },
     ],
   };
 
+  const expiryByMonth = inventoryItems.reduce((totals, item) => {
+    if (!item.expiryDate) return totals;
+    const month = item.expiryDate.slice(0, 7);
+    totals[month] = (totals[month] || 0) + 1;
+    return totals;
+  }, {});
   const expiryTrendData = {
-    labels: ['Aug 2026', 'Sep 2026', 'Oct 2026', 'Nov 2026', 'Dec 2026', 'Jan 2027'],
+    labels: Object.keys(expiryByMonth).sort(),
     datasets: [
       {
         label: 'Expiring Items Count',
-        data: [12, 19, 7, 25, 4, 15],
+        data: Object.keys(expiryByMonth).sort().map(month => expiryByMonth[month]),
         borderColor: '#ef4444',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         tension: 0.3,
@@ -85,16 +176,19 @@ export default function ReportsPage() {
       },
     ],
   };
-
-  const supplierPieData = {
-    labels: ['Apex Health', 'Global Biotech', 'MediLife Wholesale', 'Novartis Logistics'],
-    datasets: [
-      {
-        data: [42, 28, 18, 12],
-        backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6'],
-      },
-    ],
-  };
+  const totalUnits = inventoryItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const totalValue = inventoryItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.medicine?.unitPrice || 0), 0);
+  const averageUnitValue = totalUnits > 0 ? totalValue / totalUnits : 0;
+  const expiringWithin90Days = inventoryItems.filter(item => {
+    if (!item.expiryDate) return false;
+    const days = (new Date(item.expiryDate) - new Date()) / 86400000;
+    return days <= 90;
+  });
+  const expiringWithinSixMonths = inventoryItems.filter(item => {
+    if (!item.expiryDate) return false;
+    const days = (new Date(item.expiryDate) - new Date()) / 86400000;
+    return days <= 180;
+  });
 
   return (
     <div className="space-y-6 font-sans text-slate-900 pb-10">
@@ -184,18 +278,18 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Total Stock Valuation</span>
-              <h3 className="text-2xl font-black text-slate-900 mt-1">{formatINR(980000)}</h3>
-              <p className="text-[11px] text-emerald-600 font-semibold mt-1">↑ +8.4% vs last month</p>
+              <h3 className="text-2xl font-black text-slate-900 mt-1">{formatINR(totalValue)}</h3>
+              <p className="text-[11px] text-slate-500 font-semibold mt-1">Based on current inventory quantities</p>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Total Units In Warehouse</span>
-              <h3 className="text-2xl font-black text-blue-600 mt-1">14,250 Units</h3>
-              <p className="text-[11px] text-slate-400 mt-1">Across 250 inventory batch records</p>
+              <h3 className="text-2xl font-black text-blue-600 mt-1">{totalUnits.toLocaleString('en-IN')} Units</h3>
+              <p className="text-[11px] text-slate-400 mt-1">Across {inventoryItems.length} inventory records</p>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Average Unit Valuation</span>
-              <h3 className="text-2xl font-black text-purple-600 mt-1">{formatINR(184.50)} / unit</h3>
-              <p className="text-[11px] text-slate-400 mt-1">Based on catalog standard rate</p>
+              <h3 className="text-2xl font-black text-purple-600 mt-1">{formatINR(averageUnitValue)} / unit</h3>
+              <p className="text-[11px] text-slate-400 mt-1">Based on current catalog prices</p>
             </div>
           </div>
 
@@ -215,18 +309,18 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-rose-200 bg-rose-50/20 shadow-xs">
               <span className="text-xs text-rose-700 font-semibold">Immediate Expiry Risk (&lt;90 Days)</span>
-              <h3 className="text-2xl font-black text-rose-700 mt-1">12 Batches</h3>
-              <p className="text-[11px] text-rose-600 mt-1">Value at risk: {formatINR(34500)}</p>
+              <h3 className="text-2xl font-black text-rose-700 mt-1">{expiringWithin90Days.length} Batches</h3>
+              <p className="text-[11px] text-rose-600 mt-1">Value at risk: {formatINR(expiringWithin90Days.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.medicine?.unitPrice || 0), 0))}</p>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Next 6 Months Forecast</span>
-              <h3 className="text-2xl font-black text-slate-900 mt-1">92 Batches</h3>
-              <p className="text-[11px] text-slate-400 mt-1">Scheduled for restocking cycle</p>
+              <h3 className="text-2xl font-black text-slate-900 mt-1">{expiringWithinSixMonths.length} Batches</h3>
+              <p className="text-[11px] text-slate-400 mt-1">Based on actual expiry dates</p>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <span className="text-xs text-slate-500 font-medium">Waste Prevention Efficiency</span>
-              <h3 className="text-2xl font-black text-emerald-600 mt-1">98.2%</h3>
-              <p className="text-[11px] text-emerald-600 font-semibold mt-1">High efficiency batch rotation</p>
+              <h3 className="text-2xl font-black text-emerald-600 mt-1">{inventoryItems.length > 0 ? `${Math.round((inventoryItems.filter(item => !item.isExpired).length / inventoryItems.length) * 100)}%` : '0%'}</h3>
+              <p className="text-[11px] text-emerald-600 font-semibold mt-1">Non-expired inventory records</p>
             </div>
           </div>
 
@@ -240,55 +334,50 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Tab 3: Supplier Performance */}
+      {/* Tab 3: Supplier Performance — Dynamic from API */}
       {activeTab === 'SUPPLIERS' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
-              <h3 className="font-bold text-slate-900 text-sm mb-2 text-center">Supplier Procurement Market Share</h3>
-              <div className="w-60 h-60 my-2">
-                <Pie data={supplierPieData} options={{ responsive: true, maintainAspectRatio: false }} />
-              </div>
+          {loadingSuppliers ? (
+            <div className="bg-white p-12 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+              <p className="text-sm font-semibold text-slate-500">Loading supplier procurement data...</p>
             </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs lg:col-span-2">
-              <h3 className="font-bold text-slate-900 text-sm mb-4">Vendor Supply Chain Summary</h3>
-              <div className="space-y-3 text-xs">
-                <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100">
-                  <div>
-                    <span className="font-bold text-slate-900">Apex Health Pharma</span>
-                    <p className="text-slate-500 text-[11px]">Primary Antibiotics &amp; Painkillers Supplier</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-blue-600">42% Orders</span>
-                    <span className="block text-[10px] text-emerald-600 font-semibold">Lead Time: 3 Days</span>
-                  </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
+                <h3 className="font-bold text-slate-900 text-sm mb-2 text-center">Supplier Procurement Market Share</h3>
+                <div className="w-60 h-60 my-2">
+                  {supplierShareData ? (
+                    <Pie data={supplierShareData} options={{ responsive: true, maintainAspectRatio: false }} />
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center pt-20">No procurement data available</p>
+                  )}
                 </div>
+              </div>
 
-                <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100">
-                  <div>
-                    <span className="font-bold text-slate-900">Global Biotech Supplies</span>
-                    <p className="text-slate-500 text-[11px]">Specialized Insulin &amp; Critical Care Formulations</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-blue-600">28% Orders</span>
-                    <span className="block text-[10px] text-emerald-600 font-semibold">Lead Time: 4 Days</span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100">
-                  <div>
-                    <span className="font-bold text-slate-900">MediLife Wholesale</span>
-                    <p className="text-slate-500 text-[11px]">General OTC &amp; Clinical Supplies</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-blue-600">18% Orders</span>
-                    <span className="block text-[10px] text-emerald-600 font-semibold">Lead Time: 2 Days</span>
-                  </div>
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs lg:col-span-2">
+                <h3 className="font-bold text-slate-900 text-sm mb-4">Vendor Supply Chain Summary</h3>
+                <div className="space-y-3 text-xs">
+                  {supplierSummary.length === 0 ? (
+                    <p className="text-xs text-slate-400 py-4 text-center">No supplier data available</p>
+                  ) : (
+                    supplierSummary.map((sup, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100">
+                        <div>
+                          <span className="font-bold text-slate-900">{sup.name}</span>
+                          <p className="text-slate-500 text-[11px]">{sup.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-blue-600">{sup.share}% Orders</span>
+                          <span className="block text-[10px] text-emerald-600 font-semibold">Value share from actual purchase orders</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

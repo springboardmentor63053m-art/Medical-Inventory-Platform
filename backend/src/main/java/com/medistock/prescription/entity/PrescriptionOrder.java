@@ -38,7 +38,7 @@ public class PrescriptionOrder {
 
     @Builder.Default
     @Column(nullable = false, length = 30)
-    private String status = "PENDING_VERIFICATION";
+    private String status = "PENDING_REVIEW";
 
     @Column(name = "delivery_address", columnDefinition = "TEXT")
     private String deliveryAddress;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { categoryService } from '../../../services/api/categoryService';
 import { medicineService } from '../../../services/api/medicineService';
 import { inventoryService } from '../../../services/api/inventoryService';
@@ -23,7 +24,7 @@ import {
 } from 'lucide-react';
 
 export default function CategoryListPage() {
-  const { isAdmin, isPharmacist, isUser } = useAuth();
+  const { isAdmin, isPharmacist, isUser, isSupplier } = useAuth();
   const [categories, setCategories] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -157,36 +158,42 @@ export default function CategoryListPage() {
     };
   });
 
+  const activeCategoryMetrics = isSupplier
+    ? categoryMetrics.filter((c) => c.medCount > 0)
+    : categoryMetrics;
+
   // KPI Calculations
-  const totalCategories = categories.length;
+  const totalCategories = activeCategoryMetrics.length;
   const totalMedicines = medicines.length;
 
-  const largestCatObj = categoryMetrics.reduce(
+  const largestCatObj = activeCategoryMetrics.reduce(
     (max, cur) => (cur.medCount > (max?.medCount || 0) ? cur : max),
     null
   );
   const largestCategoryName = largestCatObj ? `${largestCatObj.name} (${largestCatObj.medCount} meds)` : 'N/A';
 
-  const categoriesWithLowStock = categoryMetrics.filter(
+  const categoriesWithLowStock = activeCategoryMetrics.filter(
     (c) => c.lowStockCount > 0 || c.outOfStockCount > 0
   ).length;
 
-  const filteredMetrics = categoryMetrics.filter(
+  const filteredMetrics = activeCategoryMetrics.filter(
     (c) =>
       c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (c.description && c.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans text-slate-900 pb-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Boxes className="w-6 h-6 text-blue-600" /> Pharmaceutical Category Management
+            <Boxes className="w-6 h-6 text-blue-600" /> {isSupplier ? 'Supplier Category Catalog' : 'Pharmaceutical Category Management'}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Organize, monitor stock health, and manage pharmaceutical categories across the medical catalog
+            {isSupplier
+              ? 'View pharmaceutical categories associated with your active supplier catalog.'
+              : 'Organize, monitor stock health, and manage pharmaceutical categories across the medical catalog'}
           </p>
         </div>
 
@@ -319,7 +326,12 @@ export default function CategoryListPage() {
                           <Boxes className="w-4.5 h-4.5" />
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900">{cat.name}</div>
+                          <Link
+                            to={`/categories/${cat.id}`}
+                            className="font-bold text-slate-900 hover:text-blue-600 hover:underline transition flex items-center gap-1.5"
+                          >
+                            {cat.name}
+                          </Link>
                           <p className="text-[11px] text-slate-400 max-w-xs truncate">
                             {cat.description || 'No description provided'}
                           </p>
@@ -379,6 +391,12 @@ export default function CategoryListPage() {
                     {/* Actions */}
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/categories/${cat.id}`}
+                          className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition border border-blue-200 flex items-center gap-1"
+                        >
+                          View
+                        </Link>
                         {(isAdmin || isPharmacist) && (
                           <button
                             onClick={() => handleOpenEditModal(cat)}

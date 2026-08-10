@@ -12,4 +12,10 @@ public interface SupplierService {
     SupplierResponse updateSupplier(Long id, SupplierRequest request);
     void deleteSupplier(Long id);
     List<SupplierResponse> searchSuppliers(String name);
+    SupplierResponse linkMedicineToSupplier(Long supplierId, Long medicineId);
+    SupplierResponse unlinkMedicineFromSupplier(Long supplierId, Long medicineId);
+    List<SupplierResponse.SuppliedMedicineDto> getMedicinesBySupplier(Long supplierId);
+    List<SupplierResponse.SuppliedMedicineDto> getMySupplierMedicines(String email);
+    SupplierResponse addMedicineToSupplierByEmail(String email, Long medicineId);
+    SupplierResponse removeMedicineFromSupplierByEmail(String email, Long medicineId);
 }

@@ -16,7 +16,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Header({ toggleSidebar, sidebarOpen }) {
-  const { user, logout, isAdmin, isPharmacist, isStaff, isUser } = useAuth();
+  const { user, logout, isAdmin, isPharmacist, isSupplier, isUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -66,13 +66,13 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
     navigate('/login', { replace: true });
   };
 
-  const roleLabel = isAdmin ? 'Admin' : isPharmacist ? 'Pharmacist' : isStaff ? 'Staff' : 'User';
+  const roleLabel = isAdmin ? 'Admin' : isPharmacist ? 'Pharmacist' : isSupplier ? 'Supplier' : 'User';
   const roleBadgeColor = isAdmin 
     ? 'bg-purple-100 text-purple-700 border-purple-200' 
     : isPharmacist 
-    ? 'bg-blue-100 text-blue-700 border-blue-200'
-    : isStaff
     ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    : isSupplier
+    ? 'bg-amber-100 text-amber-700 border-amber-200'
     : 'bg-slate-100 text-slate-700 border-slate-200';
 
   return (

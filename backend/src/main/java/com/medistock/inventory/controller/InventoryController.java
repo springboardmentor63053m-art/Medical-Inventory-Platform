@@ -28,7 +28,7 @@ public class InventoryController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
     public ResponseEntity<List<InventoryResponse>> getAllInventory() {
         return ResponseEntity.ok(inventoryService.getAllInventory());
     }
@@ -71,7 +71,7 @@ public class InventoryController {
     }
 
     @GetMapping("/medicine/{medicineId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
     public ResponseEntity<List<InventoryResponse>> getInventoryByMedicineId(@PathVariable Long medicineId) {
         return ResponseEntity.ok(inventoryService.getInventoryByMedicineId(medicineId));
     }

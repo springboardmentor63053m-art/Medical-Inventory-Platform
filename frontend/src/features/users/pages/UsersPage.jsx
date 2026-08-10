@@ -24,8 +24,12 @@ import {
   UserX
 } from 'lucide-react';
 
+import { supplierService } from '../../../services/api/supplierService';
+import { getUserRoles, getUsersByRole, getRoleCount, getSupplierCompanyCount } from '../../../utils/dataHelpers';
+
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
+  const [supplierCompanies, setSupplierCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -71,8 +75,18 @@ export default function UsersPage() {
     }
   };
 
+  const fetchSupplierCompanies = async () => {
+    try {
+      const sups = await supplierService.getAllSuppliers();
+      setSupplierCompanies(Array.isArray(sups) ? sups : []);
+    } catch (err) {
+      console.error('Failed to fetch supplier companies count:', err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchSupplierCompanies();
   }, []);
 
   // Handle Create User Submit
@@ -101,7 +115,7 @@ export default function UsersPage() {
         email: '',
         password: '',
         phone: '',
-        role: 'STAFF',
+        role: 'PHARMACIST',
       });
       fetchUsers();
     } catch (err) {
@@ -114,9 +128,8 @@ export default function UsersPage() {
   // Open Edit Modal
   const handleOpenEditModal = (u) => {
     setEditingUser(u);
-    const rolesArr = u.roles ? (Array.isArray(u.roles) ? u.roles : Array.from(u.roles)) : [];
-    const cleanRoles = rolesArr.map((r) => r.replace('ROLE_', '').toUpperCase());
-    const primaryRole = cleanRoles.length > 0 ? cleanRoles[0] : 'STAFF';
+    const rolesArr = getUserRoles(u);
+    const primaryRole = rolesArr.length > 0 ? rolesArr[0] : 'USER';
 
     setEditForm({
       firstName: u.firstName || '',
@@ -176,21 +189,20 @@ export default function UsersPage() {
   };
 
   // Role Stats Calculations
-  const adminCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('ADMIN'))).length;
-  const pharmacistCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('PHARMACIST'))).length;
-  const staffCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('STAFF'))).length;
-  const userCount = users.filter((u) => u.roles && Array.from(u.roles).some((r) => r.includes('USER'))).length;
+  const adminCount = getRoleCount(users, 'ADMIN');
+  const staffCount = getRoleCount(users, 'STAFF');
+  const pharmacistCount = getRoleCount(users, 'PHARMACIST');
+  const supplierCount = getRoleCount(users, 'SUPPLIER');
+  const userCount = getRoleCount(users, 'USER');
 
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = getUsersByRole(users, roleFilter).filter((u) => {
     const q = searchTerm.toLowerCase();
-    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
-    const email = (u.email || '').toLowerCase();
-    const empId = (u.employeeId || '').toLowerCase();
-    const matchesSearch = fullName.includes(q) || email.includes(q) || empId.includes(q);
-
-    if (roleFilter === 'ALL') return matchesSearch;
-    const rolesArr = u.roles ? Array.from(u.roles).map((r) => r.replace('ROLE_', '').toUpperCase()) : [];
-    return matchesSearch && rolesArr.includes(roleFilter);
+    return (
+      (u.employeeId && u.employeeId.toLowerCase().includes(q)) ||
+      (u.firstName && u.firstName.toLowerCase().includes(q)) ||
+      (u.lastName && u.lastName.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q))
+    );
   });
 
   const formatDate = (dt) => {
@@ -206,110 +218,132 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 rounded-3xl text-white shadow-xl border border-slate-800">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <h1 className="text-2xl font-black tracking-tight flex items-center gap-2.5">
-            <ShieldCheck className="w-7 h-7 text-blue-400" /> Enterprise Role & User Management
-          </h1>
-          <p className="text-xs text-slate-300 mt-1">
-            Manage system access tiers, role permissions (Admin, Pharmacist, Staff, User), and employee accounts.
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">User Management</h1>
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold uppercase tracking-wider">
+              Admin Portal
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Manage system access, assign roles (Admin, Staff, Pharmacist, Supplier, User), and update account security settings.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-2xl shadow-lg shadow-blue-500/20 transition flex items-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" /> Create New Account
-          </button>
+        <div className="flex items-center gap-2">
           <button
             onClick={fetchUsers}
-            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 transition"
-            title="Refresh Users"
+            disabled={loading}
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+            title="Refresh Users List"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 flex items-center gap-2 transition"
+          >
+            <UserPlus className="w-4 h-4" /> Add New User
           </button>
         </div>
       </div>
 
-      {/* Role Summary Statistic Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      {/* Role Stats Summary Cards — EXACTLY 5 ROLE CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div
           onClick={() => setRoleFilter(roleFilter === 'ADMIN' ? 'ALL' : 'ADMIN')}
-          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+          className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             roleFilter === 'ADMIN'
               ? 'bg-purple-900/20 border-purple-500 shadow-lg shadow-purple-500/10'
               : 'bg-white border-slate-200 hover:border-purple-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-purple-600">Admin Role</span>
-            <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
-              <Shield className="w-5 h-5" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600">Admin Role</span>
+            <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+              <Shield className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">{adminCount}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Full system governance & user management</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">Full system control &amp; administration</p>
+        </div>
+
+        <div
+          onClick={() => setRoleFilter(roleFilter === 'STAFF' ? 'ALL' : 'STAFF')}
+          className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+            roleFilter === 'STAFF'
+              ? 'bg-sky-900/20 border-sky-500 shadow-lg shadow-sky-500/10'
+              : 'bg-white border-slate-200 hover:border-sky-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-600">Staff Role</span>
+            <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{staffCount}</div>
+          <p className="text-[10px] text-slate-500 mt-0.5">Operational inventory lookup &amp; stock</p>
         </div>
 
         <div
           onClick={() => setRoleFilter(roleFilter === 'PHARMACIST' ? 'ALL' : 'PHARMACIST')}
-          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+          className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             roleFilter === 'PHARMACIST'
               ? 'bg-emerald-900/20 border-emerald-500 shadow-lg shadow-emerald-500/10'
               : 'bg-white border-slate-200 hover:border-emerald-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">Pharmacist Role</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-              <Stethoscope className="w-5 h-5" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Pharmacist Role</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+              <Stethoscope className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">{pharmacistCount}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Medicine catalog, batch stock & supplier orders</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">Medicine catalog, batch stock &amp; POs</p>
         </div>
 
         <div
-          onClick={() => setRoleFilter(roleFilter === 'STAFF' ? 'ALL' : 'STAFF')}
-          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-            roleFilter === 'STAFF'
-              ? 'bg-blue-900/20 border-blue-500 shadow-lg shadow-blue-500/10'
-              : 'bg-white border-slate-200 hover:border-blue-300'
+          onClick={() => setRoleFilter(roleFilter === 'SUPPLIER' ? 'ALL' : 'SUPPLIER')}
+          className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+            roleFilter === 'SUPPLIER'
+              ? 'bg-amber-900/20 border-amber-500 shadow-lg shadow-amber-500/10'
+              : 'bg-white border-slate-200 hover:border-amber-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Staff Role</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-              <Building2 className="w-5 h-5" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Supplier Role</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+              <Building2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{staffCount}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Standard inventory lookup & dispenses</p>
+          <div className="text-2xl font-black text-slate-900 mt-2">{supplierCount}</div>
+          <p className="text-[10px] text-slate-500 mt-0.5">Supply logistics &amp; purchase orders</p>
         </div>
 
         <div
           onClick={() => setRoleFilter(roleFilter === 'USER' ? 'ALL' : 'USER')}
-          className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+          className={`p-4 rounded-2xl border cursor-pointer transition-all ${
             roleFilter === 'USER'
               ? 'bg-slate-900/20 border-slate-500 shadow-lg shadow-slate-500/10'
               : 'bg-white border-slate-200 hover:border-slate-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">User Role</span>
-            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-              <Users className="w-5 h-5" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">User Role</span>
+            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
+              <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">{userCount}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5">Standard read-only catalog lookup</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">Standard catalog &amp; ordering portal</p>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
+      {/* Filter & Search Bar — EXACTLY 6 ROLE FILTERS */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -322,14 +356,14 @@ export default function UsersPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <Filter className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-bold text-slate-600">Filter Role:</span>
-          {['ALL', 'ADMIN', 'PHARMACIST', 'STAFF', 'USER'].map((r) => (
+          <span className="text-xs font-bold text-slate-600 mr-1">Filter Role:</span>
+          {['ALL', 'ADMIN', 'STAFF', 'PHARMACIST', 'SUPPLIER', 'USER'].map((r) => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition ${
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition ${
                 roleFilter === r
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -371,15 +405,15 @@ export default function UsersPage() {
                 </tr>
               ) : (
                 filteredUsers.map((u) => {
-                  const rolesArr = u.roles ? Array.from(u.roles).map((r) => r.replace('ROLE_', '').toUpperCase()) : [];
-                  const primaryRole = rolesArr.length > 0 ? rolesArr[0] : 'STAFF';
+                  const rolesArr = getUserRoles(u);
+                  const primaryRole = rolesArr.length > 0 ? rolesArr[0] : 'USER';
 
                   return (
                     <tr key={u.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-xl font-bold text-xs flex items-center justify-center text-white ${
-                            primaryRole === 'ADMIN' ? 'bg-purple-600' : primaryRole === 'PHARMACIST' ? 'bg-emerald-600' : 'bg-blue-600'
+                            primaryRole === 'ADMIN' ? 'bg-purple-600' : primaryRole === 'PHARMACIST' ? 'bg-emerald-600' : primaryRole === 'SUPPLIER' ? 'bg-amber-600' : 'bg-slate-600'
                           }`}>
                             {u.firstName ? u.firstName.charAt(0).toUpperCase() : 'U'}
                           </div>
@@ -388,7 +422,7 @@ export default function UsersPage() {
                               {u.firstName} {u.lastName}
                             </div>
                             <span className="inline-block px-1.5 py-0.2 bg-slate-100 border border-slate-200 rounded text-[10px] font-mono font-bold text-slate-600 mt-0.5">
-                              {u.employeeId || `EMP${String(u.id).padStart(3, '0')}`}
+                              {u.employeeId || `${primaryRole === 'ADMIN' ? 'ADM' : primaryRole === 'PHARMACIST' ? 'PHA' : primaryRole === 'SUPPLIER' ? 'SUP' : 'USR'}${String(u.id).padStart(3, '0')}`}
                             </span>
                           </div>
                         </div>
@@ -506,16 +540,17 @@ export default function UsersPage() {
           </div>
 
           <FormField label="Assigned System Role" required>
-            <div className="grid grid-cols-4 gap-2 pt-1">
+            <div className="grid grid-cols-5 gap-2 pt-1">
               {[
                 { id: 'ADMIN', label: 'Admin', desc: 'Full Control' },
+                { id: 'STAFF', label: 'Staff', desc: 'Operational' },
                 { id: 'PHARMACIST', label: 'Pharmacist', desc: 'Catalog & Stock' },
-                { id: 'STAFF', label: 'Staff', desc: 'Stock Ops' },
-                { id: 'USER', label: 'User', desc: 'Read-Only' },
+                { id: 'SUPPLIER', label: 'Supplier', desc: 'Partner' },
+                { id: 'USER', label: 'User', desc: 'General' },
               ].map((r) => (
                 <label
                   key={r.id}
-                  className={`p-3 rounded-xl border cursor-pointer text-center transition ${
+                  className={`p-2.5 rounded-xl border cursor-pointer text-center transition ${
                     createForm.role === r.id
                       ? 'bg-blue-50 border-blue-600 text-blue-900 font-bold'
                       : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -529,8 +564,8 @@ export default function UsersPage() {
                     onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
                     className="sr-only"
                   />
-                  <div className="text-xs">{r.label}</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">{r.desc}</div>
+                  <div className="text-xs font-bold">{r.label}</div>
+                  <div className="text-[9px] text-slate-400 mt-0.5">{r.desc}</div>
                 </label>
               ))}
             </div>
@@ -578,11 +613,11 @@ export default function UsersPage() {
             </div>
 
             <FormField label="Assigned Role" required>
-              <div className="grid grid-cols-4 gap-2 pt-1">
-                {['ADMIN', 'PHARMACIST', 'STAFF', 'USER'].map((r) => (
+              <div className="grid grid-cols-5 gap-2 pt-1">
+                {['ADMIN', 'STAFF', 'PHARMACIST', 'SUPPLIER', 'USER'].map((r) => (
                   <label
                     key={r}
-                    className={`p-3 rounded-xl border cursor-pointer text-center transition ${
+                    className={`p-2.5 rounded-xl border cursor-pointer text-center transition ${
                       editForm.role === r
                         ? 'bg-blue-50 border-blue-600 text-blue-900 font-bold'
                         : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'

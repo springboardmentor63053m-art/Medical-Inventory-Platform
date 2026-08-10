@@ -15,8 +15,10 @@ public class PrescriptionOrderItemResponse {
     private String medicineCode;
     private String medicineName;
     private String genericName;
+    private String manufacturer;
     private Boolean prescriptionRequired;
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;
+    private Long currentStock;
 }

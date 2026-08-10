@@ -8,9 +8,11 @@ import { useAuth } from '../contexts/AuthContext';
 import LoginPage from '../features/authentication/pages/LoginPage';
 import DashboardPage from '../features/dashboard/pages/DashboardPage';
 import UserDashboardPage from '../features/dashboard/pages/UserDashboardPage';
-import StaffDashboardPage from '../features/dashboard/pages/StaffDashboardPage';
 import PharmacistDashboardPage from '../features/dashboard/pages/PharmacistDashboardPage';
+import StaffDashboardPage from '../features/dashboard/pages/StaffDashboardPage';
+import SupplierDashboardPage from '../features/dashboard/pages/SupplierDashboardPage';
 import CategoryListPage from '../features/category/pages/CategoryListPage';
+import CategoryDetailsPage from '../features/category/pages/CategoryDetailsPage';
 import UserCategoryPage from '../features/category/pages/UserCategoryPage';
 import MedicineListPage from '../features/medicine/pages/MedicineListPage';
 import UserMedicinePage from '../features/medicine/pages/UserMedicinePage';
@@ -86,10 +88,10 @@ export default function AppRoutes() {
       />
 
       <Route
-        path="/staff"
+        path="/supplier"
         element={
-          <ProtectedRoute allowedRoles={['STAFF']}>
-            <Navigate to="/staff/dashboard" replace />
+          <ProtectedRoute allowedRoles={['SUPPLIER']}>
+            <Navigate to="/supplier/dashboard" replace />
           </ProtectedRoute>
         }
       />
@@ -99,6 +101,26 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['USER']}>
             <Navigate to="/user/dashboard" replace />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/staff"
+        element={
+          <ProtectedRoute allowedRoles={['STAFF']}>
+            <Navigate to="/staff/dashboard" replace />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/staff/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['STAFF']}>
+            <MainLayout>
+              <StaffDashboardPage />
+            </MainLayout>
           </ProtectedRoute>
         }
       />
@@ -127,11 +149,11 @@ export default function AppRoutes() {
       />
 
       <Route
-        path="/staff/dashboard"
+        path="/supplier/dashboard"
         element={
-          <ProtectedRoute allowedRoles={['STAFF']}>
+          <ProtectedRoute allowedRoles={['SUPPLIER']}>
             <MainLayout>
-              <StaffDashboardPage />
+              <SupplierDashboardPage />
             </MainLayout>
           </ProtectedRoute>
         }
@@ -152,7 +174,7 @@ export default function AppRoutes() {
       <Route
         path="/categories"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'USER']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER']}>
             <MainLayout>
               <CategoriesRouteSwitch />
             </MainLayout>
@@ -161,9 +183,20 @@ export default function AppRoutes() {
       />
 
       <Route
+        path="/categories/:id"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER']}>
+            <MainLayout>
+              <CategoryDetailsPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/medicines"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'USER']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER']}>
             <MainLayout>
               <MedicinesRouteSwitch />
             </MainLayout>
@@ -174,7 +207,7 @@ export default function AppRoutes() {
       <Route
         path="/suppliers"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPPLIER']}>
             <MainLayout>
               <SupplierListPage />
             </MainLayout>
@@ -196,7 +229,7 @@ export default function AppRoutes() {
       <Route
         path="/expiring"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
             <MainLayout>
               <ExpiringMedicinesPage />
             </MainLayout>
@@ -207,7 +240,7 @@ export default function AppRoutes() {
       <Route
         path="/purchase-orders"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'SUPPLIER']}>
             <MainLayout>
               <PurchaseOrderPage />
             </MainLayout>
@@ -229,7 +262,7 @@ export default function AppRoutes() {
       <Route
         path="/notifications"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'SUPPLIER']}>
             <MainLayout>
               <NotificationsPage />
             </MainLayout>
@@ -240,7 +273,7 @@ export default function AppRoutes() {
       <Route
         path="/profile"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'USER']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER']}>
             <MainLayout>
               <ProfilePage />
             </MainLayout>
@@ -263,7 +296,7 @@ export default function AppRoutes() {
       <Route
         path="/prescription-orders"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['USER']}>
             <MainLayout>
               <PrescriptionOrderPage />
             </MainLayout>

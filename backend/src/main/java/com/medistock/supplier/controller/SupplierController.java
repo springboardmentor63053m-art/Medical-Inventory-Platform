@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.security.core.Authentication;
+
 @RestController
 @RequestMapping("/api/suppliers")
 @RequiredArgsConstructor
@@ -28,13 +30,13 @@ public class SupplierController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
     public ResponseEntity<List<SupplierResponse>> getAllSuppliers() {
         return ResponseEntity.ok(supplierService.getAllSuppliers());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
     public ResponseEntity<SupplierResponse> getSupplierById(@PathVariable Long id) {
         return ResponseEntity.ok(supplierService.getSupplierById(id));
     }
@@ -53,8 +55,44 @@ public class SupplierController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
     public ResponseEntity<List<SupplierResponse>> searchSuppliers(@RequestParam String name) {
         return ResponseEntity.ok(supplierService.searchSuppliers(name));
+    }
+
+    @PostMapping("/{id}/medicines/{medicineId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
+    public ResponseEntity<SupplierResponse> linkMedicineToSupplier(@PathVariable Long id, @PathVariable Long medicineId) {
+        return ResponseEntity.ok(supplierService.linkMedicineToSupplier(id, medicineId));
+    }
+
+    @DeleteMapping("/{id}/medicines/{medicineId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
+    public ResponseEntity<SupplierResponse> unlinkMedicineFromSupplier(@PathVariable Long id, @PathVariable Long medicineId) {
+        return ResponseEntity.ok(supplierService.unlinkMedicineFromSupplier(id, medicineId));
+    }
+
+    @GetMapping("/me/medicines")
+    @PreAuthorize("hasAnyRole('SUPPLIER', 'ADMIN')")
+    public ResponseEntity<List<SupplierResponse.SuppliedMedicineDto>> getMySupplierMedicines(Authentication authentication) {
+        return ResponseEntity.ok(supplierService.getMySupplierMedicines(authentication != null ? authentication.getName() : "supplier@medistock.com"));
+    }
+
+    @PostMapping("/me/medicines/{medicineId}")
+    @PreAuthorize("hasAnyRole('SUPPLIER', 'ADMIN')")
+    public ResponseEntity<SupplierResponse> addMedicineToMySupplierCatalog(Authentication authentication, @PathVariable Long medicineId) {
+        return ResponseEntity.ok(supplierService.addMedicineToSupplierByEmail(authentication != null ? authentication.getName() : "supplier@medistock.com", medicineId));
+    }
+
+    @DeleteMapping("/me/medicines/{medicineId}")
+    @PreAuthorize("hasAnyRole('SUPPLIER', 'ADMIN')")
+    public ResponseEntity<SupplierResponse> removeMedicineFromMySupplierCatalog(Authentication authentication, @PathVariable Long medicineId) {
+        return ResponseEntity.ok(supplierService.removeMedicineFromSupplierByEmail(authentication != null ? authentication.getName() : "supplier@medistock.com", medicineId));
+    }
+
+    @GetMapping("/{id}/medicines")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
+    public ResponseEntity<List<SupplierResponse.SuppliedMedicineDto>> getMedicinesBySupplier(@PathVariable Long id) {
+        return ResponseEntity.ok(supplierService.getMedicinesBySupplier(id));
     }
 }

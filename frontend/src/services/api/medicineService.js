@@ -13,6 +13,11 @@ export const medicineService = {
     return response.data;
   },
 
+  getSuppliersByMedicine: async (id) => {
+    const response = await apiClient.get(`/medicines/${id}/suppliers`);
+    return response.data;
+  },
+
   searchMedicines: async (name) => {
     const response = await apiClient.get('/medicines/search', {
       params: { name },
@@ -37,6 +42,14 @@ export const medicineService = {
 
   deleteMedicine: async (id) => {
     const response = await apiClient.delete(`/medicines/${id}`);
+    return response.data;
+  },
+
+  getMasterCatalog: async (page = 0, size = 250, search = '', categoryId = '') => {
+    const params = { page, size };
+    if (search) params.search = search;
+    if (categoryId) params.categoryId = categoryId;
+    const response = await apiClient.get('/medicines/master', { params });
     return response.data;
   },
 };

@@ -286,7 +286,7 @@ export default function UserCategoryPage() {
                         <span className="font-mono text-[10px] font-bold text-slate-400">
                           {med.medicineCode}
                         </span>
-                        <StatusBadge status={med.status} />
+                        <StatusBadge status={med.status === 'INACTIVE' ? 'OUT_OF_STOCK' : 'ACTIVE'} label={med.status === 'INACTIVE' ? 'Out of Stock' : 'Available'} />
                       </div>
                       <div className="font-bold text-slate-900 text-xs mt-0.5">{med.name}</div>
                       {med.genericName && (

@@ -1,10 +1,13 @@
 package com.medistock.medicine.entity;
 
 import com.medistock.category.entity.Category;
+import com.medistock.supplier.entity.Supplier;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "medicines")
@@ -55,6 +58,10 @@ public class Medicine {
     @Builder.Default
     @Column(name = "prescription_required", nullable = false)
     private Boolean prescriptionRequired = true;
+
+    @Builder.Default
+    @ManyToMany(mappedBy = "medicines", fetch = FetchType.LAZY)
+    private Set<Supplier> suppliers = new HashSet<>();
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

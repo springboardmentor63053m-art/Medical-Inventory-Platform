@@ -17,9 +17,15 @@ public class PrescriptionOrderResponse {
     private Long userId;
     private String userEmail;
     private String userFullName;
+    private String userPhone;
     private String doctorName;
     private String patientName;
     private String prescriptionFileUrl;
+    private Long prescriptionId;
+    private String prescriptionFileName;
+    private String prescriptionContentType;
+    private Long prescriptionFileSize;
+    private LocalDateTime uploadDate;
     private BigDecimal totalAmount;
     private String status;
     private String deliveryAddress;
@@ -27,5 +33,6 @@ public class PrescriptionOrderResponse {
     private String pharmacistNotes;
     private String verifiedBy;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private List<PrescriptionOrderItemResponse> items;
 }

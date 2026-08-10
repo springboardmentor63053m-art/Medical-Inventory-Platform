@@ -15,6 +15,8 @@ import com.medistock.supplier.dto.response.SupplierResponse;
 import com.medistock.supplier.entity.Supplier;
 import com.medistock.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,20 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final SupplierRepository supplierRepository;
     private final MedicineRepository medicineRepository;
+
+    private Supplier resolveAuthenticatedSupplier() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return null;
+        }
+        boolean isSupplier = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPPLIER") || a.getAuthority().equals("SUPPLIER"));
+        if (!isSupplier) {
+            return null;
+        }
+        String email = auth.getName();
+        return supplierRepository.findByEmailIgnoreCase(email).orElse(null);
+    }
 
     @Override
     @Transactional
@@ -58,14 +74,22 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                 Medicine med = medicineRepository.findById(itemReq.getMedicineId())
                         .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + itemReq.getMedicineId()));
 
-                BigDecimal subtotal = itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+                if (!supplierRepository.existsApprovedMedicineRelationship(supplier.getId(), med.getId())) {
+                    throw new IllegalArgumentException("Medicine '" + med.getName()
+                        + "' is not approved for supplier '" + supplier.getSupplierName() + "'");
+                }
+
+                BigDecimal unitPrice = (med.getUnitPrice() != null && med.getUnitPrice().compareTo(BigDecimal.ZERO) > 0)
+                        ? med.getUnitPrice()
+                        : (itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO);
+                BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
                 total = total.add(subtotal);
 
                 items.add(PurchaseOrderItem.builder()
                         .purchaseOrder(order)
                         .medicine(med)
                         .quantity(itemReq.getQuantity())
-                        .unitPrice(itemReq.getUnitPrice())
+                        .unitPrice(unitPrice)
                         .subtotal(subtotal)
                         .build());
             }
@@ -81,6 +105,12 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseOrderResponse> getAllPurchaseOrders() {
+        Supplier supplier = resolveAuthenticatedSupplier();
+        if (supplier != null) {
+            return purchaseOrderRepository.findBySupplierId(supplier.getId()).stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+        }
         return purchaseOrderRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -91,6 +121,13 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     public PurchaseOrderResponse getPurchaseOrderById(Long id) {
         PurchaseOrder order = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase order not found with id: " + id));
+
+        Supplier supplier = resolveAuthenticatedSupplier();
+        if (supplier != null) {
+            if (order.getSupplier() == null || !order.getSupplier().getId().equals(supplier.getId())) {
+                throw new ResourceNotFoundException("Purchase order not found with id: " + id);
+            }
+        }
         return mapToResponse(order);
     }
 
@@ -99,6 +136,14 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     public PurchaseOrderResponse updatePurchaseOrderStatus(Long id, String status) {
         PurchaseOrder order = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase order not found with id: " + id));
+
+        Supplier supplier = resolveAuthenticatedSupplier();
+        if (supplier != null) {
+            if (order.getSupplier() == null || !order.getSupplier().getId().equals(supplier.getId())) {
+                throw new ResourceNotFoundException("Purchase order not found with id: " + id);
+            }
+        }
+
         order.setStatus(status);
         PurchaseOrder saved = purchaseOrderRepository.save(order);
         return mapToResponse(saved);

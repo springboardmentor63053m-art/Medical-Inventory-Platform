@@ -19,9 +19,18 @@ export default function StatusBadge({ status, label, size = 'normal' }) {
   } else if (['LOCKED', 'DRAFT'].includes(normalized)) {
     styles = 'bg-blue-50 text-blue-700 border-blue-200';
     dotColor = 'bg-blue-500';
-  } else if (['ADMIN', 'SUPER_ADMIN', 'SYSTEM_ADMINISTRATOR'].includes(normalized)) {
+  } else if (['ADMIN'].includes(normalized)) {
     styles = 'bg-purple-50 text-purple-700 border-purple-200';
     dotColor = 'bg-purple-500';
+  } else if (['PHARMACIST'].includes(normalized)) {
+    styles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    dotColor = 'bg-emerald-500';
+  } else if (['SUPPLIER'].includes(normalized)) {
+    styles = 'bg-amber-50 text-amber-800 border-amber-200';
+    dotColor = 'bg-amber-500';
+  } else if (['USER'].includes(normalized)) {
+    styles = 'bg-slate-100 text-slate-700 border-slate-200';
+    dotColor = 'bg-slate-500';
   }
 
   const py = size === 'small' ? 'py-0.5 px-2 text-[10px]' : 'py-1 px-2.5 text-xs';

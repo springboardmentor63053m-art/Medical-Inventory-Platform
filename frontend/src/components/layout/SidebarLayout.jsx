@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function SidebarLayout({ isOpen, onClose }) {
-  const { isAdmin, isPharmacist, isStaff, isUser, getDashboardPath } = useAuth();
+  const { isAdmin, isPharmacist, isStaff, isUser, isSupplier, getDashboardPath } = useAuth();
 
   const userDashboardPath = getDashboardPath();
 
@@ -28,27 +28,36 @@ export default function SidebarLayout({ isOpen, onClose }) {
     { name: 'Dashboard', path: userDashboardPath, icon: LayoutDashboard },
     { name: 'Medicines', path: '/medicines', icon: Pill },
     { name: 'Categories', path: '/categories', icon: Boxes },
-    { name: 'Prescription Orders', path: '/prescription-orders', icon: FileText, badge: 'Rx Order' },
   ];
 
-  if (isAdmin || isPharmacist || isStaff) {
-    primaryNavItems.push(
-      { name: 'Inventory', path: '/inventory', icon: Package },
-      { name: 'Expiring Soon', path: '/expiring', icon: Clock, badge: '< 90d' }
-    );
+  if (isStaff) {
+    primaryNavItems.push({ name: 'Inventory', path: '/inventory', icon: Package });
+  }
+
+  if (isUser) {
+    primaryNavItems.push({ name: 'Prescription Orders', path: '/prescription-orders', icon: FileText, badge: 'Rx Order' });
   }
 
   if (isAdmin || isPharmacist) {
     primaryNavItems.push(
+      { name: 'Inventory', path: '/inventory', icon: Package },
+      { name: 'Expiring Soon', path: '/expiring', icon: Clock, badge: '< 90d' },
       { name: 'Suppliers', path: '/suppliers', icon: Truck },
       { name: 'Purchase Orders', path: '/purchase-orders', icon: ShoppingCart },
-      { name: 'Rx Verification Queue', path: '/pharmacist/verify', icon: ShieldCheck, badge: 'Pharmacist' },
+      { name: 'Rx Verification Queue', path: '/pharmacist/verify', icon: ShieldCheck, badge: isAdmin ? 'Admin' : 'Pharmacist' },
       { name: 'In-Store POS Counter', path: '/store-counter', icon: Store, badge: 'POS' },
       { name: 'Reports', path: '/reports', icon: FileText }
     );
   }
 
-  if (isAdmin || isPharmacist || isStaff) {
+  if (isSupplier) {
+    primaryNavItems.push(
+      { name: 'My Supplier Profile', path: '/suppliers', icon: Truck },
+      { name: 'Orders From MediStock', path: '/purchase-orders', icon: ShoppingCart, badge: 'MediStock Orders' }
+    );
+  }
+
+  if (isAdmin || isPharmacist || isStaff || isSupplier) {
     primaryNavItems.push({ name: 'Notifications', path: '/notifications', icon: Bell });
   }
 

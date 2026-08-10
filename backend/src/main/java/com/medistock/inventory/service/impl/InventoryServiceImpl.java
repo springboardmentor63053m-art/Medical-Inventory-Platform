@@ -167,6 +167,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .expiryDate(inventory.getExpiryDate())
                 .storageLocation(inventory.getStorageLocation())
                 .isLowStock(isLowStock)
+                .isOutOfStock(inventory.getQuantity() == 0)
                 .isExpired(isExpired)
                 .createdAt(inventory.getCreatedAt())
                 .updatedAt(inventory.getUpdatedAt())

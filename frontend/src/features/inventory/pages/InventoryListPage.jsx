@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 
 export default function InventoryListPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isPharmacist } = useAuth();
+  const canAddEdit = isAdmin || isPharmacist;
   const [inventoryItems, setInventoryItems] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +112,7 @@ export default function InventoryListPage() {
     setFormData({
       ...initialForm,
       medicineId: medicines.length > 0 ? medicines[0].id : '',
-      batchNumber: `BATCH-${Math.floor(1000 + Math.random() * 9000)}`,
+      batchNumber: `BATCH-${Date.now().toString().slice(-4)}`,
       expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
     setModalOpen(true);
@@ -182,9 +183,10 @@ export default function InventoryListPage() {
 
   const filteredItems = inventoryItems.filter((item) => {
     const medName = item.medicine?.name || '';
+    const medCode = item.medicine?.medicineCode || '';
     const batch = item.batchNumber || '';
     const query = searchTerm.toLowerCase();
-    return medName.toLowerCase().includes(query) || batch.toLowerCase().includes(query);
+    return medName.toLowerCase().includes(query) || batch.toLowerCase().includes(query) || medCode.toLowerCase().includes(query);
   });
 
   const sortedItems = [...filteredItems].sort((a, b) => {
@@ -231,12 +233,14 @@ export default function InventoryListPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
-          <button
-            onClick={handleOpenAddModal}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add Inventory
-          </button>
+          {canAddEdit && (
+            <button
+              onClick={handleOpenAddModal}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Inventory
+            </button>
+          )}
         </div>
       </div>
 
@@ -248,7 +252,7 @@ export default function InventoryListPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by medicine name or batch number..."
+            placeholder="Search by medicine name, Medicine Code, or Batch Number..."
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
           />
         </div>
@@ -359,6 +363,7 @@ export default function InventoryListPage() {
               ) : (
                 sortedItems.map((item) => {
                   const isLow = item.isLowStock || (item.quantity <= item.minimumStock);
+                  const isOutOfStock = item.isOutOfStock || item.quantity === 0;
                   const isExpired = item.isExpired;
 
                   return (
@@ -368,8 +373,10 @@ export default function InventoryListPage() {
                       </td>
                       <td className="py-4 px-6">
                         <div className="font-bold text-slate-900">{item.medicine?.name || `Medicine #${item.medicineId}`}</div>
-                        <div className="text-[11px] text-slate-400">
-                          {item.medicine?.category?.name || 'Category N/A'}
+                        <div className="text-[11px] font-medium text-slate-500 flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <span>Medicine Code: <span className="font-mono font-semibold text-blue-700">{item.medicine?.medicineCode || 'N/A'}</span></span>
+                          <span>•</span>
+                          <span>{item.medicine?.category?.name || 'Category N/A'}</span>
                         </div>
                       </td>
                       <td className="py-4 px-6">
@@ -387,6 +394,8 @@ export default function InventoryListPage() {
                       <td className="py-4 px-6">
                         {isExpired ? (
                           <StatusBadge status="EXPIRED" label="EXPIRED" />
+                        ) : isOutOfStock ? (
+                          <StatusBadge status="OUT_OF_STOCK" label="OUT OF STOCK" />
                         ) : isLow ? (
                           <StatusBadge status="LOW_STOCK" label="LOW STOCK" />
                         ) : (
@@ -395,13 +404,15 @@ export default function InventoryListPage() {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenEditModal(item)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                            title="Edit Stock Record"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
+                          {canAddEdit && (
+                            <button
+                              onClick={() => handleOpenEditModal(item)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                              title="Edit Stock Record"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                          )}
                           {isAdmin && (
                             <button
                               onClick={() => setDeleteId(item.id)}
@@ -469,7 +480,7 @@ export default function InventoryListPage() {
                   <option value="">Select Medicine</option>
                   {medicines.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name} ({m.medicineCode})
+                      {m.name} (Medicine Code: {m.medicineCode})
                     </option>
                   ))}
                 </select>

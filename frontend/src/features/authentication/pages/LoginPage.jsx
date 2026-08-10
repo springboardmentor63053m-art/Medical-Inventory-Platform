@@ -288,7 +288,7 @@ export default function LoginPage() {
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <h3 className="text-xs font-bold text-slate-200 mt-3">Role Security</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Admin, Pharmacist & Staff permissions</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Admin, Pharmacist, Supplier & User permissions</p>
             </div>
           </div>
         </div>

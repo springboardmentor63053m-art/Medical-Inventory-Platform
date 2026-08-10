@@ -34,23 +34,32 @@ INSERT INTO suppliers (supplier_code, supplier_name, contact_person, phone, emai
 ('SUP-004', 'Pfizer India Corp', 'David Miller', '+1-800-555-0199', 'distrib@pfizer.com', '900 Global Trade Sq', 'New York', 'NY', 'USA'),
 ('SUP-005', 'Apollo Healthcare Supplies', 'Priya Nair', '+91-9445566778', 'logistics@apollohealth.com', '12 Greams Road', 'Chennai', 'Tamil Nadu', 'India');
 
--- 4. Insert Inventory Items (15 Inventory items matching all medicines)
+-- 4. Insert Inventory Items (Multiple batches for medicines)
 INSERT INTO inventory (medicine_id, quantity, minimum_stock, batch_number, expiry_date, storage_location) VALUES
-(1, 250, 50, 'BT-AMX-2026', '2027-08-30', 'Shelf-A1'),
-(2, 180, 30, 'BT-AZI-2026', '2027-06-15', 'Shelf-A2'),
-(3, 850, 100, 'BT-PCT-2026', '2028-01-20', 'Shelf-B1'),
-(4, 400, 80, 'BT-IBU-2026', '2027-11-10', 'Shelf-B2'),
-(5, 600, 150, 'BT-DOL-2026', '2028-03-15', 'Shelf-B3'),
-(6, 500, 100, 'BT-CRO-2026', '2027-12-01', 'Shelf-B4'),
-(7, 150, 40, 'BT-DIC-2026', '2026-12-30', 'Shelf-B5'),
-(8, 350, 60, 'BT-VTC-2026', '2028-05-18', 'Shelf-C1'),
-(9, 200, 50, 'BT-ZNC-2026', '2027-10-05', 'Shelf-C2'),
-(10, 180, 40, 'BT-CLC-2026', '2027-09-22', 'Shelf-C3'),
-(11, 450, 75, 'BT-CET-2026', '2028-02-14', 'Shelf-D1'),
-(12, 220, 40, 'BT-OME-2026', '2027-04-10', 'Shelf-D2'),
-(13, 300, 40, 'BT-PAN-2026', '2027-07-25', 'Shelf-D3'),
-(14, 500, 90, 'BT-MET-2026', '2028-06-30', 'Shelf-E1'),
-(15, 1000, 200, 'BT-ORS-2026', '2028-11-15', 'Shelf-E2');
+(1, 250, 50, 'BAT-2026-001', '2027-08-30', 'Shelf-A1'),
+(1, 140, 50, 'BAT-2026-014', '2028-02-15', 'Shelf-A3'),
+(1, 75, 50, 'BAT-2026-027', '2028-09-20', 'Shelf-B2'),
+(2, 180, 30, 'BAT-2026-002', '2027-06-15', 'Shelf-A2'),
+(2, 90, 30, 'BAT-2026-015', '2028-04-10', 'Shelf-A4'),
+(3, 850, 100, 'BAT-2026-003', '2028-01-20', 'Shelf-B1'),
+(3, 300, 100, 'BAT-2026-018', '2028-07-10', 'Shelf-B4'),
+(4, 400, 80, 'BAT-2026-004', '2027-11-10', 'Shelf-B2'),
+(5, 600, 150, 'BAT-2026-005', '2028-03-15', 'Shelf-B3'),
+(5, 220, 150, 'BAT-2026-020', '2028-10-05', 'Shelf-C1'),
+(6, 500, 100, 'BAT-2026-006', '2027-12-01', 'Shelf-B4'),
+(7, 150, 40, 'BAT-2026-007', '2026-12-30', 'Shelf-B5'),
+(8, 350, 60, 'BAT-2026-008', '2028-05-18', 'Shelf-C1'),
+(8, 120, 60, 'BAT-2026-022', '2028-11-01', 'Shelf-C4'),
+(9, 200, 50, 'BAT-2026-009', '2027-10-05', 'Shelf-C2'),
+(10, 180, 40, 'BAT-2026-010', '2027-09-22', 'Shelf-C3'),
+(11, 450, 75, 'BAT-2026-011', '2028-02-14', 'Shelf-D1'),
+(11, 160, 75, 'BAT-2026-025', '2028-08-19', 'Shelf-D4'),
+(12, 220, 40, 'BAT-2026-012', '2027-04-10', 'Shelf-D2'),
+(13, 300, 40, 'BAT-2026-013', '2027-07-25', 'Shelf-D3'),
+(14, 500, 90, 'BAT-2026-014', '2028-06-30', 'Shelf-E1'),
+(14, 180, 90, 'BAT-2026-028', '2028-12-15', 'Shelf-E4'),
+(15, 1000, 200, 'BAT-2026-015', '2028-11-15', 'Shelf-E2'),
+(15, 400, 200, 'BAT-2026-030', '2029-03-20', 'Shelf-E5');
 
 -- 5. Insert Purchase Orders (5 Purchase Orders)
 INSERT INTO purchase_orders (supplier_id, order_number, order_date, expected_delivery, status, total_amount) VALUES

@@ -29,5 +29,5 @@ public class CreateUserRequest {
 
     private String phone;
 
-    private String role; // ADMIN, PHARMACIST, STAFF
+    private String role; // ADMIN, PHARMACIST, USER, SUPPLIER
 }

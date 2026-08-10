@@ -19,6 +19,7 @@ public class InventoryResponse {
     private LocalDate expiryDate;
     private String storageLocation;
     private Boolean isLowStock;
+    private Boolean isOutOfStock;
     private Boolean isExpired;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

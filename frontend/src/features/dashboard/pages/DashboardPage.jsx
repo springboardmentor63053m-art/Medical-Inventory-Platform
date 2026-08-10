@@ -94,11 +94,12 @@ export default function DashboardPage() {
         ? user.roles
         : Array.from(user.roles)
       : [];
-    const primary = roles.length > 0 ? String(roles[0]).replace('ROLE_', '').toUpperCase() : 'STAFF';
+    const primary = roles.length > 0 ? String(roles[0]).replace('ROLE_', '').toUpperCase() : 'ADMIN';
 
     if (primary.includes('ADMIN')) return 'ADM001';
     if (primary.includes('PHARMACIST')) return 'PHA001';
-    return 'STF001';
+    if (primary.includes('SUPPLIER')) return 'SUP001';
+    return 'USR001';
   };
 
   const fetchDashboardData = async () => {
@@ -197,7 +198,10 @@ export default function DashboardPage() {
 
       setLowStockItems(lowList.slice(0, 5));
       setExpiringItems(expiringList);
-      setCategoriesData(Array.isArray(cats) ? cats : []);
+      setCategoriesData(Array.isArray(cats) ? cats.map(c => ({
+        ...c,
+        medicineCount: meds.filter(m => m.category?.id === c.id).length
+      })) : []);
       setPurchaseOrders(poList.slice(0, 4));
     } catch (error) {
       console.error('Dashboard backend fetch error:', error);
@@ -228,17 +232,16 @@ export default function DashboardPage() {
     ],
   };
 
-  // Clean 12-Category Bar Chart
-  const categoryLabels = categoriesData.length > 0
-    ? categoriesData.map((c) => c.name.split(' ')[0] + ' ' + (c.name.split(' ')[1] || ''))
-    : ['Antibiotics', 'Analgesics', 'Cardiovascular', 'Diabetes', 'Respiratory', 'Gastro', 'Neuro', 'Derm', 'Ophthal', 'Oncology', 'Pediatrics', 'Vitamins'];
+  // Real Category Bar Chart
+  const categoryLabels = categoriesData.map((c) => c.name);
+  const categoryCounts = categoriesData.map((c) => c.medicineCount || 0);
 
   const categoryChartData = {
     labels: categoryLabels,
     datasets: [
       {
         label: 'Formulations Count',
-        data: categoriesData.length > 0 ? categoriesData.map((_, i) => 20 + (i % 4)) : [22, 22, 22, 22, 20, 20, 20, 20, 20, 22, 20, 20],
+        data: categoryCounts,
         backgroundColor: 'rgba(37, 99, 235, 0.85)',
         borderRadius: 6,
         hoverBackgroundColor: '#1d4ed8',
@@ -437,7 +440,7 @@ export default function DashboardPage() {
                     <div>
                       <h4 className="text-xs font-bold text-slate-900">{item.medicine?.name || `Medicine #${item.medicineId}`}</h4>
                       <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                        Form: {item.medicine?.dosage || 'Formulation'} | Batch: <span className="font-mono text-slate-700">{item.batchNumber}</span>
+                        Medicine Code: <span className="font-mono font-semibold text-slate-700">{item.medicine?.medicineCode || 'N/A'}</span> • Batch: <span className="font-mono font-semibold text-slate-700">{item.batchNumber}</span>
                       </p>
                     </div>
                     {item.statusType === 'OUT_OF_STOCK' ? (
@@ -514,7 +517,7 @@ export default function DashboardPage() {
                       <div>
                         <h4 className="text-xs font-bold text-slate-900">{item.medicine?.name || `Medicine #${item.medicineId}`}</h4>
                         <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
-                          Batch: <span className="font-mono text-slate-700">{item.batchNumber}</span> ({item.expiryDate})
+                          Medicine Code: <span className="font-mono font-semibold text-slate-700">{item.medicine?.medicineCode || 'N/A'}</span> • Batch: <span className="font-mono font-semibold text-slate-700">{item.batchNumber}</span> ({item.expiryDate})
                         </p>
                       </div>
                       <span className={`px-2.5 py-1 font-bold text-[10px] rounded-full border inline-flex items-center gap-1.5 ${badgeColor}`}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { medicineService } from '../../../services/api/medicineService';
 import { prescriptionService } from '../../../services/api/prescriptionService';
+import { inventoryService } from '../../../services/api/inventoryService';
 import { toast } from 'react-toastify';
 import {
   FileText,
@@ -25,6 +26,7 @@ import {
 export default function PrescriptionOrderPage() {
   const [activeTab, setActiveTab] = useState('new'); // 'new' | 'my-orders'
   const [medicines, setMedicines] = useState([]);
+  const [inventoryByMedicine, setInventoryByMedicine] = useState({});
   const [loadingMeds, setLoadingMeds] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -32,7 +34,7 @@ export default function PrescriptionOrderPage() {
   const [cart, setCart] = useState([]);
   const [patientName, setPatientName] = useState('');
   const [doctorName, setDoctorName] = useState('');
-  const [prescriptionFileUrl, setPrescriptionFileUrl] = useState('');
+  const [prescriptionFile, setPrescriptionFile] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [notes, setNotes] = useState('');
@@ -50,10 +52,19 @@ export default function PrescriptionOrderPage() {
   const fetchMedicines = async () => {
     setLoadingMeds(true);
     try {
-      const data = await medicineService.getAllMedicines(0, 100);
+      const [data, inventory] = await Promise.all([
+        medicineService.getAllMedicines(0, 250),
+        inventoryService.getAllInventory()
+      ]);
       setMedicines(data.content || []);
+      const inventoryMap = (Array.isArray(inventory) ? inventory : []).reduce((map, row) => {
+        const id = String(row.medicine?.id || row.medicineId);
+        map[id] = (map[id] || 0) + Number(row.quantity || 0);
+        return map;
+      }, {});
+      setInventoryByMedicine(inventoryMap);
     } catch (err) {
-      toast.error('Failed to load medicine catalog');
+      toast.error('Failed to load medicine catalog', { toastId: 'load-meds-error' });
     } finally {
       setLoadingMeds(false);
     }
@@ -78,7 +89,16 @@ export default function PrescriptionOrderPage() {
 
   const addToCart = (med) => {
     const existing = cart.find((item) => item.id === med.id);
+    const available = inventoryByMedicine[String(med.id)] || 0;
+    if (available <= 0) {
+      toast.warn(`${med.name} is out of stock`);
+      return;
+    }
     if (existing) {
+      if (existing.quantity >= available) {
+        toast.warn(`Maximum available stock reached for ${med.name}`);
+        return;
+      }
       setCart(cart.map((item) => (item.id === med.id ? { ...item, quantity: item.quantity + 1 } : item)));
     } else {
       setCart([...cart, { ...med, quantity: 1 }]);
@@ -96,7 +116,8 @@ export default function PrescriptionOrderPage() {
         .map((item) => {
           if (item.id === id) {
             const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
+            const available = inventoryByMedicine[String(item.id)] || 0;
+            return newQty > 0 && newQty <= available ? { ...item, quantity: newQty } : (newQty <= 0 ? null : item);
           }
           return item;
         })
@@ -108,9 +129,17 @@ export default function PrescriptionOrderPage() {
     return cart.reduce((sum, item) => sum + (item.unitPrice || 0) * item.quantity, 0).toFixed(2);
   };
 
-  const hasNonRxItemInCart = cart.some((item) => item.prescriptionRequired === false);
-  const hasRxItemInCart = cart.some((item) => item.prescriptionRequired !== false);
-  const requiresStoreVisitNotice = hasNonRxItemInCart && !prescriptionFileUrl.trim() && !hasRxItemInCart;
+  const rxItemsInCart = cart.filter((item) => item.prescriptionRequired !== false);
+  const hasRxItemInCart = rxItemsInCart.length > 0;
+  const rxItemNames = rxItemsInCart.map((i) => i.name).join(', ');
+  const requiresPrescription = hasRxItemInCart;
+
+  const isFormValid =
+    cart.length > 0 &&
+    patientName.trim().length >= 2 &&
+    deliveryAddress.trim().length >= 5 &&
+    /^[+]?[0-9\s\-\(\)]{7,20}$/.test(contactPhone.trim()) &&
+    (!hasRxItemInCart || (prescriptionFile && doctorName.trim().length > 0));
 
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
@@ -119,23 +148,35 @@ export default function PrescriptionOrderPage() {
       toast.error('Please add at least one medicine to your order');
       return;
     }
-    if (!patientName.trim() || !deliveryAddress.trim() || !contactPhone.trim()) {
-      toast.error('Please fill in Patient Name, Delivery Address, and Contact Phone');
+    if (patientName.trim().length < 2) {
+      toast.error('Please enter a valid Patient Name (at least 2 characters)');
+      return;
+    }
+    if (deliveryAddress.trim().length < 5) {
+      toast.error('Please enter a valid Delivery Address (at least 5 characters)');
+      return;
+    }
+    if (!/^[+]?[0-9\s\-\(\)]{7,20}$/.test(contactPhone.trim())) {
+      toast.error('Please enter a valid Contact Phone number');
       return;
     }
 
-    // Policy check: If user wants non-prescription medicine without prescription file
-    if (requiresStoreVisitNotice) {
-      toast.warn('Non-prescription purchases require visiting the nearest physical store to purchase directly through a Pharmacist.');
-      return;
+    if (hasRxItemInCart) {
+      if (!prescriptionFile) {
+        toast.error(`Prescription required for: ${rxItemNames}`);
+        return;
+      }
+      if (!doctorName.trim()) {
+        toast.error('Doctor Name is required when ordering prescription medicines');
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
-      const payload = {
+      const orderPayload = {
         patientName: patientName.trim(),
         doctorName: doctorName.trim(),
-        prescriptionFileUrl: prescriptionFileUrl.trim() || 'https://medistock.demo/prescriptions/default_rx.pdf',
         deliveryAddress: deliveryAddress.trim(),
         contactPhone: contactPhone.trim(),
         notes: notes.trim(),
@@ -145,14 +186,17 @@ export default function PrescriptionOrderPage() {
         })),
       };
 
-      const res = await prescriptionService.createPrescriptionOrder(payload);
+      const formData = new FormData();
+      formData.append('order', new Blob([JSON.stringify(orderPayload)], { type: 'application/json' }));
+      if (prescriptionFile) formData.append('prescriptionFile', prescriptionFile);
+      const res = await prescriptionService.createPrescriptionOrder(formData);
       toast.success(`Order ${res.orderNumber} placed successfully! Routed for Pharmacist verification.`);
 
       // Reset form
       setCart([]);
       setPatientName('');
       setDoctorName('');
-      setPrescriptionFileUrl('');
+      setPrescriptionFile(null);
       setNotes('');
       fetchMyOrders();
       setActiveTab('my-orders');
@@ -166,16 +210,24 @@ export default function PrescriptionOrderPage() {
 
   const getStatusBadge = (status) => {
     switch (status) {
+      case 'PENDING_REVIEW':
       case 'PENDING_VERIFICATION':
         return (
           <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5 w-fit">
-            <Clock className="w-3.5 h-3.5" /> Pending Pharmacist Verification
+            <Clock className="w-3.5 h-3.5" /> Pending Pharmacist Review
           </span>
         );
+      case 'APPROVED':
       case 'VERIFIED':
         return (
           <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 w-fit">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Prescription Verified
+            <CheckCircle2 className="w-3.5 h-3.5" /> Prescription Approved
+          </span>
+        );
+      case 'COMPLETED':
+        return (
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5 w-fit">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Order Completed
           </span>
         );
       case 'DISPATCHED':
@@ -271,6 +323,11 @@ export default function PrescriptionOrderPage() {
                 </div>
               ) : (
                 <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+                  {searchQuery && filteredMedicines.length > 0 && filteredMedicines.some(med => med.prescriptionRequired === false) && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200">
+                      {filteredMedicines.find(med => med.prescriptionRequired === false)?.name} is an Over-The-Counter (OTC) medicine and does not require prescription verification. Please purchase it through the store counter.
+                    </div>
+                  )}
                   {filteredMedicines.map((med) => (
                     <div
                       key={med.id}
@@ -286,8 +343,8 @@ export default function PrescriptionOrderPage() {
                               Rx Required
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-400 flex items-center gap-1">
-                              <Store className="w-3 h-3" /> Store OTC
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> OTC / No Prescription Required
                             </span>
                           )}
                         </div>
@@ -298,13 +355,23 @@ export default function PrescriptionOrderPage() {
 
                       <div className="flex items-center gap-3">
                         <span className="text-xs font-bold text-emerald-400">
-                          ${med.unitPrice ? med.unitPrice.toFixed(2) : '0.00'}
+                          ₹{med.unitPrice ? med.unitPrice.toFixed(2) : '0.00'}
                         </span>
+                        {inventoryByMedicine[String(med.id)] > 0 ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Available
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                            Out of Stock
+                          </span>
+                        )}
                         <button
                           onClick={() => addToCart(med)}
-                          className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 border border-blue-500/30 hover:border-blue-500 text-blue-300 hover:text-white text-xs font-bold transition flex items-center gap-1"
+                          disabled={!inventoryByMedicine[String(med.id)] || (inventoryByMedicine[String(med.id)] || 0) <= 0}
+                          className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600 border border-blue-500/30 hover:border-blue-500 text-blue-300 hover:text-white text-xs font-bold transition flex items-center gap-1 disabled:opacity-40 disabled:hover:bg-blue-600/20 disabled:hover:border-blue-500/30 disabled:hover:text-blue-300"
                         >
-                          <Plus className="w-3.5 h-3.5" /> Add
+                          <Plus className="w-3.5 h-3.5" /> {(inventoryByMedicine[String(med.id)] || 0) > 0 ? 'Add' : 'Unavailable'}
                         </button>
                       </div>
                     </div>
@@ -321,19 +388,27 @@ export default function PrescriptionOrderPage() {
                 <ShoppingCart className="w-4 h-4 text-blue-400" /> Order Summary ({cart.length})
               </h2>
 
-              {/* STORE VISIT NOTICE WARNING */}
-              {requiresStoreVisitNotice && (
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-2">
-                  <div className="flex items-start gap-2.5">
-                    <Store className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-bold text-amber-200">Physical Store Visit Required</h4>
-                      <p className="text-[11px] text-amber-300/90 leading-relaxed mt-0.5">
-                        You have non-prescription medicines in your cart. If you do not have a doctor's prescription to upload, please visit our physical pharmacy store to purchase directly through a Pharmacist.
-                      </p>
+              {/* DYNAMIC PRESCRIPTION STATUS BANNER */}
+              {cart.length > 0 && (
+                hasRxItemInCart ? (
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs space-y-1">
+                    <div className="flex items-center gap-2 font-bold text-amber-300">
+                      <AlertCircle className="w-4 h-4 text-amber-400" /> Prescription Required
                     </div>
+                    <p className="text-[11px] text-amber-300/90 leading-relaxed">
+                      Your order contains prescription medicines: <strong>{rxItemNames}</strong>. Upload a valid prescription from your doctor before submitting.
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs space-y-1">
+                    <div className="flex items-center gap-2 font-bold text-emerald-300">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" /> No Prescription Required
+                    </div>
+                    <p className="text-[11px] text-emerald-300/90 leading-relaxed">
+                      All selected medicines in your cart are available as Over-The-Counter (OTC) products.
+                    </p>
+                  </div>
+                )
               )}
 
               {cart.length === 0 ? (
@@ -345,8 +420,15 @@ export default function PrescriptionOrderPage() {
                   {cart.map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800 text-xs">
                       <div className="flex-1 min-w-0 pr-2">
-                        <p className="font-semibold text-slate-200 truncate">{item.name}</p>
-                        <p className="text-[10px] text-slate-400">${(item.unitPrice || 0).toFixed(2)} each</p>
+                        <p className="font-semibold text-slate-200 truncate flex items-center gap-1.5">
+                          {item.name}
+                          {item.prescriptionRequired !== false ? (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-400">Rx</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400">OTC</span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-slate-400">₹{(item.unitPrice || 0).toFixed(2)} each</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
@@ -363,7 +445,7 @@ export default function PrescriptionOrderPage() {
 
                   <div className="pt-2 flex justify-between text-sm font-bold text-white border-t border-slate-800">
                     <span>Total Amount:</span>
-                    <span className="text-emerald-400">${calculateTotal()}</span>
+                    <span className="text-emerald-400">₹{calculateTotal()}</span>
                   </div>
                 </div>
               )}
@@ -372,18 +454,39 @@ export default function PrescriptionOrderPage() {
               <form onSubmit={handleSubmitOrder} className="space-y-3.5 pt-2 border-t border-slate-800">
                 <div className="space-y-1">
                   <label className="block text-xs font-semibold text-slate-300">
-                    Upload Prescription File / Document <span className="text-blue-400">(Image/PDF)</span>
+                    Upload Prescription File / Document {hasRxItemInCart && <span className="text-rose-400">*</span>} <span className="text-blue-400">(Image/PDF)</span>
                   </label>
                   <div className="relative">
                     <Upload className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
-                      type="text"
-                      value={prescriptionFileUrl}
-                      onChange={(e) => setPrescriptionFileUrl(e.target.value)}
-                      placeholder="e.g. https://medistock.demo/uploads/rx_001.pdf"
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) {
+                          toast.error('Prescription must be a PDF, JPG, JPEG, or PNG');
+                          e.target.value = '';
+                          return;
+                        }
+                        if (file.size > 10 * 1024 * 1024) {
+                          toast.error('Prescription file must be 10 MB or smaller');
+                          e.target.value = '';
+                          return;
+                        }
+                        setPrescriptionFile(file);
+                      }}
                       className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+                  {prescriptionFile && (
+                    <div className="flex items-center justify-between text-[11px] text-slate-300 bg-slate-950/80 p-2 rounded-xl border border-slate-800">
+                      <span className="truncate flex items-center gap-1.5 text-blue-300">
+                        <FileCheck className="w-3.5 h-3.5 text-blue-400" /> {prescriptionFile.name}
+                      </span>
+                      <button type="button" onClick={() => setPrescriptionFile(null)} className="text-rose-400 hover:text-rose-300 font-bold ml-2">Remove</button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -399,9 +502,10 @@ export default function PrescriptionOrderPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300">Doctor Name</label>
+                    <label className="block text-xs font-semibold text-slate-300">Doctor Name {hasRxItemInCart ? '*' : '(Optional)'}</label>
                     <input
                       type="text"
+                      required={hasRxItemInCart}
                       value={doctorName}
                       onChange={(e) => setDoctorName(e.target.value)}
                       placeholder="e.g. Dr. A. Smith"
@@ -436,12 +540,16 @@ export default function PrescriptionOrderPage() {
 
                 <button
                   type="submit"
-                  disabled={submitting || cart.length === 0}
+                  disabled={submitting || cart.length === 0 || (hasRxItemInCart && !prescriptionFile)}
                   className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" /> Submitting Order...
+                    </>
+                  ) : hasRxItemInCart && !prescriptionFile ? (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-amber-300" /> Prescription Required to Place Order
                     </>
                   ) : (
                     <>
@@ -479,13 +587,13 @@ export default function PrescriptionOrderPage() {
                         {getStatusBadge(ord.status)}
                       </div>
                       <p className="text-[11px] text-slate-400 mt-1">
-                        Patient: <strong className="text-slate-200">{ord.patientName}</strong> • Placed on {new Date(ord.createdAt).toLocaleDateString()}
+                        Patient: <strong className="text-slate-200">{ord.patientName || ord.userFullName || 'Patient information unavailable'}</strong> • Placed on {new Date(ord.createdAt).toLocaleDateString()}
                       </p>
                     </div>
 
                     <div className="text-right">
                       <span className="text-xs text-slate-400">Total:</span>
-                      <p className="text-base font-black text-emerald-400">${(ord.totalAmount || 0).toFixed(2)}</p>
+                      <p className="text-base font-black text-emerald-400">₹{(ord.totalAmount || 0).toFixed(2)}</p>
                     </div>
                   </div>
 
@@ -495,9 +603,9 @@ export default function PrescriptionOrderPage() {
                       <div key={item.id} className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60 flex items-center justify-between text-xs">
                         <div>
                           <p className="font-bold text-slate-200">{item.medicineName}</p>
-                          <p className="text-[10px] text-slate-400">Qty: {item.quantity} × ${item.unitPrice?.toFixed(2)}</p>
+                          <p className="text-[10px] text-slate-400">Qty: {item.quantity} × ₹{item.unitPrice?.toFixed(2)}</p>
                         </div>
-                        <span className="font-bold text-slate-300">${item.subtotal?.toFixed(2)}</span>
+                        <span className="font-bold text-slate-300">₹{item.subtotal?.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>

@@ -3,6 +3,8 @@ import { toast } from 'react-toastify';
 import { purchaseOrderService } from '../../../services/api/purchaseOrderService';
 import { supplierService } from '../../../services/api/supplierService';
 import { medicineService } from '../../../services/api/medicineService';
+import { inventoryService } from '../../../services/api/inventoryService';
+import { useAuth } from '../../../contexts/AuthContext';
 import {
   ShoppingCart,
   Plus,
@@ -26,9 +28,15 @@ import {
 } from 'lucide-react';
 
 export default function PurchaseOrderPage() {
+  const { isSupplier, isAdmin, isPharmacist } = useAuth();
+  const canCreatePO = isAdmin || isPharmacist;
+
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [medicines, setMedicines] = useState([]);
+  const [supplierMedicines, setSupplierMedicines] = useState([]);
+  const [inventoryByMedicine, setInventoryByMedicine] = useState({});
+  const [supplierMedicinesLoading, setSupplierMedicinesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,14 +80,25 @@ export default function PurchaseOrderPage() {
 
   const fetchDropdownData = async () => {
     try {
-      const [sups, meds] = await Promise.all([
+      const [sups, meds, inventory] = await Promise.all([
         supplierService.getAllSuppliers(),
-        medicineService.getAllMedicines(0, 200)
+        medicineService.getAllMedicines(0, 500),
+        inventoryService.getAllInventory()
       ]);
-      const supList = Array.isArray(sups) ? sups : [];
+      const supList = Array.isArray(sups) ? sups.filter(s => s.active !== false) : [];
       const medList = meds.content || meds || [];
       setSuppliers(supList);
       setMedicines(Array.isArray(medList) ? medList : []);
+      const inventoryMap = (Array.isArray(inventory) ? inventory : []).reduce((map, row) => {
+        const key = String(row.medicine?.id || row.medicineId);
+        const current = map[key] || { quantity: 0, minimumStock: 0 };
+        map[key] = {
+          quantity: current.quantity + Number(row.quantity || 0),
+          minimumStock: Math.max(current.minimumStock, Number(row.minimumStock || 0))
+        };
+        return map;
+      }, {});
+      setInventoryByMedicine(inventoryMap);
     } catch (err) {
       console.error('Failed to load dropdown data:', err);
     }
@@ -89,6 +108,29 @@ export default function PurchaseOrderPage() {
     fetchOrders();
     fetchDropdownData();
   }, []);
+
+  useEffect(() => {
+    if (!selectedSupplierId) {
+      setSupplierMedicines([]);
+      return;
+    }
+
+    const loadSupplierMedicines = async () => {
+      setSupplierMedicinesLoading(true);
+      try {
+        const linked = await supplierService.getSuppliedMedicines(selectedSupplierId);
+        setSupplierMedicines(Array.isArray(linked) ? linked : []);
+        setLineItems(items => items.map(item => ({ ...item, medicineId: '', unitPrice: 0 })));
+      } catch (err) {
+        setSupplierMedicines([]);
+        toast.error('Unable to load medicines approved for this supplier');
+      } finally {
+        setSupplierMedicinesLoading(false);
+      }
+    };
+
+    loadSupplierMedicines();
+  }, [selectedSupplierId]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -110,8 +152,16 @@ export default function PurchaseOrderPage() {
   const handleLineItemChange = (index, field, value) => {
     const updated = [...lineItems];
     updated[index][field] = value;
+    if (field === 'medicineId') {
+      const medicine = supplierMedicines.find(item => String(item.id) === String(value));
+      updated[index].unitPrice = medicine?.unitPrice || 0;
+    }
     setLineItems(updated);
   };
+
+  const eligibleMedicines = supplierMedicines
+    .map(linked => medicines.find(medicine => Number(medicine.id) === Number(linked.id)) || linked)
+    .filter(Boolean);
 
   const calculateTotal = () => {
     return lineItems.reduce((acc, item) => acc + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0);
@@ -229,10 +279,12 @@ export default function PurchaseOrderPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <ShoppingCart className="w-6 h-6 text-blue-600" /> Enterprise Purchase Orders &amp; Procurement
+            <ShoppingCart className="w-6 h-6 text-blue-600" /> {isSupplier ? 'Orders From MediStock' : 'Enterprise Purchase Orders & Procurement'}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Procurement management, vendor purchase requests, order status lifecycle tracking, and invoicing
+            {isSupplier
+              ? 'View and track purchase orders received from MediStock.'
+              : 'Procurement management, vendor purchase requests, order status lifecycle tracking, and invoicing'}
           </p>
         </div>
 
@@ -244,12 +296,14 @@ export default function PurchaseOrderPage() {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Create Purchase Order
-          </button>
+          {canCreatePO && (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Create Purchase Order
+            </button>
+          )}
         </div>
       </div>
 
@@ -368,7 +422,7 @@ export default function PurchaseOrderPage() {
               ) : sortedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
-                    No purchase orders found.
+                    {isSupplier ? 'No purchase orders have been received from MediStock yet.' : 'No purchase orders found.'}
                   </td>
                 </tr>
               ) : (
@@ -465,10 +519,15 @@ export default function PurchaseOrderPage() {
                         onChange={(e) => handleLineItemChange(idx, 'medicineId', e.target.value)}
                         className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
                       >
-                        <option value="">Select Medicine</option>
-                        {medicines.map(m => (
-                          <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
+                        <option value="">{supplierMedicinesLoading ? 'Loading approved medicines...' : 'Select approved medicine'}</option>
+                        {eligibleMedicines.map(m => {
+                          const stock = inventoryByMedicine[String(m.id)] || { quantity: 0, minimumStock: 0 };
+                          return (
+                          <option key={m.id} value={m.id}>
+                            {m.name} | Stock {stock.quantity} / Reorder {stock.minimumStock}
+                          </option>
+                          );
+                        })}
                       </select>
                       <input
                         type="number"
@@ -485,6 +544,7 @@ export default function PurchaseOrderPage() {
                         placeholder="Unit ₹"
                         required
                         value={item.unitPrice}
+                        readOnly
                         onChange={(e) => handleLineItemChange(idx, 'unitPrice', e.target.value)}
                         className="w-28 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs"
                       />
@@ -530,47 +590,58 @@ export default function PurchaseOrderPage() {
       {/* View PO Details Modal */}
       {viewOrder && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 border border-slate-100">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[calc(100vh-2rem)] overflow-hidden">
+            {/* 1. FIXED HEADER */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 shrink-0 bg-white">
               <div>
                 <span className="text-xs font-bold text-blue-600 font-mono">{viewOrder.orderNumber || `PO-${viewOrder.id}`}</span>
                 <h3 className="font-bold text-slate-900 text-base">Purchase Order Details</h3>
               </div>
-              <button onClick={() => setViewOrder(null)} className="p-1 text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setViewOrder(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs text-slate-700">
-              <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+            {/* 2. SCROLLABLE CONTENT BODY */}
+            <div className="p-5 overflow-y-auto min-h-0 flex-1 space-y-4 text-xs text-slate-700">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <div>
-                  <span className="text-slate-400 block text-[10px]">Supplier:</span>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Supplier</span>
                   <span className="font-bold text-slate-900">{viewOrder.supplier?.supplierName || viewOrder.supplierName || 'Vendor N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px]">Status:</span>
-                  <div>{getStatusBadge(viewOrder.status)}</div>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Status</span>
+                  <div className="mt-0.5">{getStatusBadge(viewOrder.status)}</div>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px]">Order Date:</span>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Order Date</span>
                   <span className="font-medium text-slate-700">{viewOrder.orderDate}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px]">Expected Delivery:</span>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Expected Delivery</span>
                   <span className="font-medium text-slate-700">{viewOrder.expectedDelivery}</span>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-bold text-slate-800 mb-2">Line Items</h4>
-                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px]">
+                    Line Items ({viewOrder.items ? viewOrder.items.length : 0})
+                  </h4>
+                </div>
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
                   {viewOrder.items && viewOrder.items.map((it, i) => (
-                    <div key={i} className="p-3 flex items-center justify-between bg-white">
+                    <div key={i} className="p-3 flex items-center justify-between hover:bg-slate-50/50 transition">
                       <div>
                         <div className="font-bold text-slate-900">{it.medicineName || `Medicine #${it.medicineId}`}</div>
-                        <div className="text-slate-400 text-[11px]">Qty: {it.quantity} x {formatINR(it.unitPrice)}</div>
+                        <div className="text-slate-400 text-[11px] font-mono">
+                          Qty: <span className="font-bold text-slate-700">{it.quantity}</span> x {formatINR(it.unitPrice)}
+                        </div>
                       </div>
-                      <div className="font-bold text-slate-900">
+                      <div className="font-bold text-slate-900 font-mono">
                         {formatINR(it.subtotal || (it.quantity * it.unitPrice))}
                       </div>
                     </div>
@@ -578,47 +649,47 @@ export default function PurchaseOrderPage() {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-2 font-bold text-sm text-slate-900">
-                <span>Total Amount:</span>
-                <span className="text-base text-blue-600">{formatINR(viewOrder.totalAmount)}</span>
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex justify-between items-center font-bold text-xs text-blue-900">
+                <span className="uppercase text-[10px] font-extrabold tracking-wider">Total Purchase Value:</span>
+                <span className="text-base font-black text-blue-900">{formatINR(viewOrder.totalAmount)}</span>
+              </div>
+            </div>
+
+            {/* 3. FIXED FOOTER */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/80 shrink-0 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {viewOrder.status === 'PENDING' && (
+                  <button
+                    onClick={() => handleUpdateStatus(viewOrder.id, 'APPROVED')}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-xs transition"
+                  >
+                    Approve PO
+                  </button>
+                )}
+                {viewOrder.status === 'APPROVED' && (
+                  <button
+                    onClick={() => handleUpdateStatus(viewOrder.id, 'RECEIVED')}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs transition"
+                  >
+                    Mark Received
+                  </button>
+                )}
+                {viewOrder.status !== 'CANCELLED' && viewOrder.status !== 'RECEIVED' && (
+                  <button
+                    onClick={() => handleUpdateStatus(viewOrder.id, 'CANCELLED')}
+                    className="px-3.5 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl text-xs transition"
+                  >
+                    Cancel PO
+                  </button>
+                )}
               </div>
 
-              {/* Status Action Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  {viewOrder.status === 'PENDING' && (
-                    <button
-                      onClick={() => handleUpdateStatus(viewOrder.id, 'APPROVED')}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs"
-                    >
-                      Approve PO
-                    </button>
-                  )}
-                  {viewOrder.status === 'APPROVED' && (
-                    <button
-                      onClick={() => handleUpdateStatus(viewOrder.id, 'RECEIVED')}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs"
-                    >
-                      Mark Received
-                    </button>
-                  )}
-                  {viewOrder.status !== 'CANCELLED' && viewOrder.status !== 'RECEIVED' && (
-                    <button
-                      onClick={() => handleUpdateStatus(viewOrder.id, 'CANCELLED')}
-                      className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-lg text-xs"
-                    >
-                      Cancel PO
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => toast.info(`Downloading Invoice PDF for ${viewOrder.orderNumber || viewOrder.id}`)}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1"
-                >
-                  <Download className="w-3.5 h-3.5" /> PDF Invoice
-                </button>
-              </div>
+              <button
+                onClick={() => toast.info(`Downloading Invoice PDF for ${viewOrder.orderNumber || viewOrder.id}`)}
+                className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition"
+              >
+                <Download className="w-3.5 h-3.5" /> PDF Invoice
+              </button>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 package com.medistock.category.controller;
 
 import com.medistock.category.dto.request.CategoryRequest;
+import com.medistock.category.dto.response.CategoryDetailsResponse;
 import com.medistock.category.dto.response.CategoryResponse;
 import com.medistock.category.service.CategoryService;
 import jakarta.validation.Valid;
@@ -28,15 +29,21 @@ public class CategoryController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
     public ResponseEntity<List<CategoryResponse>> getAllCategories() {
         return ResponseEntity.ok(categoryService.getAllCategories());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
     public ResponseEntity<CategoryResponse> getCategoryById(@PathVariable Long id) {
         return ResponseEntity.ok(categoryService.getCategoryById(id));
+    }
+
+    @GetMapping("/{id}/details")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
+    public ResponseEntity<CategoryDetailsResponse> getCategoryDetails(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.getCategoryDetails(id));
     }
 
     @PutMapping("/{id}")

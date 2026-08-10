@@ -26,6 +26,32 @@ public class AdminUserServiceImpl implements AdminUserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private String generateNextEmployeeId(String prefix) {
+        List<User> users = userRepository.findAll();
+        int maxSeq = 0;
+        for (User u : users) {
+            if (u.getEmployeeId() != null && u.getEmployeeId().startsWith(prefix)) {
+                try {
+                    int num = Integer.parseInt(u.getEmployeeId().substring(prefix.length()));
+                    if (num > maxSeq) {
+                        maxSeq = num;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return String.format("%s%03d", prefix, maxSeq + 1);
+    }
+
+    private String getPrefixForRole(String roleName) {
+        if (roleName == null) return "USR";
+        String normalized = roleName.toUpperCase().replace("ROLE_", "");
+        if (normalized.contains("ADMIN")) return "ADM";
+        if (normalized.contains("STAFF")) return "STF";
+        if (normalized.contains("PHARMACIST")) return "PHA";
+        if (normalized.contains("SUPPLIER")) return "SUP";
+        return "USR";
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<UserProfileResponse> getAllUsers() {
@@ -59,13 +85,8 @@ public class AdminUserServiceImpl implements AdminUserService {
                         .description(roleName + " Role")
                         .build()));
 
-        boolean isEmployee = !roleName.equalsIgnoreCase("USER");
-        String autoEmpId = null;
-        if (isEmployee) {
-            String empPrefix = roleName.contains("ADMIN") ? "ADM" : roleName.contains("PHARMACIST") ? "PHA" : "STF";
-            long nextId = userRepository.count() + 1;
-            autoEmpId = String.format("%s%03d", empPrefix, nextId);
-        }
+        String prefix = getPrefixForRole(roleName);
+        String autoEmpId = generateNextEmployeeId(prefix);
 
         User user = User.builder()
                 .employeeId(autoEmpId)
@@ -112,16 +133,12 @@ public class AdminUserServiceImpl implements AdminUserService {
             }
             user.setRoles(updatedRoles);
 
-            // Handle Employee ID on role promotion / demotion
-            String primaryRole = request.getRoles().stream().findFirst().orElse("USER").toUpperCase();
-            boolean isNowEmployee = primaryRole.contains("ADMIN") || primaryRole.contains("PHARMACIST") || primaryRole.contains("STAFF");
-            if (isNowEmployee) {
-                if (user.getEmployeeId() == null || user.getEmployeeId().isBlank()) {
-                    String prefix = primaryRole.contains("ADMIN") ? "ADM" : primaryRole.contains("PHARMACIST") ? "PHA" : "STF";
-                    user.setEmployeeId(String.format("%s%03d", prefix, user.getId()));
-                }
-            } else {
-                user.setEmployeeId(null);
+            // Handle Employee ID synchronization on role update
+            String primaryRole = request.getRoles().stream().findFirst().orElse("USER");
+            String expectedPrefix = getPrefixForRole(primaryRole);
+
+            if (user.getEmployeeId() == null || !user.getEmployeeId().startsWith(expectedPrefix)) {
+                user.setEmployeeId(generateNextEmployeeId(expectedPrefix));
             }
         }
 

@@ -29,7 +29,7 @@ public class MedicineController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
     public ResponseEntity<Page<MedicineResponse>> getAllMedicines(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -40,7 +40,7 @@ public class MedicineController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
     public ResponseEntity<MedicineResponse> getMedicineById(@PathVariable Long id) {
         return ResponseEntity.ok(medicineService.getMedicineById(id));
     }
@@ -59,14 +59,31 @@ public class MedicineController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
     public ResponseEntity<List<MedicineResponse>> searchMedicines(@RequestParam String name) {
         return ResponseEntity.ok(medicineService.searchMedicines(name));
     }
 
     @GetMapping("/category/{categoryId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
     public ResponseEntity<List<MedicineResponse>> getMedicinesByCategory(@PathVariable Long categoryId) {
         return ResponseEntity.ok(medicineService.getMedicinesByCategory(categoryId));
+    }
+
+    @GetMapping("/master")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
+    public ResponseEntity<Page<MedicineResponse>> getMasterMedicineCatalog(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "250") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long categoryId
+    ) {
+        return ResponseEntity.ok(medicineService.getMasterMedicineCatalog(page, size, search, categoryId));
+    }
+
+    @GetMapping("/{id}/suppliers")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
+    public ResponseEntity<List<MedicineResponse.LinkedSupplierDto>> getSuppliersByMedicine(@PathVariable Long id) {
+        return ResponseEntity.ok(medicineService.getSuppliersByMedicine(id));
     }
 }

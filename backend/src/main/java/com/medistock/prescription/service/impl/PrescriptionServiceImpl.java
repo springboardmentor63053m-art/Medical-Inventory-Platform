@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +39,12 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @Override
     @Transactional
     public PrescriptionOrderResponse createPrescriptionOrder(Long userId, CreatePrescriptionOrderRequest request) {
+        return createPrescriptionOrder(userId, request, null);
+    }
+
+    @Override
+    @Transactional
+    public PrescriptionOrderResponse createPrescriptionOrder(Long userId, CreatePrescriptionOrderRequest request, MultipartFile prescriptionFile) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
@@ -45,21 +52,41 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             throw new IllegalArgumentException("Order items list cannot be empty");
         }
 
+        // Validate customer details
+        if (request.getPatientName() == null || request.getPatientName().trim().length() < 2) {
+            throw new IllegalArgumentException("Patient Name must be at least 2 characters");
+        }
+        if (request.getDeliveryAddress() == null || request.getDeliveryAddress().trim().length() < 5) {
+            throw new IllegalArgumentException("Delivery Address must be at least 5 characters");
+        }
+        if (request.getContactPhone() == null || !request.getContactPhone().trim().matches("^[+]?[0-9\\s\\-\\(\\)]{7,20}$")) {
+            throw new IllegalArgumentException("A valid Contact Phone number is required");
+        }
+
         // Verify items and check prescription requirement policy
         List<PrescriptionOrderItem> orderItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
         boolean hasRxItem = false;
-        boolean hasNonRxItemWithoutPrescription = false;
+        List<String> rxItemNames = new ArrayList<>();
 
         for (OrderItemRequest itemReq : request.getItems()) {
+            if (itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
+                throw new IllegalArgumentException("Item quantity must be greater than 0");
+            }
+
             Medicine medicine = medicineRepository.findById(itemReq.getMedicineId())
                     .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + itemReq.getMedicineId()));
 
             Boolean rxRequired = medicine.getPrescriptionRequired() != null ? medicine.getPrescriptionRequired() : true;
             if (rxRequired) {
                 hasRxItem = true;
-            } else {
-                hasNonRxItemWithoutPrescription = true;
+                rxItemNames.add(medicine.getName());
+            }
+
+            long availableQuantity = Optional.ofNullable(inventoryRepository.sumQuantityByMedicineId(medicine.getId())).orElse(0L);
+            if (itemReq.getQuantity() > availableQuantity) {
+                throw new IllegalArgumentException("Insufficient stock for '" + medicine.getName()
+                        + "'. Requested: " + itemReq.getQuantity() + ", Available: " + availableQuantity);
             }
 
             BigDecimal unitPrice = medicine.getUnitPrice();
@@ -76,39 +103,63 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             orderItems.add(item);
         }
 
-        // Policy Enforcement: If non-Rx items requested online without prescription file attached
-        if (hasNonRxItemWithoutPrescription && (request.getPrescriptionFileUrl() == null || request.getPrescriptionFileUrl().trim().isEmpty())) {
-            // Check if ALL items are non-prescription without prescription upload
-            if (!hasRxItem) {
-                throw new IllegalArgumentException(
-                        "Non-prescription medicines without a valid doctor prescription require visiting the nearest physical store to purchase directly through a Pharmacist."
-                );
+        if (prescriptionFile != null) {
+            validatePrescriptionFile(prescriptionFile);
+        }
+
+        boolean hasPrescriptionDoc = (prescriptionFile != null && !prescriptionFile.isEmpty() && prescriptionFile.getSize() > 0)
+                || (request.getPrescriptionFileUrl() != null && !request.getPrescriptionFileUrl().trim().isEmpty());
+
+        if (hasRxItem) {
+            if (!hasPrescriptionDoc) {
+                throw new IllegalArgumentException("A valid prescription file is required for the selected prescription medicines: " + String.join(", ", rxItemNames));
+            }
+            if (request.getDoctorName() == null || request.getDoctorName().trim().isEmpty()) {
+                throw new IllegalArgumentException("Doctor Name is required when ordering prescription medicines (" + String.join(", ", rxItemNames) + ")");
             }
         }
 
         // Create Prescription Record if file provided
         Prescription prescription = null;
-        if (request.getPrescriptionFileUrl() != null && !request.getPrescriptionFileUrl().trim().isEmpty()) {
+        if ((prescriptionFile != null && !prescriptionFile.isEmpty() && prescriptionFile.getSize() > 0)
+                || (request.getPrescriptionFileUrl() != null && !request.getPrescriptionFileUrl().trim().isEmpty())) {
+            byte[] fileBytes = null;
+            String fileName = null;
+            String contentType = null;
+            if (prescriptionFile != null && !prescriptionFile.isEmpty()) {
+                try {
+                    fileBytes = prescriptionFile.getBytes();
+                } catch (java.io.IOException ex) {
+                    throw new IllegalArgumentException("Unable to read prescription file");
+                }
+                fileName = prescriptionFile.getOriginalFilename();
+                contentType = prescriptionFile.getContentType();
+            }
             prescription = Prescription.builder()
                     .user(user)
                     .doctorName(request.getDoctorName())
                     .patientName(request.getPatientName())
                     .prescriptionFileUrl(request.getPrescriptionFileUrl())
+                    .prescriptionFile(fileBytes)
+                    .prescriptionFileName(fileName)
+                    .prescriptionContentType(contentType)
                     .notes(request.getNotes())
-                    .status("PENDING_VERIFICATION")
+                    .status("PENDING_REVIEW")
                     .build();
 
             prescription = prescriptionRepository.save(prescription);
         }
 
-        String orderNum = "RX-ORD-" + System.currentTimeMillis() % 1000000;
+        String orderPrefix = hasRxItem ? "RX-ORD-" : "OTC-ORD-";
+        String orderNum = orderPrefix + System.currentTimeMillis() % 1000000;
+        String initialStatus = hasRxItem ? "PENDING_REVIEW" : "COMPLETED";
 
         PrescriptionOrder order = PrescriptionOrder.builder()
                 .orderNumber(orderNum)
                 .user(user)
                 .prescription(prescription)
                 .totalAmount(totalAmount)
-                .status("PENDING_VERIFICATION")
+                .status(initialStatus)
                 .deliveryAddress(request.getDeliveryAddress())
                 .contactPhone(request.getContactPhone())
                 .build();
@@ -119,9 +170,39 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         order.setItems(orderItems);
 
         PrescriptionOrder savedOrder = prescriptionOrderRepository.save(order);
-        log.info("Created online prescription order {} for user {}", savedOrder.getOrderNumber(), user.getEmail());
+        log.info("Created online {} order {} for user {}", hasRxItem ? "prescription" : "OTC", savedOrder.getOrderNumber(), user.getEmail());
 
         return mapToOrderResponse(savedOrder);
+    }
+
+    private void validatePrescriptionFile(MultipartFile file) {
+        if (file == null || file.isEmpty() || file.getSize() <= 0) {
+            throw new IllegalArgumentException("Prescription file cannot be empty");
+        }
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new IllegalArgumentException("Prescription file must not exceed 10 MB.");
+        }
+        String contentType = file.getContentType() != null ? file.getContentType().toLowerCase().trim() : "";
+        String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase().trim() : "";
+
+        List<String> allowedTypes = List.of(
+                "application/pdf",
+                "image/jpeg",
+                "image/jpg",
+                "image/pjpeg",
+                "image/png",
+                "image/x-png"
+        );
+
+        boolean isValidMime = allowedTypes.contains(contentType);
+        boolean isValidExt = originalFilename.endsWith(".pdf")
+                || originalFilename.endsWith(".jpg")
+                || originalFilename.endsWith(".jpeg")
+                || originalFilename.endsWith(".png");
+
+        if (!isValidMime && !isValidExt) {
+            throw new IllegalArgumentException("Prescription file must be a valid PDF, JPG, JPEG, or PNG document");
+        }
     }
 
     @Override
@@ -137,7 +218,12 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     public List<PrescriptionOrderResponse> getAllOrders(String statusFilter) {
         List<PrescriptionOrder> orders;
         if (statusFilter != null && !statusFilter.trim().isEmpty() && !"ALL".equalsIgnoreCase(statusFilter)) {
-            orders = prescriptionOrderRepository.findByStatusOrderByCreatedAtDesc(statusFilter.toUpperCase());
+            String filterUpper = statusFilter.toUpperCase();
+            if ("PENDING_REVIEW".equals(filterUpper) || "PENDING_VERIFICATION".equals(filterUpper)) {
+                orders = prescriptionOrderRepository.findByStatusInOrderByCreatedAtDesc(List.of("PENDING_REVIEW", "PENDING_VERIFICATION"));
+            } else {
+                orders = prescriptionOrderRepository.findByStatusOrderByCreatedAtDesc(filterUpper);
+            }
         } else {
             orders = prescriptionOrderRepository.findAllByOrderByCreatedAtDesc();
         }
@@ -159,7 +245,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Prescription order not found with id: " + orderId));
 
         String newStatus = request.getStatus().toUpperCase();
-        if (!"VERIFIED".equals(newStatus) && !"REJECTED".equals(newStatus) && !"DISPATCHED".equals(newStatus) && !"COMPLETED".equals(newStatus)) {
+        if (!"APPROVED".equals(newStatus) && !"VERIFIED".equals(newStatus) && !"REJECTED".equals(newStatus) && !"DISPATCHED".equals(newStatus) && !"COMPLETED".equals(newStatus)) {
             throw new IllegalArgumentException("Invalid verification status: " + request.getStatus());
         }
 
@@ -172,8 +258,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             prescriptionRepository.save(order.getPrescription());
         }
 
-        // Deduct inventory when verified or dispatched
-        if ("VERIFIED".equals(newStatus) || "DISPATCHED".equals(newStatus)) {
+        // Deduct inventory when approved, verified or dispatched
+        if ("APPROVED".equals(newStatus) || "VERIFIED".equals(newStatus) || "DISPATCHED".equals(newStatus)) {
             for (PrescriptionOrderItem item : order.getItems()) {
                 deductInventoryForMedicine(item.getMedicine(), item.getQuantity());
             }
@@ -247,7 +333,14 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     }
 
     private void deductInventoryForMedicine(Medicine medicine, int quantityToDeduct) {
-        List<Inventory> inventories = inventoryRepository.findByMedicineId(medicine.getId());
+        List<Inventory> inventories = inventoryRepository.findByMedicineIdWithLock(medicine.getId());
+        long totalAvailable = inventories.stream().mapToLong(Inventory::getQuantity).sum();
+
+        if (quantityToDeduct > totalAvailable) {
+            throw new IllegalArgumentException("Insufficient inventory stock for '" + medicine.getName()
+                    + "'. Requested: " + quantityToDeduct + ", Available: " + totalAvailable);
+        }
+
         int remainingToDeduct = quantityToDeduct;
 
         for (Inventory inv : inventories) {
@@ -259,28 +352,57 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 inventoryRepository.save(inv);
             }
         }
+
+        if (remainingToDeduct > 0) {
+            throw new IllegalArgumentException("Failed to fulfill requested stock for '" + medicine.getName() + "'");
+        }
     }
 
     private PrescriptionOrderResponse mapToOrderResponse(PrescriptionOrder order) {
         List<PrescriptionOrderItemResponse> itemResponses = order.getItems().stream()
-                .map(item -> PrescriptionOrderItemResponse.builder()
-                        .id(item.getId())
-                        .medicineId(item.getMedicine().getId())
-                        .medicineCode(item.getMedicine().getMedicineCode())
-                        .medicineName(item.getMedicine().getName())
-                        .genericName(item.getMedicine().getGenericName())
-                        .prescriptionRequired(item.getMedicine().getPrescriptionRequired() != null ? item.getMedicine().getPrescriptionRequired() : true)
-                        .quantity(item.getQuantity())
-                        .unitPrice(item.getUnitPrice())
-                        .subtotal(item.getSubtotal())
-                        .build())
+                .map(item -> {
+                    long currentStock = Optional.ofNullable(inventoryRepository.sumQuantityByMedicineId(item.getMedicine().getId())).orElse(0L);
+                    return PrescriptionOrderItemResponse.builder()
+                            .id(item.getId())
+                            .medicineId(item.getMedicine().getId())
+                            .medicineCode(item.getMedicine().getMedicineCode())
+                            .medicineName(item.getMedicine().getName())
+                            .genericName(item.getMedicine().getGenericName())
+                            .manufacturer(item.getMedicine().getManufacturer())
+                            .prescriptionRequired(item.getMedicine().getPrescriptionRequired() != null ? item.getMedicine().getPrescriptionRequired() : true)
+                            .quantity(item.getQuantity())
+                            .unitPrice(item.getUnitPrice())
+                            .subtotal(item.getSubtotal())
+                            .currentStock(currentStock)
+                            .build();
+                })
                 .collect(Collectors.toList());
 
-        String docName = order.getPrescription() != null ? order.getPrescription().getDoctorName() : null;
-        String patName = order.getPrescription() != null ? order.getPrescription().getPatientName() : null;
-        String fileUrl = order.getPrescription() != null ? order.getPrescription().getPrescriptionFileUrl() : null;
-
         String userFullName = order.getUser() != null ? (order.getUser().getFirstName() + " " + (order.getUser().getLastName() != null ? order.getUser().getLastName() : "")).trim() : "Guest";
+        String userPhone = order.getUser() != null ? order.getUser().getPhone() : null;
+        String docName = order.getPrescription() != null ? order.getPrescription().getDoctorName() : null;
+        String patName = (order.getPrescription() != null && order.getPrescription().getPatientName() != null && !order.getPrescription().getPatientName().trim().isEmpty())
+                ? order.getPrescription().getPatientName().trim()
+                : userFullName;
+        String fileUrl = null;
+        Long rxId = null;
+        String fileName = null;
+        String contentType = null;
+        Long fileSize = null;
+        LocalDateTime uploadDate = null;
+
+        if (order.getPrescription() != null) {
+            rxId = order.getPrescription().getId();
+            fileName = order.getPrescription().getPrescriptionFileName();
+            contentType = order.getPrescription().getPrescriptionContentType();
+            uploadDate = order.getPrescription().getCreatedAt();
+            if (order.getPrescription().getPrescriptionFile() != null) {
+                fileSize = (long) order.getPrescription().getPrescriptionFile().length;
+                fileUrl = "/api/prescriptions/orders/" + order.getId() + "/document";
+            } else {
+                fileUrl = order.getPrescription().getPrescriptionFileUrl();
+            }
+        }
 
         return PrescriptionOrderResponse.builder()
                 .id(order.getId())
@@ -288,9 +410,15 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .userId(order.getUser() != null ? order.getUser().getId() : null)
                 .userEmail(order.getUser() != null ? order.getUser().getEmail() : null)
                 .userFullName(userFullName)
+                .userPhone(userPhone)
                 .doctorName(docName)
                 .patientName(patName)
                 .prescriptionFileUrl(fileUrl)
+                .prescriptionId(rxId)
+                .prescriptionFileName(fileName)
+                .prescriptionContentType(contentType)
+                .prescriptionFileSize(fileSize)
+                .uploadDate(uploadDate != null ? uploadDate : order.getCreatedAt())
                 .totalAmount(order.getTotalAmount())
                 .status(order.getStatus())
                 .deliveryAddress(order.getDeliveryAddress())
@@ -298,6 +426,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .pharmacistNotes(order.getPharmacistNotes())
                 .verifiedBy(order.getVerifiedBy())
                 .createdAt(order.getCreatedAt())
+                .updatedAt(order.getUpdatedAt())
                 .items(itemResponses)
                 .build();
     }

@@ -11,6 +11,11 @@ export const categoryService = {
     return response.data;
   },
 
+  getCategoryDetails: async (id) => {
+    const response = await apiClient.get(`/categories/${id}/details`);
+    return response.data;
+  },
+
   createCategory: async (data) => {
     const response = await apiClient.post('/categories', data);
     return response.data;

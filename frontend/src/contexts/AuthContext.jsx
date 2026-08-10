@@ -49,6 +49,7 @@ export const getRoleDashboardPath = (user) => {
   if (cleanRoles.includes('ADMIN')) return '/admin/dashboard';
   if (cleanRoles.includes('PHARMACIST')) return '/pharmacist/dashboard';
   if (cleanRoles.includes('STAFF')) return '/staff/dashboard';
+  if (cleanRoles.includes('SUPPLIER')) return '/supplier/dashboard';
   return '/user/dashboard';
 };
 
@@ -201,6 +202,7 @@ export const AuthProvider = ({ children }) => {
         isAdmin: isAuthenticated && hasRole('ADMIN'),
         isPharmacist: isAuthenticated && hasRole('PHARMACIST'),
         isStaff: isAuthenticated && hasRole('STAFF'),
+        isSupplier: isAuthenticated && hasRole('SUPPLIER'),
         isUser: isAuthenticated && hasRole('USER'),
       }}
     >

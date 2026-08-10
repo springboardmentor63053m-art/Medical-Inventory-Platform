@@ -125,7 +125,7 @@ export default function ProfilePage() {
     ? Array.from(profileData.roles).map((r) => r.replace('ROLE_', '').toUpperCase())
     : ['USER'];
 
-  const showEmpId = profileData?.employeeId && !isUser;
+  const showEmpId = !!profileData?.employeeId;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

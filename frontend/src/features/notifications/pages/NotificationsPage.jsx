@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { inventoryService } from '../../../services/api/inventoryService';
 import {
   Bell,
   AlertTriangle,
@@ -8,47 +9,55 @@ import {
   Trash2,
   CheckCheck,
   Filter,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'LOW_STOCK',
-    title: 'Low Stock Alert: Amoxicillin 500mg',
-    message: 'Current quantity is 15 units, which is below the minimum reorder threshold of 20 units.',
-    timestamp: '10 minutes ago',
-    read: false,
-  },
-  {
-    id: 2,
-    type: 'EXPIRY',
-    title: 'Expiring Stock: Paracetamol Batch #BT-9021',
-    message: 'Batch BT-9021 (450 units) is expiring on 2026-08-15. Please review stock rotation.',
-    timestamp: '1 hour ago',
-    read: false,
-  },
-  {
-    id: 3,
-    type: 'SYSTEM',
-    title: 'System Maintenance Complete',
-    message: 'Database index optimization completed successfully. System performance upgraded.',
-    timestamp: 'Yesterday at 11:30 PM',
-    read: true,
-  },
-  {
-    id: 4,
-    type: 'LOW_STOCK',
-    title: 'Low Stock Alert: Metformin 850mg',
-    message: 'Current quantity is 8 units (Min: 15). Please place a new purchase order.',
-    timestamp: '2 days ago',
-    read: true,
-  },
-];
-
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('ALL'); // 'ALL' | 'UNREAD' | 'LOW_STOCK' | 'EXPIRY'
+
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+  const fetchAlerts = async () => {
+    setLoading(true);
+    try {
+      const [lowStock, expiring] = await Promise.all([
+        inventoryService.getLowStockInventory().catch(() => []),
+        inventoryService.getExpiringInventory(60).catch(() => [])
+      ]);
+
+      const lowStockList = Array.isArray(lowStock) ? lowStock : [];
+      const expiringList = Array.isArray(expiring) ? expiring : [];
+
+      const lowStockAlerts = lowStockList.map((item, idx) => ({
+        id: `low-${item.id || idx}`,
+        type: 'LOW_STOCK',
+        title: `Low Stock Alert: ${item.medicine?.name || item.medicineName || 'Medicine'}`,
+        message: `Current quantity is ${item.quantity || 0} units, which is below the minimum reorder threshold of ${item.minimumStock || 10} units.`,
+        timestamp: 'Active Database Alert',
+        read: false,
+      }));
+
+      const expiryAlerts = expiringList.map((item, idx) => ({
+        id: `exp-${item.id || idx}`,
+        type: 'EXPIRY',
+        title: `Expiring Stock: ${item.medicine?.name || item.medicineName || 'Medicine'} (Batch #${item.batchNumber || 'N/A'})`,
+        message: `Batch ${item.batchNumber || ''} (${item.quantity || 0} units) is expiring on ${item.expiryDate || 'soon'}.`,
+        timestamp: 'Active Database Alert',
+        read: false,
+      }));
+
+      setNotifications([...lowStockAlerts, ...expiryAlerts]);
+    } catch (err) {
+      console.error('Failed to load notifications from API:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleMarkAsRead = (id) => {
     setNotifications(
@@ -155,7 +164,12 @@ export default function NotificationsPage() {
 
       {/* Notifications List */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden divide-y divide-slate-100">
-        {filteredNotifications.length === 0 ? (
+        {loading ? (
+          <div className="p-12 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            <span>Loading notifications from database...</span>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
           <div className="p-12 text-center text-xs text-slate-500">
             No notifications found in this view.
           </div>

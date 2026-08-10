@@ -21,7 +21,7 @@ public class StorePurchaseController {
     private final PrescriptionService prescriptionService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMINISTRATOR', 'PHARMACIST')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
     public ResponseEntity<StorePurchaseResponse> createStorePurchase(
             @Valid @RequestBody CreateStorePurchaseRequest request,
             Authentication authentication) {
@@ -31,7 +31,7 @@ public class StorePurchaseController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SYSTEM_ADMINISTRATOR', 'PHARMACIST')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
     public ResponseEntity<List<StorePurchaseResponse>> getAllStorePurchases() {
         List<StorePurchaseResponse> purchases = prescriptionService.getAllStorePurchases();
         return ResponseEntity.ok(purchases);

@@ -24,6 +24,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -42,28 +43,21 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        log.info("Checking enterprise pharmaceutical inventory dataset (250 Medicines in 12 Categories, 30 Suppliers, 100 POs)...");
+        log.info("Checking enterprise pharmaceutical inventory dataset (250 Medicines in 12 Categories, 10 Suppliers, 100 POs)...");
 
-        try {
-            jdbcTemplate.execute("DELETE FROM inventory_audit");
-            jdbcTemplate.execute("DELETE FROM stock_transactions");
-            jdbcTemplate.execute("DELETE FROM purchase_order_items");
-            jdbcTemplate.execute("DELETE FROM purchase_orders");
-            jdbcTemplate.execute("DELETE FROM inventory");
-            jdbcTemplate.execute("DELETE FROM medicines");
-            jdbcTemplate.execute("DELETE FROM suppliers");
-            jdbcTemplate.execute("DELETE FROM categories");
-            log.info("Purged obsolete demo data tables cleanly for dataset initialization");
-        } catch (Exception e) {
-            log.warn("Table purge notice: {}", e.getMessage());
+        if (medicineRepository.count() > 0 && inventoryRepository.count() > 0) {
+            log.info("Database inventory dataset found with {} records. Preserving inventory quantities and expiry dates.", inventoryRepository.count());
+            sanitizeSupplierDatasetAndRemapPOs();
+            seedSupplierMedicineRelationships();
+            return;
         }
 
         // Seed Roles
         Role adminRole = getOrCreateRole("ADMIN", "System Administrator Role");
-        Role sysAdminRole = getOrCreateRole("SYSTEM_ADMINISTRATOR", "System Administrator");
         Role pharmacistRole = getOrCreateRole("PHARMACIST", "Staff Pharmacist Role");
-        Role staffRole = getOrCreateRole("STAFF", "Medical Staff Role");
-        Role userRole = getOrCreateRole("USER", "Standard User (Read-Only) Role");
+        Role staffRole = getOrCreateRole("STAFF", "Operational Inventory Staff Role");
+        Role userRole = getOrCreateRole("USER", "Standard User Role");
+        Role supplierRole = getOrCreateRole("SUPPLIER", "Supplier Partner Role");
 
         // Seed Users
         if (!userRepository.existsByEmail("admin@medistock.com")) {
@@ -76,7 +70,7 @@ public class DataSeeder implements CommandLineRunner {
                     .phone("+1 800-555-0100")
                     .enabled(true)
                     .accountNonLocked(true)
-                    .roles(new HashSet<>(List.of(adminRole, sysAdminRole)))
+                    .roles(new HashSet<>(Collections.singletonList(adminRole)))
                     .lastLogin(LocalDateTime.now().minusHours(2))
                     .build());
         }
@@ -113,7 +107,7 @@ public class DataSeeder implements CommandLineRunner {
 
         if (!userRepository.existsByEmail("user@medistock.com")) {
             userRepository.save(User.builder()
-                    .employeeId(null) // Normal USER is not an employee; employeeId is null
+                    .employeeId("USR001")
                     .firstName("Alex")
                     .lastName("Standard")
                     .email("user@medistock.com")
@@ -126,14 +120,46 @@ public class DataSeeder implements CommandLineRunner {
                     .build());
         }
 
+        String[][] supplierUserDefs = {
+                {"SUP001", "Apex", "Supplier Partner", "supplier@medistock.com", "+1 800-555-0105"},
+                {"SUP002", "Rajesh", "Sharma (Cipla)", "orders@cipla.com", "+91 22-6644-8000"},
+                {"SUP003", "Emma", "Watson (AstraZeneca)", "orders@astrazeneca.com", "+44 20-3749-5000"},
+                {"SUP004", "Hans", "Mueller (Bayer)", "orders@bayer.com", "+49 214-301"},
+                {"SUP005", "Michael", "Brown (Abbott)", "orders@abbott.com", "+1 224-667-6100"},
+                {"SUP006", "Rakesh", "Verma (Alkem)", "sales@alkem.com", "+91 22-3982-9999"},
+                {"SUP007", "Kiran", "Mazumdar (Biocon)", "orders@biocon.com", "+91 80-2808-2808"},
+                {"SUP008", "Venkatesh", "Rao (Aurobindo)", "info@aurobindo.com", "+91 40-6672-5000"},
+                {"SUP009", "John", "Smith (Baxter)", "supply@baxter.com", "+1 224-948-2000"},
+                {"SUP010", "Hubertus", "von Baumbach (Boehringer)", "supply@boehringer.com", "+49 6132-770"}
+        };
+
+        for (String[] supU : supplierUserDefs) {
+            if (!userRepository.existsByEmail(supU[3])) {
+                userRepository.save(User.builder()
+                        .employeeId(supU[0])
+                        .firstName(supU[1])
+                        .lastName(supU[2])
+                        .email(supU[3])
+                        .password(passwordEncoder.encode("Password@123"))
+                        .phone(supU[4])
+                        .enabled(true)
+                        .accountNonLocked(true)
+                        .roles(new HashSet<>(Collections.singletonList(supplierRole)))
+                        .lastLogin(LocalDateTime.now().minusDays(1))
+                        .build());
+            }
+        }
+
         // Seed 12 Major Pharmaceutical Categories
         Map<String, Category> categoryMap = seed12MajorCategories();
 
-        // Seed 30 Suppliers
+        // Seed the authoritative 10 suppliers
         List<Supplier> suppliers = seedEnterpriseSuppliers();
 
         // Seed 250 Concise Real-World Medicines and matching 250 Inventory Batch Records
         seedMedicinesAndInventory(categoryMap);
+
+        seedSupplierMedicineRelationships();
 
         // Seed 100 Purchase Orders
         seedPurchaseOrders(suppliers);
@@ -177,54 +203,124 @@ public class DataSeeder implements CommandLineRunner {
 
     private List<Supplier> seedEnterpriseSuppliers() {
         String[][] supDefs = {
-                {"SUP-101", "Apex Health Pharma Distributors", "Dr. Jane Smith", "+1 800-555-0199", "orders@apexhealth.com", "100 BioTech Way", "Boston", "MA", "USA"},
-                {"SUP-102", "Global Care Bio-Logistics", "Mark Taylor", "+1 800-555-0244", "supply@globalcare.com", "450 Pharma Park", "New York", "NY", "USA"},
-                {"SUP-103", "Cipla Healthcare Corp", "Rajesh Sharma", "+91 22-6644-8000", "orders@cipla.com", "Cipla House, Lower Parel", "Mumbai", "MH", "India"},
-                {"SUP-104", "Sun Pharmaceutical Industries", "Anil Mehta", "+91 22-4324-4324", "supply@sunpharma.com", "Sun House, Goregaon", "Mumbai", "MH", "India"},
-                {"SUP-105", "Pfizer Global Logistics", "David Miller", "+1 212-733-2323", "distrib@pfizer.com", "235 East 42nd Street", "New York", "NY", "USA"},
-                {"SUP-106", "Dr. Reddy's Laboratories", "Suresh Kumar", "+91 40-4900-2900", "sales@drreddys.com", "7-1-27 Ameerpet", "Hyderabad", "TS", "India"},
-                {"SUP-107", "Novartis Pharma Supply", "Claire Dubois", "+41 61-324-1111", "contact@novartis.com", "Novartis Campus", "Basel", "BS", "Switzerland"},
-                {"SUP-108", "Sanofi Aventis Bio-Distributors", "Jean Dupont", "+33 1-5377-4000", "supply@sanofi.com", "54 Rue La Boétie", "Paris", "IDF", "France"},
-                {"SUP-109", "AstraZeneca Supply Chain", "Emma Watson", "+44 20-3749-5000", "orders@astrazeneca.com", "1 Francis Crick Ave", "Cambridge", "CB", "UK"},
-                {"SUP-110", "GlaxoSmithKline Healthcare", "Robert Johnson", "+44 20-8047-5000", "supply@gsk.com", "980 Great West Rd", "Brentford", "MD", "UK"},
-                {"SUP-111", "Bayer Pharma Logistics", "Hans Mueller", "+49 214-301", "orders@bayer.com", "Kaiser-Wilhelm-Allee 1", "Leverkusen", "NRW", "Germany"},
                 {"SUP-112", "Abbott Laboratories Supply", "Michael Brown", "+1 224-667-6100", "orders@abbott.com", "100 Abbott Park Rd", "Abbott Park", "IL", "USA"},
-                {"SUP-113", "Lupin Pharmaceuticals Ltd", "Priya Nair", "+91 22-6640-2222", "sales@lupin.com", "Kalpataru Inspire, Santacruz", "Mumbai", "MH", "India"},
-                {"SUP-114", "Glenmark Pharmaceuticals", "Vikram Malhotra", "+91 22-4018-9999", "orders@glenmarkpharma.com", "Glenmark House, Andheri", "Mumbai", "MH", "India"},
-                {"SUP-115", "Torrent Pharmaceuticals", "Sanjay Patel", "+91 79-2686-6666", "supply@torrentpharma.com", "Torrent House, Ashram Rd", "Ahmedabad", "GJ", "India"},
                 {"SUP-116", "Alkem Laboratories Ltd", "Rakesh Verma", "+91 22-3982-9999", "sales@alkem.com", "Alkem House, Senapati Bapat Marg", "Mumbai", "MH", "India"},
-                {"SUP-117", "Mankind Pharma Ltd", "Arun Gupta", "+91 11-4654-1111", "orders@mankindpharma.com", "208 Okhla Industrial Estate", "New Delhi", "DL", "India"},
-                {"SUP-118", "Zydus Lifesciences", "Ketan Shah", "+91 79-4804-0000", "supply@zyduslife.com", "Zydus Corporate Park", "Ahmedabad", "GJ", "India"},
-                {"SUP-119", "Micro Labs Limited", "Deepak Joshi", "+91 80-2225-1501", "orders@microlabs.in", "31 Race Course Road", "Bengaluru", "KA", "India"},
-                {"SUP-120", "Biocon Biologics Supply", "Kiran Mazumdar", "+91 80-2808-2808", "orders@biocon.com", "20th KM Hosur Road", "Bengaluru", "KA", "India"},
+                {"SUP-101", "Apex Health Pharma Distributors", "Dr. Jane Smith", "+1 800-555-0199", "supplier@medistock.com", "100 BioTech Way", "Boston", "MA", "USA"},
+                {"SUP-109", "AstraZeneca Supply Chain", "Emma Watson", "+44 20-3749-5000", "orders@astrazeneca.com", "1 Francis Crick Ave", "Cambridge", "CB", "UK"},
                 {"SUP-121", "Aurobindo Pharma Ltd", "Venkatesh Rao", "+91 40-6672-5000", "info@aurobindo.com", "Water Mark Building, Hitech City", "Hyderabad", "TS", "India"},
-                {"SUP-122", "Intas Pharmaceuticals", "Hitesh Patel", "+91 79-6157-7000", "supply@intaspharma.com", "Corporate House, Sola Road", "Ahmedabad", "GJ", "India"},
-                {"SUP-123", "Mylan Laboratories (Viatris)", "Andrew Smith", "+1 724-514-1800", "orders@viatris.com", "1000 Mylan Boulevard", "Canonsburg", "PA", "USA"},
-                {"SUP-124", "Teva Pharmaceutical Supply", "Yossi Cohen", "+972 3-926-7267", "orders@tevapharm.com", "124 Dvora HaNevi'a St", "Tel Aviv", "TA", "Israel"},
-                {"SUP-125", "Hikma Pharmaceuticals", "Said Darwazah", "+44 20-7399-2760", "supply@hikma.com", "1 Hanover Square", "London", "LD", "UK"},
-                {"SUP-126", "Fresenius Kabi Logistics", "Stefan Richter", "+49 6172-6860", "orders@fresenius-kabi.com", "Else-Kröner-Straße 1", "Bad Homburg", "HE", "Germany"},
                 {"SUP-127", "Baxter Healthcare Corp", "John Smith", "+1 224-948-2000", "supply@baxter.com", "One Baxter Parkway", "Deerfield", "IL", "USA"},
-                {"SUP-128", "Eli Lilly & Company Logistics", "David Ricks", "+1 317-276-2000", "orders@lilly.com", "Lilly Corporate Center", "Indianapolis", "IN", "USA"},
+                {"SUP-111", "Bayer Pharma Logistics", "Hans Mueller", "+49 214-301", "orders@bayer.com", "Kaiser-Wilhelm-Allee 1", "Leverkusen", "NRW", "Germany"},
+                {"SUP-120", "Biocon Biologics Supply", "Kiran Mazumdar", "+91 80-2808-2808", "orders@biocon.com", "20th KM Hosur Road", "Bengaluru", "KA", "India"},
                 {"SUP-129", "Boehringer Ingelheim", "Hubertus von Baumbach", "+49 6132-770", "supply@boehringer.com", "Binger Straße 173", "Ingelheim", "RP", "Germany"},
-                {"SUP-130", "Merck Sharp & Dohme (MSD)", "Kenneth Frazier", "+1 908-740-4000", "orders@merck.com", "2000 Galloping Hill Rd", "Kenilworth", "NJ", "USA"}
+                {"SUP-103", "Cipla Healthcare Supply", "Rajesh Sharma", "+91 22-6644-8000", "orders@cipla.com", "Cipla House, Lower Parel", "Mumbai", "MH", "India"}
         };
 
         List<Supplier> list = new ArrayList<>();
         for (String[] s : supDefs) {
-            Supplier supplier = supplierRepository.save(Supplier.builder()
-                    .supplierCode(s[0])
-                    .supplierName(s[1])
-                    .contactPerson(s[2])
-                    .phone(s[3])
-                    .email(s[4])
-                    .address(s[5])
-                    .city(s[6])
-                    .state(s[7])
-                    .country(s[8])
-                    .build());
+            Supplier supplier = supplierRepository.findBySupplierCode(s[0]).orElseGet(() -> Supplier.builder()
+                .supplierCode(s[0])
+                .build());
+            supplier.setSupplierName(s[1]);
+            supplier.setContactPerson(s[2]);
+            supplier.setPhone(s[3]);
+            supplier.setEmail(s[4]);
+            supplier.setAddress(s[5]);
+            supplier.setCity(s[6]);
+            supplier.setState(s[7]);
+            supplier.setCountry(s[8]);
+            supplier.setActive(true);
+            supplier = supplierRepository.save(supplier);
             list.add(supplier);
         }
         return list;
+    }
+
+    private void sanitizeSupplierDatasetAndRemapPOs() {
+        List<Supplier> allSups = supplierRepository.findAll();
+        List<String> canonicalCodes = Arrays.asList(
+                "SUP-112", "SUP-116", "SUP-101", "SUP-109", "SUP-121",
+                "SUP-127", "SUP-111", "SUP-120", "SUP-129", "SUP-103"
+        );
+
+        List<Supplier> canonicalSuppliers = allSups.stream()
+                .filter(s -> canonicalCodes.contains(s.getSupplierCode()))
+                .collect(Collectors.toList());
+
+        if (canonicalSuppliers.size() < 10) {
+            canonicalSuppliers = seedEnterpriseSuppliers();
+        }
+
+        List<Long> canonicalIds = canonicalSuppliers.stream().map(Supplier::getId).collect(Collectors.toList());
+        if (!canonicalIds.isEmpty()) {
+            for (int i = 0; i < canonicalIds.size(); i++) {
+                Long targetId = canonicalIds.get(i);
+                jdbcTemplate.update(
+                        "UPDATE purchase_orders SET supplier_id = ? WHERE (id % ?) = ?",
+                        targetId, canonicalIds.size(), i
+                );
+            }
+        }
+
+        List<Supplier> obsolete = allSups.stream()
+                .filter(s -> !canonicalCodes.contains(s.getSupplierCode()))
+                .collect(Collectors.toList());
+
+        if (!obsolete.isEmpty()) {
+            try {
+                supplierRepository.deleteAll(obsolete);
+                log.info("Cleaned up {} obsolete suppliers beyond the 10 canonical suppliers.", obsolete.size());
+            } catch (Exception e) {
+                log.warn("Obsolete supplier cleanup notice: {}", e.getMessage());
+            }
+        }
+    }
+
+    private void seedSupplierMedicineRelationships() {
+        List<Supplier> suppliers = supplierRepository.findAll().stream()
+                .filter(s -> Boolean.TRUE.equals(s.getActive()))
+                .collect(Collectors.toList());
+        Map<String, Supplier> suppliersByCode = suppliers.stream()
+                .collect(Collectors.toMap(Supplier::getSupplierCode, s -> s));
+
+        Map<String, List<String>> categoryPools = new HashMap<>();
+        categoryPools.put("Antibiotics & Anti-infectives", List.of("SUP-112", "SUP-116", "SUP-109"));
+        categoryPools.put("Analgesics & Pain Management", List.of("SUP-112", "SUP-103", "SUP-101"));
+        categoryPools.put("Cardiovascular & Antihypertensives", List.of("SUP-109", "SUP-129", "SUP-111"));
+        categoryPools.put("Diabetes & Endocrine Care", List.of("SUP-120", "SUP-129", "SUP-112"));
+        categoryPools.put("Respiratory & Pulmonary Care", List.of("SUP-103", "SUP-109", "SUP-116"));
+        categoryPools.put("Gastroenterology & GI Care", List.of("SUP-112", "SUP-116", "SUP-121"));
+        categoryPools.put("Neuro-Psychiatry", List.of("SUP-121", "SUP-127"));
+        categoryPools.put("Dermatology & Skincare", List.of("SUP-111", "SUP-116"));
+        categoryPools.put("Ophthalmology & ENT", List.of("SUP-116", "SUP-112", "SUP-121"));
+        categoryPools.put("Oncology & Critical Care", List.of("SUP-127", "SUP-120"));
+        categoryPools.put("Pediatrics & Women's Health", List.of("SUP-112", "SUP-121", "SUP-101"));
+        categoryPools.put("Vitamins & Clinical Nutrition", List.of("SUP-112", "SUP-101", "SUP-111"));
+
+        List<Medicine> medicines = medicineRepository.findAll();
+        for (Medicine medicine : medicines) {
+            String name = medicine.getName().toLowerCase(Locale.ROOT);
+            List<String> supplierCodes = categoryPools.getOrDefault(
+                    medicine.getCategory() != null ? medicine.getCategory().getName() : "",
+                    List.of("SUP-101", "SUP-103"));
+
+            if (name.contains("amoxicillin")) {
+                supplierCodes = List.of("SUP-112", "SUP-116", "SUP-109");
+            } else if (name.contains("paracetamol") || name.contains("dolo") || name.contains("crocin")) {
+                supplierCodes = List.of("SUP-112", "SUP-103", "SUP-101", "SUP-116");
+            } else if (name.contains("insulin") || name.contains("vaccine") || name.contains("monoclonal")) {
+                supplierCodes = List.of("SUP-120", "SUP-127");
+            }
+
+            for (String supplierCode : supplierCodes) {
+                Supplier supplier = suppliersByCode.get(supplierCode);
+                if (supplier == null) continue;
+                jdbcTemplate.update(
+                        "INSERT INTO supplier_medicines (supplier_id, medicine_id) " +
+                                "SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM supplier_medicines WHERE supplier_id = ? AND medicine_id = ?)",
+                        supplier.getId(), medicine.getId(), supplier.getId(), medicine.getId());
+            }
+        }
+        log.info("Verified idempotent medicine-supplier relationships for {} medicines.", medicines.size());
     }
 
     private void seedMedicinesAndInventory(Map<String, Category> catMap) {
@@ -277,64 +373,112 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         List<Medicine> savedMedicines = medicineRepository.saveAll(medicinesList);
-        log.info("Saved {} medicines. Generating exactly 1:1 matching inventory batch records...", savedMedicines.size());
+        log.info("Saved {} medicines. Generating multi-batch inventory records...", savedMedicines.size());
 
         LocalDate today = LocalDate.now();
         List<Inventory> inventoryBatch = new ArrayList<>();
+        int globalBatchSeq = 1;
 
         for (int i = 0; i < savedMedicines.size(); i++) {
             Medicine med = savedMedicines.get(i);
-            int qty;
-            int minStock = med.getReorderLevel();
-            LocalDate expiry;
-            String location;
+            String medName = med.getName().toLowerCase();
+            String catName = (med.getCategory() != null ? med.getCategory().getName() : "").toLowerCase();
 
-            if (i < 5) {
-                // Out of Stock (5 medicines)
-                qty = 0;
-                expiry = today.plusDays(150 + i * 30);
-                location = "Shelf A-" + String.format("%02d", i + 1);
-            } else if (i < 15) {
-                // Critical Stock (10 medicines)
-                qty = (i % 5) + 1; // 1 to 5 units
-                expiry = today.plusDays(180 + i * 20);
-                location = "Cold Storage F-" + String.format("%02d", (i - 5) + 1);
-            } else if (i < 40) {
-                // Low Stock (25 medicines)
-                qty = Math.min(minStock - 2, 12 + (i % 10));
-                expiry = today.plusDays(200 + i * 15);
-                location = "Shelf B-" + String.format("%02d", (i - 15) + 1);
-            } else if (i < 48) {
-                // Expiring within 30 days (8 medicines)
-                qty = 60 + (i % 20);
-                expiry = today.plusDays((i - 40) * 3 + 4); // 4 to 25 days
-                location = "Vault C-" + String.format("%02d", (i - 40) + 1);
-            } else if (i < 63) {
-                // Expiring within 31-90 days (15 medicines)
-                qty = 80 + (i % 30);
-                expiry = today.plusDays((i - 48) * 3 + 35); // 35 to 80 days
-                location = "Shelf D-" + String.format("%02d", (i - 48) + 1);
-            } else {
-                // Healthy Stock (remaining ~187 medicines)
-                qty = 120 + ((i * 17) % 380);
-                expiry = today.plusDays(365 + ((i * 13) % 730)); // 1 to 3 years
-                location = "Shelf E-" + String.format("%02d", (i % 30) + 1);
+            boolean isControlled = medName.contains("morphine") || medName.contains("fentanyl")
+                    || medName.contains("buprenorphine") || medName.contains("hydromorphone")
+                    || medName.contains("oxycodone") || medName.contains("pethidine")
+                    || medName.contains("methadone") || medName.contains("tramadol")
+                    || catName.contains("controlled") || catName.contains("narcotic");
+
+            boolean isColdChain = medName.contains("insulin") || medName.contains("vaccine")
+                    || medName.contains("erythropoietin") || medName.contains("interferon")
+                    || medName.contains("monoclonal") || medName.contains("oxytocin")
+                    || medName.contains("injection") || medName.contains("biologic")
+                    || catName.contains("biologic") || catName.contains("cold chain")
+                    || catName.contains("injectable");
+
+            boolean isHighDemand = medName.contains("paracetamol") || medName.contains("ibuprofen")
+                    || medName.contains("amoxicillin") || medName.contains("azithromycin")
+                    || medName.contains("pantoprazole") || medName.contains("cetirizine")
+                    || medName.contains("metformin") || medName.contains("atorvastatin")
+                    || medName.contains("amlodipine") || medName.contains("ors")
+                    || medName.contains("multivitamin") || medName.contains("antacid")
+                    || medName.contains("cough") || medName.contains("aspirin")
+                    || medName.contains("ciprofloxacin") || medName.contains("omeprazole")
+                    || medName.contains("losartan") || medName.contains("salbutamol")
+                    || catName.contains("antibiotic") || catName.contains("analgesic")
+                    || catName.contains("cardio") || catName.contains("gastro");
+
+            int baseHash = mixHash(medName.hashCode() + i * 17);
+            int batchCount = isHighDemand ? (2 + (baseHash % 3)) : (1 + (baseHash % 2));
+
+            for (int b = 0; b < batchCount; b++) {
+                int seedHash = mixHash(baseHash + b * 37 + 101);
+
+                String location;
+                int minStock;
+                if (isControlled) {
+                    location = "Vault C-" + String.format("%02d", (seedHash % 3) + 1);
+                    minStock = 5 + (seedHash % 10);
+                } else if (isColdChain) {
+                    location = "Cold Storage F-" + String.format("%02d", (seedHash % 5) + 1);
+                    minStock = 10 + (seedHash % 15);
+                } else if (isHighDemand) {
+                    char shelf = (seedHash % 2 == 0) ? 'A' : 'B';
+                    location = "Shelf " + shelf + "-" + String.format("%02d", (seedHash % 15) + 1);
+                    minStock = 20 + (seedHash % 30);
+                } else {
+                    char shelf = (seedHash % 2 == 0) ? 'D' : 'E';
+                    location = "Shelf " + shelf + "-" + String.format("%02d", (seedHash % 15) + 1);
+                    minStock = 15 + (seedHash % 20);
+                }
+
+                boolean isOutOfStock = (seedHash % 97 == 0 && b == 0);
+                boolean isLowStock = !isOutOfStock && (seedHash % 5 == 0 || (b == 0 && (medName.contains("morphine") || medName.contains("fentanyl"))));
+
+                int qty;
+                if (isOutOfStock) {
+                    qty = 0;
+                } else if (isLowStock) {
+                    qty = Math.max(1, Math.min(minStock - 2, 8 + (seedHash % 10)));
+                } else {
+                    int maxCap = isControlled ? 45 : (isColdChain ? 110 : (isHighDemand ? 450 : 220));
+                    int baseSpan = Math.max(20, maxCap - minStock - 15);
+                    qty = minStock + 15 + (seedHash % baseSpan);
+                }
+
+                boolean isExpiringSoon = (seedHash % 11 == 0);
+                LocalDate expiry;
+                if (isExpiringSoon) {
+                    expiry = today.plusDays(10 + (seedHash % 70));
+                } else {
+                    expiry = today.plusDays(120 + (b * 180) + (seedHash % 600));
+                }
+
+                Inventory inv = Inventory.builder()
+                        .medicine(med)
+                        .quantity(qty)
+                        .minimumStock(minStock)
+                        .batchNumber("BAT-2026-" + String.format("%03d", globalBatchSeq++))
+                        .expiryDate(expiry)
+                        .storageLocation(location)
+                        .build();
+
+                inventoryBatch.add(inv);
             }
-
-            Inventory inv = Inventory.builder()
-                    .medicine(med)
-                    .quantity(qty)
-                    .minimumStock(minStock)
-                    .batchNumber("BAT-2026-" + String.format("%03d", i + 1))
-                    .expiryDate(expiry)
-                    .storageLocation(location)
-                    .build();
-
-            inventoryBatch.add(inv);
         }
 
         inventoryRepository.saveAll(inventoryBatch);
-        log.info("Saved exactly {} matching inventory batch records!", inventoryBatch.size());
+        log.info("Saved {} inventory batch records across {} medicines!", inventoryBatch.size(), savedMedicines.size());
+    }
+
+    private int mixHash(int key) {
+        key ^= key >>> 16;
+        key *= 0x85ebca6b;
+        key ^= key >>> 13;
+        key *= 0xc2b2ae35;
+        key ^= key >>> 16;
+        return Math.abs(key);
     }
 
     private void seedPurchaseOrders(List<Supplier> suppliers) {

@@ -158,7 +158,7 @@ export default function MedicineListPage() {
   // Image State
   const handleOpenAddModal = () => {
     setEditingMedicine(null);
-    const autoCode = `MED-${Math.floor(1000 + Math.random() * 9000)}`;
+    const autoCode = `MED-${Date.now().toString().slice(-4)}`;
     setFormData({
       ...initialForm,
       medicineCode: autoCode,
@@ -404,7 +404,7 @@ export default function MedicineListPage() {
                   className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Code</span>
+                    <span>Medicine Code</span>
                     {renderSortIcon('medicineCode')}
                   </div>
                 </th>

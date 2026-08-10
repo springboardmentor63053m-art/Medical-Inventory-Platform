@@ -12,5 +12,6 @@ public interface PrescriptionOrderRepository extends JpaRepository<PrescriptionO
     List<PrescriptionOrder> findByUserIdOrderByCreatedAtDesc(Long userId);
     List<PrescriptionOrder> findAllByOrderByCreatedAtDesc();
     List<PrescriptionOrder> findByStatusOrderByCreatedAtDesc(String status);
+    List<PrescriptionOrder> findByStatusInOrderByCreatedAtDesc(List<String> statuses);
     Optional<PrescriptionOrder> findByOrderNumber(String orderNumber);
 }

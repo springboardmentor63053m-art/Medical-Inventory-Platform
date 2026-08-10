@@ -4,6 +4,7 @@ import com.medistock.category.dto.response.CategoryResponse;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -29,6 +30,7 @@ public class MedicineResponse {
     private String countryOfOrigin;
     private String licenseNo;
     private Boolean prescriptionRequired;
+    private List<LinkedSupplierDto> suppliers;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -58,5 +60,21 @@ public class MedicineResponse {
 
     public Boolean getPrescriptionRequired() {
         return prescriptionRequired != null ? prescriptionRequired : true;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class LinkedSupplierDto {
+        private Long id;
+        private String supplierCode;
+        private String supplierName;
+        private String contactPerson;
+        private String phone;
+        private String email;
+        private String city;
+        private String country;
     }
 }

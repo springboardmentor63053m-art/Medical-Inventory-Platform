@@ -43,7 +43,7 @@ export default function UnifiedMedicineDetailsModal({
   onDelete,
   onStockUpdate
 }) {
-  const { isUser, isStaff, isPharmacist, isAdmin } = useAuth();
+  const { isUser, isSupplier, isPharmacist, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'inventory' | 'purchasing' | 'admin'
 
   if (!medicine) return null;
@@ -200,7 +200,7 @@ export default function UnifiedMedicineDetailsModal({
   const getRoleBadge = () => {
     if (isAdmin) return <span className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-extrabold rounded-md uppercase tracking-wider">ADMIN VIEW</span>;
     if (isPharmacist) return <span className="px-2.5 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-extrabold rounded-md uppercase tracking-wider">PHARMACIST VIEW</span>;
-    if (isStaff) return <span className="px-2.5 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-extrabold rounded-md uppercase tracking-wider">STAFF VIEW</span>;
+    if (isSupplier) return <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-extrabold rounded-md uppercase tracking-wider">SUPPLIER VIEW</span>;
     return <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-extrabold rounded-md uppercase tracking-wider">READ-ONLY USER VIEW</span>;
   };
 
@@ -293,7 +293,7 @@ export default function UnifiedMedicineDetailsModal({
             <Pill className="w-3.5 h-3.5" /> Clinical & Medicine Information
           </button>
 
-          {(isStaff || isPharmacist || isAdmin) && (
+          {(isPharmacist || isAdmin) && (
             <button
               onClick={() => setActiveTab('inventory')}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 ${
@@ -348,8 +348,8 @@ export default function UnifiedMedicineDetailsModal({
                   <span className="font-mono font-bold text-slate-900">{medicineCode}</span>
                 </div>
                 <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Batch Number</span>
-                  <span className="font-mono font-bold text-slate-900">{batchNumber}</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Batch Identifier</span>
+                  <span className="font-mono font-bold text-slate-900">{medicine.batchNumber || 'Multi-Batch Tracked'}</span>
                 </div>
                 <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Mfg. Date</span>
@@ -575,8 +575,8 @@ export default function UnifiedMedicineDetailsModal({
           </div>
         )}
 
-        {/* TAB 2: INVENTORY & OPERATIONS (ROLE_STAFF, ROLE_PHARMACIST, ROLE_ADMIN) */}
-        {activeTab === 'inventory' && (isStaff || isPharmacist || isAdmin) && (
+        {/* TAB 2: INVENTORY & OPERATIONS (ROLE_PHARMACIST, ROLE_ADMIN) */}
+        {activeTab === 'inventory' && (isPharmacist || isAdmin) && (
           <div className="space-y-4">
             <div className="p-5 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-3">
               <h4 className="text-xs font-extrabold text-blue-950 uppercase tracking-wider flex items-center gap-1.5 border-b border-blue-200/80 pb-2">
@@ -609,15 +609,15 @@ export default function UnifiedMedicineDetailsModal({
           <div className="space-y-4">
             <div className="p-5 bg-purple-50/70 border border-purple-200 rounded-2xl space-y-3">
               <h4 className="text-xs font-extrabold text-purple-950 uppercase tracking-wider flex items-center gap-1.5 border-b border-purple-200/80 pb-2">
-                <Truck className="w-4 h-4 text-purple-600" /> Pharmacist Supplier & Purchase Record
+                <Truck className="w-4 h-4 text-purple-600" /> Authorized Supply Partners & Purchase Parameters
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Primary Supplier</span>
-                  <span className="font-bold text-slate-900">{supplierName}</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Primary Manufacturer</span>
+                  <span className="font-bold text-slate-900">{manufacturer}</span>
                 </div>
                 <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Estimated Purchase Price</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Estimated Purchase Cost</span>
                   <span className="font-bold text-purple-700">{formatINR(unitPrice ? unitPrice * 0.75 : 0)}</span>
                 </div>
                 <div className="p-3 bg-white border border-slate-200 rounded-xl">
@@ -626,6 +626,49 @@ export default function UnifiedMedicineDetailsModal({
                 </div>
               </div>
             </div>
+
+            {/* SUPPLIERS LIST SECTION */}
+            {(() => {
+              const linkedSuppliers = Array.isArray(medicine.suppliers) ? medicine.suppliers : [];
+              return (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <Building2 className="w-4 h-4 text-purple-600" /> Suppliers Supplying This Medicine
+                    <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">
+                      {linkedSuppliers.length}
+                    </span>
+                  </h4>
+
+                  {linkedSuppliers.length === 0 ? (
+                    <div className="py-6 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500">
+                      <Truck className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
+                      <p className="text-xs font-semibold text-slate-700">No registered suppliers currently linked</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Link suppliers from the Supplier Directory page to manage supply channels.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {linkedSuppliers.map((sup) => (
+                        <div key={sup.id} className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-900 text-xs">{sup.supplierName}</span>
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded border border-purple-100">
+                              {sup.supplierCode}
+                            </span>
+                          </div>
+                          {sup.contactPerson && (
+                            <div className="text-[11px] text-slate-600">Contact: <span className="font-semibold text-slate-800">{sup.contactPerson}</span></div>
+                          )}
+                          <div className="text-[11px] text-slate-500 flex items-center gap-3 pt-1 border-t border-slate-100">
+                            <span>📞 {sup.phone}</span>
+                            <span className="truncate">✉️ {sup.email}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -669,8 +712,8 @@ export default function UnifiedMedicineDetailsModal({
             Close Modal
           </button>
 
-          {/* Action Buttons for ROLE_STAFF */}
-          {isStaff && (
+          {/* Action Buttons for ROLE_SUPPLIER */}
+          {isSupplier && (
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {

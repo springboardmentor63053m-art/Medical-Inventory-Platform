@@ -241,7 +241,7 @@ export default function UserDashboardPage() {
                     <span className="font-mono text-[10px] font-bold text-slate-400 uppercase">
                       {med.medicineCode}
                     </span>
-                    <StatusBadge status={med.status} />
+                    <StatusBadge status={med.status === 'INACTIVE' ? 'OUT_OF_STOCK' : 'ACTIVE'} label={med.status === 'INACTIVE' ? 'Out of Stock' : 'Available'} />
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 mt-1">{med.name}</h3>
                   {med.genericName && (

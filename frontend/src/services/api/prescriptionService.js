@@ -3,7 +3,17 @@ import api from './apiClient';
 export const prescriptionService = {
   // Place an online prescription order
   createPrescriptionOrder: async (data) => {
-    const response = await api.post('/prescriptions/orders', data);
+    const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+    const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+    const response = await api.post('/prescriptions/orders', data, config);
+    return response.data;
+  },
+
+  // Get prescription document Blob securely with JWT auth
+  getPrescriptionDocumentBlob: async (orderId) => {
+    const response = await api.get(`/prescriptions/orders/${orderId}/document`, {
+      responseType: 'blob',
+    });
     return response.data;
   },
 

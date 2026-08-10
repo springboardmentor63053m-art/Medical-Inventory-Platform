@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { medicineService } from '../../../services/api/medicineService';
 import { categoryService } from '../../../services/api/categoryService';
+import { inventoryService } from '../../../services/api/inventoryService';
+import { useAuth } from '../../../contexts/AuthContext';
+import { supplierService } from '../../../services/api/supplierService';
 import StatusBadge from '../../../components/common/StatusBadge';
-import UnifiedMedicineDetailsModal from '../components/UnifiedMedicineDetailsModal';
+import UserMedicineDetailsModal from '../components/UserMedicineDetailsModal';
+import SupplierAddMedicineModal from '../components/SupplierAddMedicineModal';
+import { toast } from 'react-toastify';
 import {
   Pill,
   Boxes,
@@ -15,13 +20,17 @@ import {
   ChevronRight,
   Filter,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 export default function UserMedicinePage() {
+  const { isSupplier } = useAuth();
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [inventoryByMedicine, setInventoryByMedicine] = useState({});
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,6 +45,21 @@ export default function UserMedicinePage() {
   // View Modal State
   const [viewMedicine, setViewMedicine] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  const handleRemoveMedicine = async (med) => {
+    if (!window.confirm(`Are you sure you want to remove "${med.name}" from your supplier catalog?`)) return;
+    try {
+      await supplierService.removeMyMedicine(med.id);
+      toast.success(`Removed "${med.name}" from your supplier catalog.`);
+      fetchMedicines();
+      fetchCategories();
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to remove "${med.name}"`);
+    }
+  };
 
   const formatINR = (val) => {
     return new Intl.NumberFormat('en-IN', {
@@ -47,6 +71,7 @@ export default function UserMedicinePage() {
 
   const fetchMedicines = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       if (searchTerm.trim()) {
         const searchResults = await medicineService.searchMedicines(searchTerm.trim());
@@ -61,7 +86,20 @@ export default function UserMedicinePage() {
         setTotalPages(1);
         setTotalElements(list.length);
       } else {
-        const data = await medicineService.getAllMedicines(page, pageSize);
+        const [data, inventory] = await Promise.all([
+          medicineService.getAllMedicines(page, pageSize),
+          inventoryService.getAllInventory()
+        ]);
+        const inventoryMap = (Array.isArray(inventory) ? inventory : []).reduce((map, row) => {
+          const id = String(row.medicine?.id || row.medicineId);
+          const current = map[id] || { quantity: 0, minimumStock: 0 };
+          map[id] = {
+            quantity: current.quantity + Number(row.quantity || 0),
+            minimumStock: Math.max(current.minimumStock, Number(row.minimumStock || 0))
+          };
+          return map;
+        }, {});
+        setInventoryByMedicine(inventoryMap);
         if (data && data.content) {
           setMedicines(data.content);
           setTotalPages(data.totalPages || 1);
@@ -74,6 +112,16 @@ export default function UserMedicinePage() {
       }
     } catch (err) {
       console.error('Failed to load medicines for user view:', err);
+      const status = err.response?.status;
+      if (status === 401 || status === 403) {
+        setErrorMsg('You do not have permission to access the medicine catalog.');
+      } else if (status >= 500) {
+        setErrorMsg('Unable to load the medicine catalog. Please try again.');
+      } else if (!err.response) {
+        setErrorMsg('Unable to connect to the server.');
+      } else {
+        setErrorMsg('Unable to load the medicine catalog. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -107,21 +155,38 @@ export default function UserMedicinePage() {
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Pill className="w-6 h-6 text-blue-600" /> Browse Medicines
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Pill className="w-6 h-6 text-blue-600" /> {isSupplier ? 'Supplier Medicine Catalog' : 'Browse Medicines'}
+            </h1>
+            <span className="px-3 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold">
+              {isSupplier ? `My Medicines: ${totalElements}` : `Total Catalog: ${totalElements}`}
+            </span>
+          </div>
           <p className="text-xs text-slate-500 mt-1">
-            Search medicine formulations, view active dosage specifications, generic names, and pricing.
+            {isSupplier
+              ? 'View and manage medicines associated with your supplier account.'
+              : 'Search medicine formulations, view active dosage specifications, generic names, and pricing.'}
           </p>
         </div>
 
-        <button
-          onClick={fetchMedicines}
-          className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center gap-2 text-xs font-bold shrink-0 self-start sm:self-auto"
-          title="Refresh medicines"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
+        <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
+          {isSupplier && (
+            <button
+              onClick={() => setAddModalOpen(true)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Medicine
+            </button>
+          )}
+          <button
+            onClick={fetchMedicines}
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center gap-2 text-xs font-bold"
+            title="Refresh medicines"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Search & Category Filter Bar */}
@@ -188,14 +253,10 @@ export default function UserMedicinePage() {
           <RefreshCw className="w-7 h-7 animate-spin mx-auto text-blue-600 mb-2" />
           <p className="text-xs font-medium">Loading medicine formulations...</p>
         </div>
-      ) : medicines.length === 0 ? (
-        <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-slate-200 space-y-3">
-          <Pill className="w-8 h-8 text-slate-400 mx-auto" />
-          <p className="text-sm font-bold text-slate-800">
-            {searchTerm || selectedCategory
-              ? 'No medicines match the selected search criteria or category filter.'
-              : 'No medicine formulations currently available in the catalog.'}
-          </p>
+      ) : errorMsg ? (
+        <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-rose-200 space-y-3">
+          <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
+          <p className="text-sm font-bold text-rose-800">{errorMsg}</p>
           <button
             onClick={() => {
               setSearchTerm('');
@@ -203,14 +264,54 @@ export default function UserMedicinePage() {
               setPage(0);
               fetchMedicines();
             }}
-            className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition"
+            className="px-4 py-2 bg-rose-50 text-rose-600 text-xs font-bold rounded-xl hover:bg-rose-100 transition"
           >
-            {searchTerm || selectedCategory ? 'Clear Search & Filters' : 'Refresh Catalog'}
+            Retry Connection
           </button>
+        </div>
+      ) : medicines.length === 0 ? (
+        <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-slate-200 space-y-4">
+          <Pill className="w-10 h-10 text-slate-300 mx-auto" />
+          {isSupplier && !searchTerm && !selectedCategory ? (
+            <>
+              <h3 className="text-base font-bold text-slate-900">No Medicines in Your Catalog</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                You are not currently supplying any medicines. Add medicines from the MediStock master catalog to start supplying.
+              </p>
+              <button
+                onClick={() => setAddModalOpen(true)}
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition inline-flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add Medicine
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-bold text-slate-800">
+                {searchTerm || selectedCategory
+                  ? 'No medicines match the selected search criteria or category filter.'
+                  : 'No medicine formulations currently available in the catalog.'}
+              </p>
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('');
+                  setPage(0);
+                  fetchMedicines();
+                }}
+                className="px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-100 transition"
+              >
+                {searchTerm || selectedCategory ? 'Clear Search & Filters' : 'Refresh Catalog'}
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {medicines.map((med) => (
+          {medicines.map((med) => {
+            const stock = inventoryByMedicine[String(med.id)] || { quantity: 0 };
+            const isAvailable = Number(stock.quantity || 0) > 0;
+            return (
             <div
               key={med.id}
               className="p-5 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition bg-white flex flex-col justify-between"
@@ -220,7 +321,7 @@ export default function UserMedicinePage() {
                   <span className="font-mono text-[10px] font-bold text-slate-400 uppercase">
                     {med.medicineCode}
                   </span>
-                  <StatusBadge status={med.status} />
+                  <StatusBadge status={isAvailable ? 'ACTIVE' : 'OUT_OF_STOCK'} label={isAvailable ? 'Available' : 'Out of Stock'} />
                 </div>
 
                 <h3 className="text-sm font-bold text-slate-900 mt-1.5 line-clamp-1">{med.name}</h3>
@@ -249,18 +350,35 @@ export default function UserMedicinePage() {
                   <span className="text-[10px] text-slate-400 block font-semibold uppercase">Unit Price</span>
                   <span className="text-sm font-black text-slate-900">{formatINR(med.unitPrice)}</span>
                 </div>
-                <button
-                  onClick={() => {
-                    setViewMedicine(med);
-                    setViewModalOpen(true);
-                  }}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
-                >
-                  <Eye className="w-3.5 h-3.5" /> Details
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {isSupplier && (
+                    <button
+                      onClick={() => handleRemoveMedicine(med)}
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-xl transition border border-rose-100"
+                      title="Remove from your supplier catalog"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setViewMedicine({
+                        ...med,
+                        status: isAvailable ? 'ACTIVE' : 'OUT_OF_STOCK',
+                        stockQuantity: stock.quantity,
+                        minimumStock: stock.minimumStock
+                      });
+                      setViewModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Details
+                  </button>
+                </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -293,12 +411,25 @@ export default function UserMedicinePage() {
 
       {/* View Medicine Details Modal */}
       {viewModalOpen && viewMedicine && (
-        <UnifiedMedicineDetailsModal
+        <UserMedicineDetailsModal
           isOpen={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
           medicine={viewMedicine}
           allMedicines={medicines}
           onSelectRelated={(rel) => setViewMedicine(rel)}
+        />
+      )}
+
+      {/* Supplier Add Medicine Modal */}
+      {isSupplier && (
+        <SupplierAddMedicineModal
+          isOpen={addModalOpen}
+          onClose={() => setAddModalOpen(false)}
+          suppliedMedicineIds={medicines.map((m) => m.id)}
+          onSuccess={() => {
+            fetchMedicines();
+            fetchCategories();
+          }}
         />
       )}
     </div>

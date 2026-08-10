@@ -1,48 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { medicineService } from '../../../services/api/medicineService';
 import { inventoryService } from '../../../services/api/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
 import StatusBadge from '../../../components/common/StatusBadge';
 import {
+  Pill,
   Package,
   AlertTriangle,
-  Clock,
-  Bell,
-  RefreshCw,
-  ArrowRight,
-  Building2,
-  CheckCircle2,
   Search,
-  Pill,
-  BarChart2
+  RefreshCw,
+  Boxes,
+  Eye,
+  Activity,
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
 
 export default function StaffDashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [inventoryList, setInventoryList] = useState([]);
-  const [lowStockItems, setLowStockItems] = useState([]);
-  const [expiringItems, setExpiringItems] = useState([]);
+  const [medicines, setMedicines] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchStaffData = async () => {
     setLoading(true);
     try {
-      const [invRes, lowStockRes, expiringRes] = await Promise.allSettled([
-        inventoryService.getAllInventory(),
-        inventoryService.getLowStockInventory(),
-        inventoryService.getExpiringInventory(90)
+      const [medsRes, invRes] = await Promise.allSettled([
+        medicineService.getAllMedicines(0, 500),
+        inventoryService.getAllInventory()
       ]);
 
-      const invs = invRes.status === 'fulfilled' && Array.isArray(invRes.value) ? invRes.value : [];
-      const lows = lowStockRes.status === 'fulfilled' && Array.isArray(lowStockRes.value) ? lowStockRes.value : [];
-      const exps = expiringRes.status === 'fulfilled' && Array.isArray(expiringRes.value) ? expiringRes.value : [];
+      const medList = medsRes.status === 'fulfilled' ? (medsRes.value?.content || medsRes.value || []) : [];
+      const invList = invRes.status === 'fulfilled' ? (Array.isArray(invRes.value) ? invRes.value : []) : [];
 
-      setInventoryList(invs);
-      setLowStockItems(lows);
-      setExpiringItems(exps);
+      setMedicines(Array.isArray(medList) ? medList : []);
+      setInventory(invList);
     } catch (err) {
-      console.error('Failed to load staff inventory dashboard:', err);
+      console.error('Failed to load Staff dashboard data:', err);
     } finally {
       setLoading(false);
     }
@@ -52,31 +47,40 @@ export default function StaffDashboardPage() {
     fetchStaffData();
   }, []);
 
-  const totalStock = inventoryList.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
-  const lowStockCount = lowStockItems.length;
-  const expiringCount = expiringItems.length;
-  const healthyCount = inventoryList.length - lowStockCount;
+  const totalMedicines = medicines.length;
+  const availableStockCount = inventory.filter((inv) => Number(inv.quantity || 0) > 0).length;
+  const lowStockCount = inventory.filter(
+    (inv) => Number(inv.quantity || 0) <= Number(inv.minimumStock || 10)
+  ).length;
+
+  const filteredMedicines = medicines.filter(
+    (m) =>
+      m.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.genericName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.medicineCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.category?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const empId = user?.employeeId || `STF${String(user?.id || '001').padStart(3, '0')}`;
 
   return (
     <div className="space-y-6 font-sans text-slate-900 pb-10">
-      {/* Employee Staff Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 rounded-3xl text-white shadow-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Staff Operational Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 font-mono font-bold text-xs rounded-lg">
               {empId}
             </span>
-            <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-bold text-xs rounded-full uppercase">
-              Staff Role
+            <span className="px-2.5 py-0.5 bg-sky-500/20 border border-sky-400/30 text-sky-300 font-bold text-xs rounded-full uppercase">
+              Staff Operational Role
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-2">
-            Inventory Operations Dashboard
+            Operational Inventory Dashboard
           </h1>
           <p className="text-xs text-slate-300 mt-1">
-            Real-time stock monitoring, low-stock alerts, and inventory dispatch management
+            Real-time medicine catalog lookup, inventory stock level monitoring, and operational activity tracking
           </p>
         </div>
 
@@ -84,174 +88,134 @@ export default function StaffDashboardPage() {
           onClick={fetchStaffData}
           className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 transition flex items-center gap-2 text-xs font-bold shrink-0"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Sync Stock Data
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh Operational View
         </button>
       </div>
 
-      {/* KPI Statistic Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Staff KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {/* Total Medicines */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-slate-500">Total Formulations</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1">{inventoryList.length}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">{totalStock} total units in stock</p>
+            <p className="text-xs font-semibold text-slate-500">Total Medicines</p>
+            <h3 className="text-2xl font-black text-slate-900 mt-1">{totalMedicines}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Master Formulations Catalog</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+            <Pill className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Available Stock */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-slate-500">Available Stock Batches</p>
+            <h3 className="text-2xl font-black text-emerald-700 mt-1">{availableStockCount}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Active Inventory Batches</p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
             <Package className="w-6 h-6" />
           </div>
         </div>
 
+        {/* Low Stock Alerts */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-slate-500">Healthy Stock</p>
-            <h3 className="text-2xl font-bold text-emerald-600 mt-1">{healthyCount < 0 ? 0 : healthyCount}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Sufficient inventory levels</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Low Stock Alerts</p>
-            <h3 className="text-2xl font-bold text-amber-600 mt-1">{lowStockCount}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Reorder threshold reached</p>
+            <p className="text-xs font-semibold text-amber-700">Low Stock Alerts</p>
+            <h3 className="text-2xl font-black text-amber-700 mt-1">{lowStockCount}</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">At or Below Reorder Threshold</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
             <AlertTriangle className="w-6 h-6" />
           </div>
         </div>
+      </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+      {/* Main Section: Search & Permitted Medicine List */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold text-slate-500">Expiring Soon</p>
-            <h3 className="text-2xl font-bold text-rose-600 mt-1">{expiringCount}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Expires within 90 days</p>
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Boxes className="w-5 h-5 text-blue-600" /> Permitted Medicine Catalog Lookup
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Search formulations by name, generic classification, code, or category
+            </p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-            <Clock className="w-6 h-6" />
+
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search medicine or code..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
+        </div>
+
+        {/* Table of Permitted Medicines */}
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                <th className="py-3 px-4">Medicine Code</th>
+                <th className="py-3 px-4">Name & Generic</th>
+                <th className="py-3 px-4">Category</th>
+                <th className="py-3 px-4">Dosage</th>
+                <th className="py-3 px-4">Unit Price</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto text-blue-600 mb-2" />
+                    Loading database medicine inventory...
+                  </td>
+                </tr>
+              ) : filteredMedicines.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-500">
+                    No medicine formulations found matching query.
+                  </td>
+                </tr>
+              ) : (
+                filteredMedicines.slice(0, 8).map((med) => (
+                  <tr key={med.id} className="hover:bg-slate-50/80 transition">
+                    <td className="py-3 px-4 font-mono font-bold text-blue-700">{med.medicineCode}</td>
+                    <td className="py-3 px-4">
+                      <span className="font-bold text-slate-900 block">{med.name}</span>
+                      <span className="text-[11px] text-slate-500 italic">{med.genericName || 'Standard Formulation'}</span>
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-slate-700">{med.category?.name || 'General'}</td>
+                    <td className="py-3 px-4 font-medium text-slate-600">{med.dosage || 'N/A'}</td>
+                    <td className="py-3 px-4 font-bold text-slate-900">₹{Number(med.unitPrice || 0).toFixed(2)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Low Stock & Reorder List */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-500" /> Stock Replenishment Priority List
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">Items needing stock update or batch restocking</p>
-            </div>
-            <Link
-              to="/inventory"
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              Full Inventory <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+      {/* Permitted Activity & Scope Summary */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-100">
+            <Activity className="w-5 h-5" />
           </div>
-
-          {loading ? (
-            <div className="py-8 text-center text-slate-500">
-              <RefreshCw className="w-5 h-5 animate-spin mx-auto text-blue-600 mb-2" />
-              <p className="text-xs">Loading inventory monitoring dataset...</p>
-            </div>
-          ) : lowStockItems.length === 0 ? (
-            <div className="py-8 text-center text-slate-500">
-              <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-slate-700">All stock levels are optimal!</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">No immediate low-stock reorders required.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/50">
-                    <th className="py-2.5 px-3">Medicine</th>
-                    <th className="py-2.5 px-3">Batch</th>
-                    <th className="py-2.5 px-3 text-right">Current Qty</th>
-                    <th className="py-2.5 px-3 text-right">Min Threshold</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                  {lowStockItems.slice(0, 6).map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 transition">
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-slate-900">{item.medicine?.name || 'Medicine'}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{item.medicine?.medicineCode}</div>
-                      </td>
-                      <td className="py-3 px-3 font-mono font-semibold text-slate-700">
-                        {item.batchNumber || 'N/A'}
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-amber-600">
-                        {item.quantity} units
-                      </td>
-                      <td className="py-3 px-3 text-right text-slate-500 font-medium">
-                        {item.minimumStock || 10} units
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Quick Links & Notifications Card */}
-        <div className="space-y-4">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Bell className="w-5 h-5 text-blue-600" /> Operational Actions
-            </h2>
-
-            <div className="space-y-2.5">
-              <Link
-                to="/inventory"
-                className="w-full p-3.5 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl transition flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3">
-                  <Package className="w-5 h-5 text-blue-600" />
-                  <div className="text-left">
-                    <div className="text-xs font-bold text-slate-900">Manage Stock Levels</div>
-                    <div className="text-[10px] text-slate-500">Update item quantities & batches</div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
-              </Link>
-
-              <Link
-                to="/expiring"
-                className="w-full p-3.5 bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-xl transition flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-rose-600" />
-                  <div className="text-left">
-                    <div className="text-xs font-bold text-slate-900">Expiring Batches</div>
-                    <div className="text-[10px] text-slate-500">Inspect near-expiry inventory</div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
-              </Link>
-
-              <Link
-                to="/notifications"
-                className="w-full p-3.5 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl transition flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3">
-                  <Bell className="w-5 h-5 text-amber-600" />
-                  <div className="text-left">
-                    <div className="text-xs font-bold text-slate-900">Stock Notifications</div>
-                    <div className="text-[10px] text-slate-500">View low stock alerts</div>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition" />
-              </Link>
-            </div>
+          <div>
+            <h4 className="font-bold text-slate-900 text-sm">Staff Role Scoping Active</h4>
+            <p className="text-slate-500 mt-0.5">
+              Access is limited to operational medicine inventory lookup, stock checking, and low-stock monitoring.
+            </p>
           </div>
         </div>
+        <span className="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 shrink-0">
+          Role ID: STAFF
+        </span>
       </div>
     </div>
   );

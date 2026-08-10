@@ -5,8 +5,8 @@ import com.medistock.authentication.dto.request.RegisterRequest;
 import com.medistock.authentication.dto.response.AuthResponse;
 import com.medistock.authentication.service.AuthService;
 import com.medistock.common.exception.UserAlreadyExistsException;
-import com.medistock.common.security.jwt.JwtService;
 import com.medistock.common.security.principal.UserPrincipal;
+import com.medistock.common.security.jwt.JwtService;
 import com.medistock.role.entity.Role;
 import com.medistock.role.repository.RoleRepository;
 import com.medistock.user.entity.User;
@@ -16,7 +16,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +36,31 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
+    private String generateNextEmployeeId(String prefix) {
+        List<User> users = userRepository.findAll();
+        int maxSeq = 0;
+        for (User u : users) {
+            if (u.getEmployeeId() != null && u.getEmployeeId().startsWith(prefix)) {
+                try {
+                    int num = Integer.parseInt(u.getEmployeeId().substring(prefix.length()));
+                    if (num > maxSeq) {
+                        maxSeq = num;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return String.format("%s%03d", prefix, maxSeq + 1);
+    }
+
+    private String getPrefixForRole(String roleName) {
+        if (roleName == null) return "USR";
+        String normalized = roleName.toUpperCase().replace("ROLE_", "");
+        if (normalized.contains("ADMIN")) return "ADM";
+        if (normalized.contains("PHARMACIST")) return "PHA";
+        if (normalized.contains("SUPPLIER")) return "SUP";
+        return "USR";
+    }
+
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -49,11 +73,13 @@ public class AuthServiceImpl implements AuthService {
         Role defaultRole = roleRepository.findByName(targetRole)
                 .orElseGet(() -> roleRepository.save(Role.builder()
                         .name(targetRole)
-                        .description("Standard User (Read-Only) Role")
+                        .description("Standard User Role")
                         .build()));
 
+        String autoEmpId = generateNextEmployeeId("USR");
+
         User user = User.builder()
-                .employeeId(null) // Normal USER is not an employee; employeeId is null
+                .employeeId(autoEmpId)
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
@@ -95,12 +121,11 @@ public class AuthServiceImpl implements AuthService {
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         User user = userPrincipal.getUser();
 
-        // Assign employeeId ONLY if user is an employee (ADMIN, PHARMACIST, STAFF) and missing employeeId
         String primaryRole = user.getRoles().stream().map(Role::getName).findFirst().orElse("USER");
-        boolean isEmployeeRole = primaryRole.contains("ADMIN") || primaryRole.contains("PHARMACIST") || primaryRole.contains("STAFF");
-        if (isEmployeeRole && (user.getEmployeeId() == null || user.getEmployeeId().isEmpty())) {
-            String prefix = primaryRole.contains("ADMIN") ? "ADM" : primaryRole.contains("PHARMACIST") ? "PHA" : "STF";
-            user.setEmployeeId(String.format("%s%03d", prefix, user.getId()));
+        String expectedPrefix = getPrefixForRole(primaryRole);
+
+        if (user.getEmployeeId() == null || !user.getEmployeeId().startsWith(expectedPrefix)) {
+            user.setEmployeeId(generateNextEmployeeId(expectedPrefix));
         }
         user.setLastLogin(LocalDateTime.now());
         User updatedUser = userRepository.save(user);
