@@ -157,17 +157,27 @@ const SalesHistory = () => {
                 </thead>
                 <tbody>
                   {filteredSales.map((sale) => (
-                    <tr 
-                      key={sale.id}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => openSaleDetails(sale.id)}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
+                    <tr key={sale.id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <FileText size={16} style={{ color: 'var(--primary)' }} />
-                          <strong style={{ color: 'white' }}>{sale.invoiceNumber}</strong>
+                          <button
+                            onClick={() => openSaleDetails(sale.id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                              color: 'var(--primary)',
+                              textDecoration: 'underline',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              fontSize: 'inherit',
+                              fontFamily: 'inherit',
+                              textAlign: 'left'
+                            }}
+                          >
+                            {sale.invoiceNumber}
+                          </button>
                         </div>
                       </td>
                       <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -220,132 +230,145 @@ const SalesHistory = () => {
       {/* Sale Detail Modal Overlay */}
       {selectedSale && (
         <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(5, 7, 13, 0.85)', zIndex: 1000, padding: '20px' }}>
-          <div className="card modal-content" style={{ maxWidth: '600px', width: '100%', padding: '28px', position: 'relative' }}>
+          <div className="card modal-content" style={{
+            maxWidth: '600px',
+            width: '100%',
+            padding: '28px',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '90vh'
+          }}>
             
-            <div className="card-header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Receipt size={22} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, fontFamily: 'Outfit, sans-serif', color: 'white', margin: 0 }}>
-                  Invoice Details: {selectedSale.invoiceNumber}
-                </h3>
+            {/* Header: Fixed */}
+            <div className="card-header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px', flexShrink: 0 }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'Outfit, sans-serif', color: 'var(--primary)', margin: 0, letterSpacing: '0.5px' }}>
+                  MEDISTOCK
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                  Medical Inventory Platform
+                </p>
               </div>
               <button className="btn-icon" onClick={() => setSelectedSale(null)} style={{ padding: '6px' }}>
                 <X size={18} />
               </button>
             </div>
 
-            {/* Metadata Section */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px',
-              backgroundColor: 'rgba(255,255,255,0.01)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--border-radius-md)',
-              padding: '16px',
-              marginBottom: '24px'
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  <Calendar size={12} />
-                  <span>Date & Time</span>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'white', fontWeight: 500 }}>
-                  {formatDate(selectedSale.saleDate)}
+            {/* Scrollable body */}
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', marginBottom: '16px' }}>
+              {/* Invoice Info & Metadata Section */}
+              <div style={{ marginBottom: '20px' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Invoice Number</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', marginTop: '2px' }}>
+                  {selectedSale.invoiceNumber}
                 </div>
               </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  <User size={12} />
-                  <span>Staff / Pharmacist</span>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'white', fontWeight: 500 }}>
-                  {selectedSale.createdByUsername || 'System'}
-                </div>
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  <User size={12} />
-                  <span>Customer Name</span>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'white', fontWeight: 500 }}>
-                  {selectedSale.customerName || 'Walk-in Customer'}
-                </div>
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  <Phone size={12} />
-                  <span>Customer Phone</span>
-                </div>
-                <div style={{ fontSize: '0.85rem', color: 'white', fontWeight: 500 }}>
-                  {selectedSale.customerPhone || 'N/A'}
-                </div>
-              </div>
-            </div>
 
-            {/* Medicines List Table */}
-            <div style={{ marginBottom: '24px' }}>
-              <h4 style={{ fontSize: '0.9rem', color: 'white', fontWeight: 600, marginBottom: '10px' }}>Items Billed</h4>
-              <div className="table-responsive" style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)' }}>
-                <table style={{ width: '100%', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: 'rgba(255,255,255,0.01)' }}>
-                      <th>Medicine Name</th>
-                      <th style={{ width: '90px', textAlign: 'right' }}>Price</th>
-                      <th style={{ width: '60px', textAlign: 'center' }}>Qty</th>
-                      <th style={{ width: '90px', textAlign: 'right' }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedSale.items?.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <div style={{ fontWeight: 600, color: 'white' }}>{item.medicineName}</div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Code: {item.medicineCode}</div>
-                        </td>
-                        <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
-                          ₹{parseFloat(item.unitPrice).toFixed(2)}
-                        </td>
-                        <td style={{ textAlign: 'center', color: 'white', fontWeight: 500 }}>
-                          {item.quantity}
-                        </td>
-                        <td style={{ textAlign: 'right', fontWeight: 600, color: 'white' }}>
-                          ₹{parseFloat(item.totalPrice).toFixed(2)}
-                        </td>
+              {/* Metadata Section */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '16px',
+                backgroundColor: 'rgba(255,255,255,0.01)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--border-radius-md)',
+                padding: '16px',
+                marginBottom: '24px'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                    <Calendar size={12} />
+                    <span>Date & Time</span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'white', fontWeight: 500 }}>
+                    {formatDate(selectedSale.saleDate)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                    <User size={12} />
+                    <span>Customer Name</span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'white', fontWeight: 500 }}>
+                    {selectedSale.customerName || 'Walk-in Customer'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                    <Phone size={12} />
+                    <span>Customer Phone</span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'white', fontWeight: 500 }}>
+                    {selectedSale.customerPhone || 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Medicines List Table */}
+              <div style={{ marginBottom: '24px' }}>
+                <h4 style={{ fontSize: '0.9rem', color: 'white', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ITEMS PURCHASED</h4>
+                <div className="table-responsive" style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)' }}>
+                  <table style={{ width: '100%', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                        <th>Medicine Name</th>
+                        <th style={{ width: '60px', textAlign: 'center' }}>Quantity</th>
+                        <th style={{ width: '90px', textAlign: 'right' }}>Unit Price</th>
+                        <th style={{ width: '90px', textAlign: 'right' }}>Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {selectedSale.items?.map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <div style={{ fontWeight: 600, color: 'white' }}>{item.medicineName}</div>
+                            {item.medicineCode && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Code: {item.medicineCode}</div>}
+                          </td>
+                          <td style={{ textAlign: 'center', color: 'white', fontWeight: 500 }}>
+                            {item.quantity}
+                          </td>
+                          <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+                            ₹{parseFloat(item.unitPrice).toFixed(2)}
+                          </td>
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: 'white' }}>
+                            ₹{parseFloat(item.totalPrice).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Calculations Summary */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <span>Subtotal:</span>
+                  <span style={{ color: 'white', fontWeight: 500 }}>₹{selectedSale.totalAmount?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <span>Discount:</span>
+                  <span style={{ color: 'var(--danger)', fontWeight: 500 }}>-₹{selectedSale.discountAmount?.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <span>Payment Method:</span>
+                  <span style={{ color: 'white', fontWeight: 500 }}>{selectedSale.paymentMethod}</span>
+                </div>
+                
+                <hr style={{ border: 'none', borderTop: '1px dashed var(--border-color)', margin: '4px 0' }} />
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 700, color: 'white' }}>Grand Total:</span>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--success)' }}>
+                    ₹{selectedSale.finalAmount?.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Calculations Summary */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                <span>Subtotal:</span>
-                <span style={{ color: 'white', fontWeight: 500 }}>₹{selectedSale.totalAmount?.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                <span>Discount Applied:</span>
-                <span style={{ color: 'var(--danger)', fontWeight: 500 }}>-₹{selectedSale.discountAmount?.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                <span>Payment Mode:</span>
-                <span style={{ color: 'white', fontWeight: 500 }}>{selectedSale.paymentMethod}</span>
-              </div>
-              
-              <hr style={{ border: 'none', borderTop: '1px dashed var(--border-color)', margin: '4px 0' }} />
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: '1rem', fontWeight: 700, color: 'white' }}>Final Paid Amount:</span>
-                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--success)' }}>
-                  ₹{selectedSale.finalAmount?.toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            {/* Close Button */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
+            {/* Footer: Fixed */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '16px', flexShrink: 0 }}>
               <button
                 type="button"
                 className="btn btn-secondary"

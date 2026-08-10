@@ -40,6 +40,13 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional
     public SaleResponse createSale(SaleRequest request, String currentUsername) {
+        if (request.getCustomerName() == null || request.getCustomerName().trim().isEmpty()) {
+            throw new BadRequestException("Customer name is required");
+        }
+        if (request.getCustomerPhone() == null || request.getCustomerPhone().trim().isEmpty()) {
+            throw new BadRequestException("Customer phone is required");
+        }
+
         // 1. Find User who created the sale
         User user = null;
         if (currentUsername != null && !currentUsername.isBlank()) {

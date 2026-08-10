@@ -183,12 +183,24 @@ const Billing = () => {
       return;
     }
 
+    const trimmedName = customerName.trim();
+    const trimmedPhone = customerPhone.trim();
+
+    if (!trimmedName) {
+      setError('Customer name is required.');
+      return;
+    }
+    if (!trimmedPhone) {
+      setError('Customer phone is required.');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
     const salePayload = {
-      customerName: customerName.trim() || null,
-      customerPhone: customerPhone.trim() || null,
+      customerName: trimmedName,
+      customerPhone: trimmedPhone,
       paymentMethod: paymentMethod,
       discountAmount: getDiscount(),
       items: cart.map(item => ({
@@ -482,7 +494,7 @@ const Billing = () => {
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
                 <User size={14} />
-                <span>Customer Name (Optional)</span>
+                <span>Customer Name *</span>
               </label>
               <input
                 type="text"
@@ -490,6 +502,7 @@ const Billing = () => {
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 disabled={submitting}
+                required
               />
             </div>
 
@@ -497,7 +510,7 @@ const Billing = () => {
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
                 <Phone size={14} />
-                <span>Customer Phone (Optional)</span>
+                <span>Customer Phone *</span>
               </label>
               <input
                 type="text"
@@ -505,6 +518,7 @@ const Billing = () => {
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 disabled={submitting}
+                required
               />
             </div>
 

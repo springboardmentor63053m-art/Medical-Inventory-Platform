@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import { Plus, Edit2, Trash2, Search, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Categories = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -153,33 +156,35 @@ const Categories = () => {
                   <th style={{ width: '80px' }}>ID</th>
                   <th>Category Name</th>
                   <th>Description</th>
-                  <th style={{ width: '120px', textAlignment: 'right' }}>Actions</th>
+                  {isAdmin && <th style={{ width: '120px', textAlignment: 'right' }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
-                {filteredCategories.map((category) => (
+                {filteredCategories.map((category, index) => (
                   <tr key={category.id}>
-                    <td>#{category.id}</td>
+                    <td>#{index + 1}</td>
                     <td><strong style={{ color: 'white' }}>{category.name}</strong></td>
                     <td style={{ color: 'var(--text-secondary)' }}>{category.description || 'No description provided'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button 
-                          className="btn-icon edit" 
-                          onClick={() => openEditModal(category)}
-                          title="Edit Category"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button 
-                          className="btn-icon delete" 
-                          onClick={() => handleDelete(category.id, category.name)}
-                          title="Delete Category"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin && (
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button 
+                            className="btn-icon edit" 
+                            onClick={() => openEditModal(category)}
+                            title="Edit Category"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            className="btn-icon delete" 
+                            onClick={() => handleDelete(category.id, category.name)}
+                            title="Delete Category"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
