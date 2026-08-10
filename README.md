@@ -8,7 +8,7 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-06B6D4?logo=tailwindcss&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT-Auth-000000?logo=jsonwebtokens&logoColor=white)
 
@@ -59,7 +59,7 @@
 | **Frontend** | React 18, Vite 5, TailwindCSS 3, Recharts, Lucide Icons, Axios |
 | **Backend** | Java 21, Spring Boot 3.2.5, Spring Security, Spring Data JPA |
 | **Security** | JWT (JJWT 0.12.5), BCrypt, CORS configuration |
-| **Database** | H2 in-memory (dev) / PostgreSQL, Hibernate ORM, HikariCP |
+| **Database** | H2 in-memory (dev) / PostgreSQL 16, Hibernate ORM, HikariCP |
 | **DevOps** | Docker, Docker Compose, Maven 3.9, Node.js 20+ |
 | **Scheduler** | Spring `@Scheduled` — daily alert engine at 6 AM |
 
@@ -113,7 +113,7 @@ MedicalInventoryManagement/
 │   └── vite.config.js
 │
 ├── database/
-│   ├── schema.sql                    # 13-table normalized MySQL schema
+│   ├── schema.sql                    # 13-table normalized PostgreSQL schema
 │   └── sample_data.sql               # Realistic seed data (10 medicines, 10 suppliers...)
 │
 ├── docs/
@@ -152,7 +152,7 @@ npm run dev
 # UI: http://localhost:5173
 ```
 
-### Option B: Docker Compose (MySQL Production Mode)
+### Option B: Docker Compose (PostgreSQL Production Mode)
 
 ```bash
 git clone <repo-url>
@@ -162,26 +162,33 @@ docker-compose up --build
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:80 |
+| Frontend | http://localhost:5173
 | Backend API | http://localhost:8080/api |
-| MySQL | localhost:3306 |
+| PostgreSQL | localhost:5432 |
 
-### Option C: MySQL Manual Setup
+### Option C: PostgreSQL Manual Setup
 
 ```sql
-CREATE DATABASE medical_inventory_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'medinv_user'@'localhost' IDENTIFIED BY 'MedInv@2024';
-GRANT ALL PRIVILEGES ON medical_inventory_db.* TO 'medinv_user'@'localhost';
-mysql -u root -p medical_inventory_db < database/schema.sql
-mysql -u root -p medical_inventory_db < database/sample_data.sql
+CREATE DATABASE medical_inventory_db
+  WITH ENCODING 'UTF8'
+       LC_COLLATE = 'en_US.UTF-8'
+       LC_CTYPE   = 'en_US.UTF-8';
+
+CREATE USER medinv_user WITH PASSWORD 'MedInv@2024';
+GRANT ALL PRIVILEGES ON DATABASE medical_inventory_db TO medinv_user;
+```
+
+```bash
+psql -U postgres -d medical_inventory_db -f database/schema.sql
+psql -U postgres -d medical_inventory_db -f database/sample_data.sql
 ```
 
 Then set environment variables:
 ```
-DB_URL=jdbc:mysql://localhost:3306/medical_inventory_db
+DB_URL=jdbc:postgresql://localhost:5432/medical_inventory_db
 DB_USERNAME=medinv_user
 DB_PASSWORD=MedInv@2024
-DB_DRIVER=com.mysql.cj.jdbc.Driver
+DB_DRIVER=org.postgresql.Driver
 ```
 
 ---
@@ -262,7 +269,7 @@ DB_DRIVER=com.mysql.cj.jdbc.Driver
 └──────────────────────┬───────────────────────────────────┘
                        │ JPA / Hibernate
 ┌──────────────────────▼───────────────────────────────────┐
-│           DATABASE — H2 (dev) / MySQL 8 (prod)           │
+│        DATABASE — H2 (dev) / PostgreSQL 16 (prod)        │
 │  13 Tables · HikariCP Pool · ACID Transactions           │
 │  roles · users · employees · categories · suppliers      │
 │  medicines · inventory · purchases · purchase_items      │
@@ -353,225 +360,84 @@ Create Sale → Check stock → Deduct qty → StockMovement(SALE_OUT) logged
 
 ---
 
+## ⚙️ Spring Boot Configuration (application.yml)
+
+For PostgreSQL production mode, update your `application.yml`:
+
+```yaml
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/medical_inventory_db}
+    username: ${DB_USERNAME:medinv_user}
+    password: ${DB_PASSWORD:MedInv@2024}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+```
+
+And add the PostgreSQL driver dependency to `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <scope>runtime</scope>
+</dependency>
+```
+
+---
+
+## 🐳 Docker Compose (PostgreSQL)
+
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: medical_inventory_db
+      POSTGRES_USER: medinv_user
+      POSTGRES_PASSWORD: MedInv@2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/medical_inventory_db
+      DB_USERNAME: medinv_user
+      DB_PASSWORD: MedInv@2024
+      DB_DRIVER: org.postgresql.Driver
+    depends_on:
+      - postgres
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+```
+
+---
+
 ## 📄 License
 
 Developed for academic purposes — **Infosys Springboard Internship Program · B.Tech CSE**.
 
 ---
 
-*Built with ❤️ using Spring Boot 3.2.5, React 18, Java 21, and TailwindCSS 3*
-
-
-> **B.Tech Computer Science — Final Year Project**
-> A production-ready, full-stack hospital/pharmacy inventory management system
-
-![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=java) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-6DB33F?logo=springboot) ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react) ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql)
-
----
-
-## 📋 Project Overview
-
-MedInventory Pro is an enterprise-level medical inventory management platform designed for hospitals and pharmacies. It provides complete control over medicine catalog management, real-time stock tracking, purchase orders, sales billing, expiry monitoring, and automated alerting.
-
-### Key Features
-- 🔐 **Secure JWT Authentication** with role-based access control (Admin, Pharmacist, Inventory Manager, Staff)
-- 💊 **Medicine Catalog** — complete CRUD with category/supplier management
-- 📦 **Real-Time Inventory** — stock levels, low-stock alerts, expiry tracking
-- 🛒 **Purchase Management** — purchase orders with receive workflow and auto stock update
-- 🧾 **Sales & Billing** — multi-item sales with automatic inventory deduction
-- 🔔 **Smart Alerts** — automated low-stock and expiry alerts with daily scheduler
-- 📊 **Analytics Dashboard** — KPIs, charts, revenue trends
-- 🐳 **Docker Ready** — full containerization with Docker Compose
-
----
-
-## 🛠 Technology Stack
-
-| Layer      | Technology                           |
-|------------|--------------------------------------|
-| Frontend   | React 18, Vite, Tailwind CSS, Recharts |
-| Backend    | Java 21, Spring Boot 3.2.5           |
-| Security   | Spring Security, JWT (JJWT 0.12.5)   |
-| Database   | MySQL 8.0, Spring Data JPA / Hibernate |
-| Containerization | Docker, Docker Compose         |
-| Build Tool | Maven 3.9                            |
-
----
-
-## 📁 Project Structure
-
-```
-MedicalInventoryManagement/
-├── backend/                    # Spring Boot application
-│   ├── src/main/java/com/medicalinventory/
-│   │   ├── controller/         # REST Controllers
-│   │   ├── service/            # Business logic
-│   │   ├── repository/         # Spring Data JPA repositories
-│   │   ├── entity/             # JPA Entities (13 tables)
-│   │   ├── dto/                # Data Transfer Objects
-│   │   ├── security/           # JWT auth filter & config
-│   │   └── exception/          # Global exception handler
-│   ├── src/main/resources/
-│   │   └── application.yml
-│   ├── Dockerfile
-│   └── pom.xml
-├── frontend/                   # React + Vite application
-│   ├── src/
-│   │   ├── pages/              # 10 page components
-│   │   ├── components/         # Sidebar, Navbar
-│   │   ├── context/            # AuthContext
-│   │   ├── api/                # Axios instance + API services
-│   │   ├── layouts/            # MainLayout, AuthLayout
-│   │   └── routes/             # PrivateRoute guard
-│   ├── Dockerfile
-│   └── nginx.conf
-├── database/
-│   ├── schema.sql              # 13-table normalized schema
-│   └── sample_data.sql         # Seed data with demo users
-├── docs/
-│   ├── week1_documentation.md  # Requirements & objectives
-│   └── diagrams.md             # Architecture & ER diagrams
-└── docker-compose.yml
-```
-
----
-
-## 🚀 Quick Start
-
-### Option A: Docker Compose (Recommended)
-```bash
-# Clone and run with Docker
-cd MedicalInventoryManagement
-docker-compose up --build
-```
-- Frontend: http://localhost:80
-- Backend API: http://localhost:8080/api
-- MySQL: localhost:3306
-
-### Option B: Local Development
-
-#### Prerequisites
-- Java 21 JDK, Maven 3.9
-- Node.js 20+, npm
-- MySQL 8.0
-
-#### Database
-```sql
-CREATE DATABASE medical_inventory_db;
-CREATE USER 'medinv_user'@'localhost' IDENTIFIED BY 'MedInv@2024';
-GRANT ALL PRIVILEGES ON medical_inventory_db.* TO 'medinv_user'@'localhost';
-mysql -u root -p medical_inventory_db < database/schema.sql
-mysql -u root -p medical_inventory_db < database/sample_data.sql
-```
-
-#### Backend
-```bash
-cd backend
-mvn clean install
-mvn spring-boot:run
-# Running at http://localhost:8080/api
-```
-
-#### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-# Running at http://localhost:5173
-```
-
----
-
-## 🔑 Default Login Credentials
-
-| Role              | Email                        | Password  |
-|-------------------|------------------------------|-----------|
-| Admin             | admin@medicalinv.com         | Admin@123 |
-| Pharmacist        | pharmacist@medicalinv.com    | Admin@123 |
-| Inventory Manager | inventory@medicalinv.com     | Admin@123 |
-
----
-
-## 🌐 API Endpoints
-
-| Method | Endpoint                    | Description            | Auth Required |
-|--------|-----------------------------|------------------------|---------------|
-| POST   | /api/auth/login             | User login             | ❌ Public     |
-| POST   | /api/auth/register          | New user registration  | ❌ Public     |
-| GET    | /api/dashboard/stats        | Dashboard KPIs         | ✅ JWT        |
-| GET    | /api/medicines              | List medicines         | ✅ JWT        |
-| POST   | /api/medicines              | Create medicine        | ✅ JWT        |
-| GET    | /api/inventory              | List inventory         | ✅ JWT        |
-| GET    | /api/inventory/low-stock    | Low stock items        | ✅ JWT        |
-| POST   | /api/inventory/adjust       | Adjust stock           | ✅ JWT        |
-| GET    | /api/purchases              | List purchases         | ✅ JWT        |
-| PUT    | /api/purchases/{id}/receive | Receive purchase       | ✅ JWT        |
-| GET    | /api/sales                  | List sales             | ✅ JWT        |
-| POST   | /api/sales                  | Create sale            | ✅ JWT        |
-| GET    | /api/alerts/active          | Active alerts          | ✅ JWT        |
-| PUT    | /api/alerts/{id}/resolve    | Resolve alert          | ✅ JWT        |
-
----
-
-## 🏗 Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     React Frontend (Vite)                        │
-│  Pages: Dashboard, Medicines, Inventory, Purchases, Sales,       │
-│         Suppliers, Employees, Alerts, Reports, Profile           │
-│  State: AuthContext (JWT) · API: Axios + Services layer          │
-└─────────────────────────────────────────────────────────────────┘
-                          │ HTTP REST
-┌─────────────────────────────────────────────────────────────────┐
-│               Spring Boot REST API (Port 8080)                    │
-│  Security: JWT Filter → SecurityConfig → Role-based endpoints    │
-│  Layers: Controller → Service → Repository → JPA Entities        │
-│  Scheduled: AlertService @Scheduled(cron) - daily at 6 AM       │
-└─────────────────────────────────────────────────────────────────┘
-                          │ JPA/Hibernate
-┌─────────────────────────────────────────────────────────────────┐
-│                  MySQL 8.0 Database                               │
-│  13 Tables: users, roles, employees, categories, suppliers,      │
-│             medicines, inventory, purchases, purchase_items,      │
-│             sales, sale_items, stock_movements, alerts           │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🧪 Testing
-
-```bash
-# Backend unit/integration tests
-cd backend && mvn test
-
-# Frontend (if configured)
-cd frontend && npm test
-```
-
----
-
-## 👥 Role-Based Access Control
-
-| Feature             | ADMIN | PHARMACIST | INV. MANAGER | STAFF |
-|---------------------|-------|------------|--------------|-------|
-| Dashboard           | ✅    | ✅         | ✅           | ✅    |
-| Medicines CRUD      | ✅    | ✅         | ✅           | 👁️   |
-| Inventory View      | ✅    | ✅         | ✅           | ✅    |
-| Stock Adjustment    | ✅    | ❌         | ✅           | ❌    |
-| Purchases           | ✅    | ❌         | ✅           | ❌    |
-| Sales               | ✅    | ✅         | ❌           | ❌    |
-| Suppliers           | ✅    | ❌         | ✅           | ❌    |
-| Reports             | ✅    | ❌         | ✅           | ❌    |
-| User Management     | ✅    | ❌         | ❌           | ❌    |
-
----
-
-## 📄 License
-
-This project is developed for academic purposes as part of a B.Tech Computer Science final year project.
-
----
-
-*Built with ❤️ using Spring Boot 3, React 18, and Java 21*
+*Built with ❤️ using Spring Boot 3.2.5, React 18, Java 21, TailwindCSS 3, and PostgreSQL 16*
