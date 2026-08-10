@@ -28,6 +28,7 @@ export default function SidebarLayout({ isOpen, onClose }) {
     { name: 'Dashboard', path: userDashboardPath, icon: LayoutDashboard },
     { name: 'Medicines', path: '/medicines', icon: Pill },
     { name: 'Categories', path: '/categories', icon: Boxes },
+    { name: 'Prescription Orders', path: '/prescription-orders', icon: FileText, badge: 'Rx Order' },
   ];
 
   if (isAdmin || isPharmacist || isStaff) {
@@ -41,6 +42,8 @@ export default function SidebarLayout({ isOpen, onClose }) {
     primaryNavItems.push(
       { name: 'Suppliers', path: '/suppliers', icon: Truck },
       { name: 'Purchase Orders', path: '/purchase-orders', icon: ShoppingCart },
+      { name: 'Rx Verification Queue', path: '/pharmacist/verify', icon: ShieldCheck, badge: 'Pharmacist' },
+      { name: 'In-Store POS Counter', path: '/store-counter', icon: Store, badge: 'POS' },
       { name: 'Reports', path: '/reports', icon: FileText }
     );
   }

@@ -22,6 +22,9 @@ import ReportsPage from '../features/reports/pages/ReportsPage';
 import NotificationsPage from '../features/notifications/pages/NotificationsPage';
 import ProfilePage from '../features/profile/pages/ProfilePage';
 import UsersPage from '../features/users/pages/UsersPage';
+import PrescriptionOrderPage from '../features/prescription/pages/PrescriptionOrderPage';
+import PharmacistVerificationPage from '../features/prescription/pages/PharmacistVerificationPage';
+import StoreCounterPurchasePage from '../features/prescription/pages/StoreCounterPurchasePage';
 
 function RoleDashboardRedirect() {
   const { getDashboardPath } = useAuth();

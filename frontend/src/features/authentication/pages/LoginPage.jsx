@@ -142,9 +142,10 @@ export default function LoginPage() {
       });
 
       if (res.token) {
-        await loginWithToken(res.token);
+        const userData = await loginWithToken(res.token);
         toast.success(`Account created! Welcome to MediStock, ${regFirstName}.`);
-        navigate(from, { replace: true });
+        const target = userData ? getRoleDashboardPath(userData) : getDashboardPath();
+        navigate(target, { replace: true });
       } else {
         toast.success('Account registered successfully! Please sign in.');
         setAuthMode('login');
