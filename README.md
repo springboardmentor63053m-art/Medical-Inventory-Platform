@@ -59,7 +59,7 @@
 | **Frontend** | React 18, Vite 5, TailwindCSS 3, Recharts, Lucide Icons, Axios |
 | **Backend** | Java 21, Spring Boot 3.2.5, Spring Security, Spring Data JPA |
 | **Security** | JWT (JJWT 0.12.5), BCrypt, CORS configuration |
-| **Database** | H2 in-memory (dev) / MySQL 8.0 (prod), Hibernate ORM, HikariCP |
+| **Database** | H2 in-memory (dev) / PostgreSQL, Hibernate ORM, HikariCP |
 | **DevOps** | Docker, Docker Compose, Maven 3.9, Node.js 20+ |
 | **Scheduler** | Spring `@Scheduled` — daily alert engine at 6 AM |
 
