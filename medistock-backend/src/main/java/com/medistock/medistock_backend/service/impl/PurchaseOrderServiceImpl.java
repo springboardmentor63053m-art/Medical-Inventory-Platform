@@ -37,7 +37,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseOrderResponse> getAllPurchaseOrders() {
-        return purchaseOrderRepository.findAll().stream()
+        Long supplierId = getAuthenticatedSupplierIdIfSupplierRole();
+        List<PurchaseOrder> list = supplierId != null ?
+                purchaseOrderRepository.findBySupplierId(supplierId) :
+                purchaseOrderRepository.findAll();
+        return list.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -47,6 +51,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     public PurchaseOrderResponse getPurchaseOrderById(Long id) {
         PurchaseOrder order = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found with id: " + id));
+        Long supplierId = getAuthenticatedSupplierIdIfSupplierRole();
+        if (supplierId != null && (order.getSupplier() == null || !order.getSupplier().getId().equals(supplierId))) {
+            throw new BadRequestException("Access denied: You cannot view purchase orders for another supplier");
+        }
         return mapToResponse(order);
     }
 
@@ -55,15 +63,42 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     public PurchaseOrderResponse getPurchaseOrderByOrderNumber(String orderNumber) {
         PurchaseOrder order = purchaseOrderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found with number: " + orderNumber));
+        Long supplierId = getAuthenticatedSupplierIdIfSupplierRole();
+        if (supplierId != null && (order.getSupplier() == null || !order.getSupplier().getId().equals(supplierId))) {
+            throw new BadRequestException("Access denied: You cannot view purchase orders for another supplier");
+        }
         return mapToResponse(order);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PurchaseOrderResponse> getPurchaseOrdersByStatus(OrderStatus status) {
-        return purchaseOrderRepository.findByStatus(status).stream()
+        Long supplierId = getAuthenticatedSupplierIdIfSupplierRole();
+        List<PurchaseOrder> list = purchaseOrderRepository.findByStatus(status);
+        if (supplierId != null) {
+            list = list.stream()
+                    .filter(o -> o.getSupplier() != null && o.getSupplier().getId().equals(supplierId))
+                    .collect(Collectors.toList());
+        }
+        return list.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    private Long getAuthenticatedSupplierIdIfSupplierRole() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_SUPPLIER"))) {
+            String username = auth.getName();
+            User user = userRepository.findByUsername(username).orElse(null);
+            if (user != null) {
+                Supplier supplier = supplierRepository.findByUserId(user.getId())
+                        .orElseGet(() -> supplierRepository.findByEmail(user.getEmail()).orElse(null));
+                if (supplier != null) {
+                    return supplier.getId();
+                }
+            }
+        }
+        return null;
     }
 
     @Override

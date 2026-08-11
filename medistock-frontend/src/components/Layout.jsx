@@ -24,7 +24,13 @@ const Layout = () => {
       path: '/',
       label: 'Dashboard',
       icon: <LayoutDashboard />,
-      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_SUPPLIER', 'ROLE_USER', 'ROLE_STAFF']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_DOCTOR', 'ROLE_USER', 'ROLE_STAFF']
+    },
+    {
+      path: '/supplier/dashboard',
+      label: 'Supplier Dashboard',
+      icon: <LayoutDashboard />,
+      roles: ['ROLE_SUPPLIER']
     },
     {
       path: '/medicines',

@@ -27,6 +27,11 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.medistock.medistock_backend.entity.Supplier;
+import com.medistock.medistock_backend.repository.SupplierRepository;
+import java.util.List;
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -34,6 +39,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final SupplierRepository supplierRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
 
@@ -96,6 +102,12 @@ public class AuthServiceImpl implements AuthService {
         Set<Role> roles = new HashSet<>();
         Set<ERole> requestedRoles = resolveRequestedRoles(registerRequest.getRoles());
 
+        if (requestedRoles.contains(ERole.ROLE_ADMIN)) {
+            if (userRepository.existsByRoles_Name(ERole.ROLE_ADMIN)) {
+                throw new BadRequestException("Admin account already exists. Only one Admin is allowed.");
+            }
+        }
+
         for (ERole eRole : requestedRoles) {
             Role role = roleRepository.findByName(eRole)
                     .orElseGet(() -> roleRepository.save(Role.builder().name(eRole).build()));
@@ -104,6 +116,45 @@ public class AuthServiceImpl implements AuthService {
 
         user.setRoles(roles);
         User savedUser = userRepository.save(user);
+
+        if (requestedRoles.contains(ERole.ROLE_SUPPLIER)) {
+            String supplierName = registerRequest.getFullName() != null && !registerRequest.getFullName().isBlank()
+                    ? registerRequest.getFullName()
+                    : registerRequest.getUsername();
+
+            Optional<Supplier> existingSupplierOpt = Optional.empty();
+            if (registerRequest.getEmail() != null && !registerRequest.getEmail().isBlank()) {
+                existingSupplierOpt = supplierRepository.findByEmail(registerRequest.getEmail());
+            }
+            if (existingSupplierOpt.isEmpty() && supplierName != null) {
+                List<Supplier> byName = supplierRepository.findByNameContainingIgnoreCase(supplierName);
+                if (!byName.isEmpty()) {
+                    existingSupplierOpt = Optional.of(byName.get(0));
+                }
+            }
+
+            if (existingSupplierOpt.isPresent()) {
+                Supplier existing = existingSupplierOpt.get();
+                existing.setUser(savedUser);
+                if (registerRequest.getPhone() != null && !registerRequest.getPhone().isBlank()) {
+                    existing.setPhone(registerRequest.getPhone());
+                }
+                if (registerRequest.getAddress() != null && !registerRequest.getAddress().isBlank()) {
+                    existing.setAddress(registerRequest.getAddress());
+                }
+                supplierRepository.save(existing);
+            } else {
+                Supplier supplier = Supplier.builder()
+                        .name(supplierName)
+                        .contactPerson(registerRequest.getFullName())
+                        .email(registerRequest.getEmail())
+                        .phone(registerRequest.getPhone())
+                        .address(registerRequest.getAddress())
+                        .user(savedUser)
+                        .build();
+                supplierRepository.save(supplier);
+            }
+        }
 
         return UserDto.builder()
                 .id(savedUser.getId())
@@ -142,8 +193,8 @@ public class AuthServiceImpl implements AuthService {
 
         for (String roleStr : incomingRoles) {
             String normalizedRole = normalizeRoleName(roleStr);
-            if (!normalizedRole.equals("ROLE_PHARMACIST") && !normalizedRole.equals("ROLE_STAFF")) {
-                throw new BadRequestException("Only pharmacist and staff roles are allowed for registration.");
+            if (!normalizedRole.equals("ROLE_PHARMACIST") && !normalizedRole.equals("ROLE_STAFF") && !normalizedRole.equals("ROLE_SUPPLIER")) {
+                throw new BadRequestException("Only pharmacist, staff, and supplier roles are allowed for registration.");
             }
             resolvedRoles.add(ERole.valueOf(normalizedRole));
         }

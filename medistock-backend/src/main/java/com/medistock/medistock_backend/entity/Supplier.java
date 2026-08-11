@@ -32,6 +32,10 @@ public class Supplier {
 
     private String address;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    private User user;
+
     @OneToMany(mappedBy = "supplier")
     @JsonIgnore
     @Builder.Default

@@ -27,5 +27,6 @@ public class MedicineResponse {
     private SupplierDto supplier;
     private Integer currentStock;
     private Integer reorderLevel;
+    private Integer supplierAvailableQuantity;
     private List<StockStatus> stockStatus;
 }

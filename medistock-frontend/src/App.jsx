@@ -16,6 +16,7 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import Users from './pages/Users';
 import Billing from './pages/Billing';
 import SalesHistory from './pages/SalesHistory';
+import SupplierDashboard from './pages/supplier/SupplierDashboard';
 
 function App() {
   return (
@@ -31,6 +32,11 @@ function App() {
             <Route element={<Layout />}>
               {/* Dashboard accessible by all roles */}
               <Route path="/" element={<Dashboard />} />
+
+              {/* Supplier Dashboard accessible by Supplier */}
+              <Route element={<ProtectedRoute allowedRoles={['ROLE_SUPPLIER']} />}>
+                <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
+              </Route>
 
               {/* Medicines catalog accessible by all roles */}
               <Route path="/medicines" element={<Medicines />} />

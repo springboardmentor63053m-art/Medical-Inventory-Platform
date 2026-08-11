@@ -86,8 +86,16 @@ const Register = () => {
             <select name="roles" id="role" value={formData.roles[0]} onChange={(e) => setFormData((prev) => ({ ...prev, roles: [e.target.value] }))} disabled={submitting}>
               <option value="ROLE_STAFF">Staff</option>
               <option value="ROLE_PHARMACIST">Pharmacist</option>
+              <option value="ROLE_SUPPLIER">Supplier</option>
             </select>
           </div>
+
+          {formData.roles[0] === 'ROLE_SUPPLIER' && (
+            <div className="form-group">
+              <label htmlFor="address">Company / Supplier Address</label>
+              <input name="address" id="address" value={formData.address || ''} onChange={handleChange} placeholder="Enter company address" disabled={submitting} />
+            </div>
+          )}
 
           <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '44px' }} disabled={submitting}>
             {submitting ? 'Creating account...' : 'Create account'}
