@@ -31,9 +31,12 @@ const Login = () => {
     setLocalError('');
 
     try {
-      // Forward-compatible selectedRole parameter
-      await login(username, password, selectedRole);
-      navigate('/', { replace: true });
+      const res = await login(username, password, selectedRole);
+      if (res && res.roles && res.roles.includes('ROLE_SUPPLIER')) {
+        navigate('/supplier/dashboard', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       setLocalError(err.message || 'Login failed. Please verify credentials.');
     } finally {
@@ -110,6 +113,7 @@ const Login = () => {
                 <option value="ROLE_ADMIN">Admin</option>
                 <option value="ROLE_PHARMACIST">Pharmacist</option>
                 <option value="ROLE_STAFF">Staff</option>
+                <option value="ROLE_SUPPLIER">Supplier</option>
               </select>
               <Shield className="input-icon" />
             </div>

@@ -373,7 +373,9 @@ const PurchaseOrders = () => {
                     >
                       <option value="">Select Medicine</option>
                       {medicines.map(m => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.code})</option>
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.code}) {m.supplierAvailableQuantity !== undefined ? `- Avail: ${m.supplierAvailableQuantity} units` : ''}
+                        </option>
                       ))}
                     </select>
 

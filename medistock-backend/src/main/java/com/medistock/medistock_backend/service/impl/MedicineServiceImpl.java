@@ -303,6 +303,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .supplier(supplierDto)
                 .currentStock(stock)
                 .reorderLevel(reorder)
+                .supplierAvailableQuantity(medicine.getSupplierAvailableQuantity() != null ? medicine.getSupplierAvailableQuantity() : 0)
                 .stockStatus(calculateStockStatus(medicine))
                 .build();
     }

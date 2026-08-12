@@ -64,6 +64,75 @@ const Medicines = () => {
 
   // Permission Checks: ADMIN and PHARMACIST can modify
   const canModify = user?.roles?.some(role => ['ROLE_ADMIN', 'ROLE_PHARMACIST'].includes(role));
+  const isSupplier = user?.roles?.includes('ROLE_SUPPLIER');
+
+  // Supplier medicine management modal state
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
+  const [supplierAllMeds, setSupplierAllMeds] = useState([]);
+  const [selectedSupplierMedId, setSelectedSupplierMedId] = useState('');
+  const [supplierAvailQty, setSupplierAvailQty] = useState(0);
+  const [submittingSupplierMed, setSubmittingSupplierMed] = useState(false);
+  const [supplierFormError, setSupplierFormError] = useState('');
+
+  const openSupplierAddModal = async (med = null) => {
+    setSupplierFormError('');
+    setSupplierAvailQty(med ? (med.supplierAvailableQuantity || 0) : 0);
+    setSelectedSupplierMedId(med ? med.id.toString() : '');
+    try {
+      const res = await api.get('/medicines');
+      if (res.data.success) {
+        const list = Array.isArray(res.data.data) ? res.data.data : (res.data.data.content || []);
+        setSupplierAllMeds(list);
+        if (!med && list.length > 0) {
+          setSelectedSupplierMedId(list[0].id.toString());
+          setSupplierAvailQty(list[0].supplierAvailableQuantity || 0);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading master medicines', err);
+    }
+    setSupplierModalOpen(true);
+  };
+
+  const handleSaveSupplierAvailability = async (e) => {
+    e.preventDefault();
+    if (!selectedSupplierMedId) {
+      setSupplierFormError('Please select a medicine');
+      return;
+    }
+    try {
+      setSubmittingSupplierMed(true);
+      setSupplierFormError('');
+      const res = await api.put(`/supplier/medicines/${selectedSupplierMedId}/availability`, null, {
+        params: { availableQuantity: parseInt(supplierAvailQty) || 0 }
+      });
+      if (res.data.success) {
+        setSupplierModalOpen(false);
+        fetchMedicines();
+      } else {
+        setSupplierFormError(res.data.message || 'Failed to update medicine availability');
+      }
+    } catch (err) {
+      setSupplierFormError(err.response?.data?.message || err.message || 'Error updating medicine availability');
+    } finally {
+      setSubmittingSupplierMed(false);
+    }
+  };
+
+  const handleRemoveSupplierMedicine = async (medId, medName) => {
+    if (window.confirm(`Are you sure you want to remove "${medName}" from your supplied medicines list?`)) {
+      try {
+        const res = await api.delete(`/supplier/medicines/${medId}`);
+        if (res.data.success) {
+          fetchMedicines();
+        } else {
+          alert(res.data.message || 'Failed to remove medicine');
+        }
+      } catch (err) {
+        alert(err.response?.data?.message || err.message || 'Error removing medicine');
+      }
+    }
+  };
 
   const fetchInitialFilters = async () => {
     try {
@@ -414,6 +483,13 @@ const Medicines = () => {
               <span>Add Medicine</span>
             </button>
           )}
+
+          {isSupplier && (
+            <button className="btn btn-primary" onClick={() => openSupplierAddModal(null)} style={{ height: '42px' }}>
+              <Plus size={16} />
+              <span>Add Medicine to Supply List</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -468,7 +544,9 @@ const Medicines = () => {
                         {getSortIcon('EXPIRY_DATE')}
                       </div>
                     </th>
-                    {canModify && <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', width: '120px', textAlign: 'right' }}>Actions</th>}
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Supplier</th>
+                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Supplier Avail Qty</th>
+                    {(canModify || isSupplier) && <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', width: '120px', textAlign: 'right' }}>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -485,23 +563,55 @@ const Medicines = () => {
                       <td><strong>{med.currentStock || 0} unit(s)</strong></td>
                       <td>{renderStockBadge(med)}</td>
                       <td>{med.expiryDate || 'N/A'}</td>
-                      {canModify && (
+                      <td>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                          {med.supplier?.name || 'Unassigned'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge-success" style={{ fontWeight: 600 }}>
+                          {med.supplierAvailableQuantity || 0} units
+                        </span>
+                      </td>
+                      {(canModify || isSupplier) && (
                         <td>
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                            <button 
-                              className="btn-icon edit" 
-                              onClick={() => openEditModal(med)}
-                              title="Edit Details"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button 
-                              className="btn-icon delete" 
-                              onClick={() => handleDelete(med.id, med.name)}
-                              title="Remove Medicine"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {canModify && (
+                              <>
+                                <button 
+                                  className="btn-icon edit" 
+                                  onClick={() => openEditModal(med)}
+                                  title="Edit Details"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button 
+                                  className="btn-icon delete" 
+                                  onClick={() => handleDelete(med.id, med.name)}
+                                  title="Remove Medicine"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
+                            {isSupplier && (
+                              <>
+                                <button 
+                                  className="btn-icon edit" 
+                                  onClick={() => openSupplierAddModal(med)}
+                                  title="Edit Available Quantity"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button 
+                                  className="btn-icon delete" 
+                                  onClick={() => handleRemoveSupplierMedicine(med.id, med.name)}
+                                  title="Remove from Supply List"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       )}
@@ -743,6 +853,74 @@ const Medicines = () => {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting ? 'Saving...' : 'Save Medicine'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Supplier Medicine Availability Modal */}
+      {supplierModalOpen && (
+        <div className="modal-overlay">
+          <div className="card modal-content" style={{ maxWidth: '520px' }}>
+            <div className="card-header-flex">
+              <h3 style={{ fontFamily: 'Outfit, sans-serif' }}>Manage Supplied Medicine Availability</h3>
+              <button className="btn-icon" onClick={() => setSupplierModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {supplierFormError && <div className="alert alert-danger">{supplierFormError}</div>}
+
+            <form onSubmit={handleSaveSupplierAvailability}>
+              <div className="form-group">
+                <label htmlFor="supMedSelect">Select Existing Medicine *</label>
+                <select
+                  id="supMedSelect"
+                  value={selectedSupplierMedId}
+                  onChange={(e) => {
+                    setSelectedSupplierMedId(e.target.value);
+                    const selected = supplierAllMeds.find(m => m.id.toString() === e.target.value);
+                    if (selected) {
+                      setSupplierAvailQty(selected.supplierAvailableQuantity || 0);
+                    }
+                  }}
+                  disabled={submittingSupplierMed}
+                  required
+                >
+                  <option value="">-- Choose Existing Medicine --</option>
+                  {supplierAllMeds.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.code}) {m.supplier?.name ? `- Currently Supplied By: ${m.supplier.name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="supQtyInput">Available Supplier Quantity (Units) *</label>
+                <input
+                  id="supQtyInput"
+                  type="number"
+                  min="0"
+                  value={supplierAvailQty}
+                  onChange={(e) => setSupplierAvailQty(e.target.value)}
+                  placeholder="e.g. 500"
+                  disabled={submittingSupplierMed}
+                  required
+                />
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Specify how many units of this medicine your firm has currently ready for supply.
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ marginTop: '20px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setSupplierModalOpen(false)} disabled={submittingSupplierMed}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submittingSupplierMed}>
+                  {submittingSupplierMed ? 'Saving...' : 'Save to Supply List'}
                 </button>
               </div>
             </form>
