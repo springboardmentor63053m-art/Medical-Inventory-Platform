@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { medicineService } from '../../../services/api/medicineService';
 import { inventoryService } from '../../../services/api/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -18,7 +19,7 @@ import {
 
 export default function StaffDashboardPage() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();  const [loading, setLoading] = useState(true);
   const [medicines, setMedicines] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,44 +93,87 @@ export default function StaffDashboardPage() {
         </button>
       </div>
 
-      {/* Staff KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {/* Total Medicines */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Total Medicines</p>
-            <h3 className="text-2xl font-black text-slate-900 mt-1">{totalMedicines}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Master Formulations Catalog</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <Pill className="w-6 h-6" />
-          </div>
-        </div>
+{/* Staff KPI Summary Cards */}
+<div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
 
-        {/* Available Stock */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Available Stock Batches</p>
-            <h3 className="text-2xl font-black text-emerald-700 mt-1">{availableStockCount}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Active Inventory Batches</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <Package className="w-6 h-6" />
-          </div>
-        </div>
+  {/* Total Medicines */}
+  <button
+    type="button"
+    onClick={() => navigate('/medicines')}
+    className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+  >
+    <div>
+      <p className="text-xs font-semibold text-slate-500">
+        Total Medicines
+      </p>
 
-        {/* Low Stock Alerts */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-amber-700">Low Stock Alerts</p>
-            <h3 className="text-2xl font-black text-amber-700 mt-1">{lowStockCount}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">At or Below Reorder Threshold</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
+      <h3 className="text-2xl font-black text-slate-900 mt-1">
+        {totalMedicines}
+      </h3>
+
+      <p className="text-[11px] text-slate-400 mt-0.5">
+        Master Formulations Catalog
+      </p>
+    </div>
+
+    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+      <Pill className="w-6 h-6" />
+    </div>
+  </button>
+
+
+  {/* Available Stock */}
+  <button
+    type="button"
+    onClick={() => navigate('/inventory')}
+    className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+  >
+    <div>
+      <p className="text-xs font-semibold text-slate-500">
+        Available Stock Batches
+      </p>
+
+      <h3 className="text-2xl font-black text-emerald-700 mt-1">
+        {availableStockCount}
+      </h3>
+
+      <p className="text-[11px] text-slate-400 mt-0.5">
+        Active Inventory Batches
+      </p>
+    </div>
+
+    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+      <Package className="w-6 h-6" />
+    </div>
+  </button>
+
+
+  {/* Low Stock Alerts */}
+  <button
+    type="button"
+    onClick={() => navigate('/inventory')}
+    className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-amber-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+  >
+    <div>
+      <p className="text-xs font-semibold text-amber-700">
+        Low Stock Alerts
+      </p>
+
+      <h3 className="text-2xl font-black text-amber-700 mt-1">
+        {lowStockCount}
+      </h3>
+
+      <p className="text-[11px] text-slate-400 mt-0.5">
+        At or Below Reorder Threshold
+      </p>
+    </div>
+
+    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+      <AlertTriangle className="w-6 h-6" />
+    </div>
+  </button>
+
+</div>
 
       {/* Main Section: Search & Permitted Medicine List */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
