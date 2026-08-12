@@ -1,0 +1,337 @@
+/* ============================================================
+   MEDISTOCK - SUPPLIER PROFILE
+   ============================================================ */
+
+.supplier-profile-page {
+  min-height: 100vh;
+  padding: 32px 42px 60px;
+  box-sizing: border-box;
+  background: #f5f7fb;
+  color: #17233d;
+}
+
+/* HEADER */
+
+.supplier-profile-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.supplier-profile-eyebrow {
+  margin-bottom: 7px;
+  color: #6f87a7;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.7px;
+}
+
+.supplier-profile-header h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.supplier-profile-header p {
+  margin: 8px 0 0;
+  color: #7d92ae;
+  font-size: 15px;
+}
+
+.supplier-profile-edit {
+  height: 46px;
+  padding: 0 20px;
+  border: 1px solid #dce5f2;
+  border-radius: 11px;
+  background: #fff;
+  color: #2864e8;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* PROFILE CARD */
+
+.supplier-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  padding: 25px;
+
+  margin-bottom: 20px;
+
+  border: 1px solid #dce7f4;
+  border-radius: 19px;
+
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #f7faff 100%
+  );
+
+  box-shadow: 0 8px 25px rgba(30, 55, 95, 0.04);
+}
+
+.supplier-profile-avatar {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 18px;
+
+  background: #edf4ff;
+  color: #2864e8;
+
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.supplier-profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.supplier-profile-main h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.supplier-profile-main p {
+  margin: 5px 0 8px;
+  color: #7d92ae;
+  font-size: 13px;
+}
+
+.supplier-profile-id {
+  color: #526b8b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.supplier-profile-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  background: #e9f9f1;
+  color: #008f61;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.supplier-profile-active i,
+.supplier-profile-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* SECTIONS */
+
+.supplier-profile-section {
+  margin-bottom: 20px;
+  padding: 23px 25px;
+
+  border: 1px solid #e1e8f2;
+  border-radius: 19px;
+
+  background: #fff;
+
+  box-shadow: 0 7px 22px rgba(30, 55, 95, 0.04);
+}
+
+.supplier-profile-section-header {
+  margin-bottom: 20px;
+}
+
+.supplier-profile-section-header h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.supplier-profile-section-header p {
+  margin: 5px 0 0;
+  color: #8497b1;
+  font-size: 13px;
+}
+
+/* GRID */
+
+.supplier-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.supplier-profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.supplier-profile-field label {
+  color: #8193aa;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+}
+
+.supplier-profile-field strong {
+  color: #263a58;
+  font-size: 14px;
+}
+
+.supplier-profile-field input {
+  width: 100%;
+  height: 44px;
+  box-sizing: border-box;
+
+  padding: 0 12px;
+
+  border: 1px solid #dce5f1;
+  border-radius: 9px;
+
+  outline: none;
+
+  color: #17233d;
+  font-size: 14px;
+}
+
+.supplier-profile-field input:focus {
+  border-color: #6d9bf1;
+  box-shadow: 0 0 0 4px rgba(40, 100, 232, 0.08);
+}
+
+.supplier-profile-wide {
+  grid-column: span 2;
+}
+
+.supplier-profile-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  width: fit-content;
+
+  padding: 6px 10px;
+
+  border-radius: 999px;
+
+  background: #e9f9f1;
+  color: #008f61;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* SAVE */
+
+.supplier-profile-save-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #edf1f6;
+}
+
+.supplier-profile-save {
+  height: 44px;
+  padding: 0 18px;
+
+  border: 0;
+  border-radius: 10px;
+
+  background: #2864e8;
+  color: #fff;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+/* ACCOUNT */
+
+.supplier-profile-security {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  padding: 18px 20px;
+
+  border: 1px solid #d9eee5;
+  border-radius: 15px;
+
+  background: #f1fbf7;
+}
+
+.supplier-profile-security-icon {
+  width: 43px;
+  height: 43px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 12px;
+
+  background: #dff6eb;
+  color: #008f61;
+
+  font-weight: 800;
+}
+
+.supplier-profile-security h3 {
+  margin: 0;
+  color: #16664f;
+  font-size: 14px;
+}
+
+.supplier-profile-security p {
+  margin: 4px 0 0;
+  color: #669487;
+  font-size: 12px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 700px) {
+  .supplier-profile-page {
+    padding: 22px 18px 40px;
+  }
+
+  .supplier-profile-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .supplier-profile-edit {
+    width: 100%;
+  }
+
+  .supplier-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .supplier-profile-wide {
+    grid-column: span 1;
+  }
+
+  .supplier-profile-name-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+}

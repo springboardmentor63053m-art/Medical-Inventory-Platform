@@ -1,102 +1,700 @@
-import React from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Pill, Users, Building2, Package, ShoppingCart, LogOut, FileText, Bell, ClipboardList, ShieldCheck, History, CalendarClock } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import {
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
-const SIDEBAR_ITEMS = [
-  { title: "Dashboard", href: "/", icon: LayoutDashboard },
-  { title: "Medicines", href: "/medicines", icon: Pill },
-  { title: "Inventory", href: "/inventory", icon: Package },
-  { title: "Suppliers", href: "/suppliers", icon: Building2 },
-  { title: "Purchases", href: "/purchases", icon: ShoppingCart },
-  { title: "Purchase items", href: "/purchase-items", icon: ClipboardList },
-  { title: "Reports", href: "/reports", icon: FileText },
-  { title: "Expiry tracking", href: "/expiries", icon: CalendarClock },
-  { title: "Stock activity", href: "/stock-activity", icon: History },
-  { title: "Notifications", href: "/notifications", icon: Bell },
-  { title: "Users", href: "/users", icon: Users },
-  { title: "Roles", href: "/roles", icon: ShieldCheck },
+import {
+  LayoutDashboard,
+  Pill,
+  Package,
+  Truck,
+  ShoppingCart,
+  ClipboardList,
+  FileText,
+  Activity,
+  Clock3,
+  Bell,
+  Users,
+  ShieldCheck,
+  Settings,
+  LogOut,
+} from "lucide-react";
+
+type MenuItem = {
+  label: string;
+  path: string;
+  icon: JSX.Element;
+};
+
+function getRole(): string {
+  try {
+    const role = localStorage.getItem("role");
+
+    if (role) {
+      return role
+        .replace("ROLE_", "")
+        .toUpperCase();
+    }
+
+    const userText =
+      localStorage.getItem("user");
+
+    if (userText) {
+      const user = JSON.parse(userText);
+
+      if (
+        user?.roles &&
+        Array.isArray(user.roles) &&
+        user.roles.length > 0
+      ) {
+        return String(user.roles[0])
+          .replace("ROLE_", "")
+          .toUpperCase();
+      }
+    }
+
+    const rolesText =
+      localStorage.getItem("roles");
+
+    if (rolesText) {
+      const roles = JSON.parse(rolesText);
+
+      if (
+        Array.isArray(roles) &&
+        roles.length > 0
+      ) {
+        return String(roles[0])
+          .replace("ROLE_", "")
+          .toUpperCase();
+      }
+    }
+  } catch (error) {
+    console.error(
+      "Unable to read role:",
+      error
+    );
+  }
+
+  return "USER";
+}
+
+function getUsername(): string {
+  try {
+    const username =
+      localStorage.getItem("username");
+
+    if (username) {
+      return username;
+    }
+
+    const userText =
+      localStorage.getItem("user");
+
+    if (userText) {
+      const user = JSON.parse(userText);
+
+      return (
+        user?.username ||
+        user?.name ||
+        "User"
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Unable to read username:",
+      error
+    );
+  }
+
+  return "User";
+}
+
+
+/* =========================================================
+   ADMIN MENU
+========================================================= */
+
+const adminMenu: MenuItem[] = [
+  {
+    label: "Dashboard",
+    path: "/admin/dashboard",
+    icon: <LayoutDashboard size={20} />,
+  },
+  {
+    label: "Medicines",
+    path: "/admin/medicines",
+    icon: <Pill size={20} />,
+  },
+  {
+    label: "Inventory",
+    path: "/admin/inventory",
+    icon: <Package size={20} />,
+  },
+  {
+    label: "Suppliers",
+    path: "/admin/suppliers",
+    icon: <Truck size={20} />,
+  },
+  {
+    label: "Purchases",
+    path: "/admin/purchases",
+    icon: <ShoppingCart size={20} />,
+  },
+  {
+    label: "Purchase Items",
+    path: "/admin/purchase-items",
+    icon: <ClipboardList size={20} />,
+  },
+  {
+    label: "Reports",
+    path: "/admin/reports",
+    icon: <FileText size={20} />,
+  },
+  {
+    label: "Stock Activity",
+    path: "/admin/stock-activity",
+    icon: <Activity size={20} />,
+  },
+  {
+    label: "Expiry Tracking",
+    path: "/admin/expiries",
+    icon: <Clock3 size={20} />,
+  },
+  {
+    label: "Notifications",
+    path: "/admin/notifications",
+    icon: <Bell size={20} />,
+  },
+  {
+    label: "Users",
+    path: "/admin/users",
+    icon: <Users size={20} />,
+  },
+  {
+    label: "Roles",
+    path: "/admin/roles",
+    icon: <ShieldCheck size={20} />,
+  },
 ];
 
-export const DashboardLayout = () => {
-  const { user, logout } = useAuth();
+
+/* =========================================================
+   USER MENU
+========================================================= */
+
+const userMenu: MenuItem[] = [
+  {
+    label: "Dashboard",
+    path: "/user/dashboard",
+    icon: <LayoutDashboard size={20} />,
+  },
+  {
+    label: "Medicines",
+    path: "/user/medicines",
+    icon: <Pill size={20} />,
+  },
+  {
+    label: "My Purchases",
+    path: "/user/purchases",
+    icon: <ShoppingCart size={20} />,
+  },
+  {
+    label: "Notifications",
+    path: "/user/notifications",
+    icon: <Bell size={20} />,
+  },
+];
+
+
+/* =========================================================
+   PHARMACIST MENU
+========================================================= */
+
+const pharmacistMenu: MenuItem[] = [
+  {
+    label: "Dashboard",
+    path: "/pharmacist/dashboard",
+    icon: <LayoutDashboard size={20} />,
+  },
+  {
+    label: "Medicines",
+    path: "/pharmacist/medicines",
+    icon: <Pill size={20} />,
+  },
+  {
+    label: "Inventory",
+    path: "/pharmacist/inventory",
+    icon: <Package size={20} />,
+  },
+  {
+    label: "Purchases",
+    path: "/pharmacist/purchases",
+    icon: <ShoppingCart size={20} />,
+  },
+  {
+    label: "Purchase Items",
+    path: "/pharmacist/purchase-items",
+    icon: <ClipboardList size={20} />,
+  },
+  {
+    label: "Expiry Tracking",
+    path: "/pharmacist/expiries",
+    icon: <Clock3 size={20} />,
+  },
+  {
+    label: "Notifications",
+    path: "/pharmacist/notifications",
+    icon: <Bell size={20} />,
+  },
+];
+
+
+/* =========================================================
+   SUPPLIER MENU
+========================================================= */
+
+const supplierMenu: MenuItem[] = [
+  {
+    label: "Dashboard",
+    path: "/supplier/dashboard",
+    icon: <LayoutDashboard size={20} />,
+  },
+  {
+    label: "Suppliers",
+    path: "/supplier/suppliers",
+    icon: <Truck size={20} />,
+  },
+  {
+    label: "Purchases",
+    path: "/supplier/purchases",
+    icon: <ShoppingCart size={20} />,
+  },
+  {
+    label: "Purchase Items",
+    path: "/supplier/purchase-items",
+    icon: <ClipboardList size={20} />,
+  },
+  {
+    label: "Notifications",
+    path: "/supplier/notifications",
+    icon: <Bell size={20} />,
+  },
+];
+
+
+/* =========================================================
+   DASHBOARD LAYOUT
+========================================================= */
+
+export function DashboardLayout() {
+
+  const navigate = useNavigate();
+
   const location = useLocation();
 
+  const role = getRole();
+
+  const username = getUsername();
+
+  const [unused] = [false];
+
+  void unused;
+
+
+  let menuItems: MenuItem[] = [];
+
+  let roleName = "User";
+
+
+  if (role === "ADMIN") {
+
+    menuItems = adminMenu;
+
+    roleName = "Administrator";
+
+  } else if (role === "PHARMACIST") {
+
+    menuItems = pharmacistMenu;
+
+    roleName = "Pharmacist";
+
+  } else if (role === "SUPPLIER") {
+
+    menuItems = supplierMenu;
+
+    roleName = "Supplier";
+
+  } else {
+
+    menuItems = userMenu;
+
+    roleName = "User";
+
+  }
+
+
+  const handleLogout = () => {
+
+    localStorage.removeItem("token");
+
+    localStorage.removeItem(
+      "isAuthenticated"
+    );
+
+    localStorage.removeItem("username");
+
+    localStorage.removeItem("roles");
+
+    localStorage.removeItem("role");
+
+    localStorage.removeItem("user");
+
+    navigate("/login", {
+      replace: true,
+    });
+
+  };
+
+
+
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#f6f8fc]">
-      {/* Sidebar */}
-      <aside className="w-72 flex-shrink-0 bg-slate-950 text-slate-300 flex flex-col transition-all duration-300">
-        <div className="h-20 flex items-center px-6 border-b border-white/10">
-          <div className="flex items-center gap-3 text-white">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg shadow-cyan-500/20"><Pill className="h-5 w-5" /></div>
-            <span className="font-bold text-xl tracking-tight">MediStock</span>
+
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        background: "#f5f7fb",
+        fontFamily:
+          "Inter, Arial, sans-serif",
+        color: "#172033",
+      }}
+    >
+
+      {/* ==================================================
+          SIDEBAR
+      ================================================== */}
+
+      <aside
+        style={{
+          position: "fixed",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: "260px",
+          background: "#ffffff",
+          borderRight:
+            "1px solid #e5e7eb",
+          boxShadow:
+            "4px 0 20px rgba(15,23,42,0.05)",
+          display: "flex",
+          flexDirection: "column",
+          zIndex: 1000,
+        }}
+      >
+
+        {/* BRAND */}
+
+        <div
+          style={{
+            height: "78px",
+            display: "flex",
+            alignItems: "center",
+            padding: "0 20px",
+            borderBottom:
+              "1px solid #eef0f4",
+          }}
+        >
+
+          <div
+            style={{
+              width: "43px",
+              height: "43px",
+              borderRadius: "12px",
+              background:
+                "linear-gradient(135deg,#2563eb,#1d4ed8)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ffffff",
+            }}
+          >
+            <Pill size={24} />
           </div>
+
+
+          <div
+            style={{
+              marginLeft: "12px",
+            }}
+          >
+
+            <div
+              style={{
+                fontSize: "21px",
+                fontWeight: 800,
+                color: "#172033",
+              }}
+            >
+              Medi
+              <span
+                style={{
+                  color: "#2563eb",
+                }}
+              >
+                Stock
+              </span>
+            </div>
+
+            <div
+              style={{
+                fontSize: "10px",
+                color: "#8a94a6",
+                marginTop: "2px",
+              }}
+            >
+              MEDICAL INVENTORY
+            </div>
+
+          </div>
+
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-1">
-          {SIDEBAR_ITEMS.map((item) => {
-            const isActive = location.pathname === item.href || 
-                             (item.href !== "/" && location.pathname.startsWith(item.href));
-            const Icon = item.icon;
-            
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-cyan-400/15 text-cyan-300"
-                    : "text-slate-400 hover:bg-white/7 hover:text-white"
-                )}
-              >
-                <Icon className={cn("h-4 w-4", isActive ? "text-cyan-300" : "text-slate-500")} />
-                {item.title}
-              </Link>
-            );
-          })}
+
+        {/* ROLE BADGE */}
+
+        <div
+          style={{
+            margin: "18px 15px 10px",
+            padding:
+              "9px 12px",
+            borderRadius: "9px",
+            background: "#eff6ff",
+            border:
+              "1px solid #dbeafe",
+            color: "#1d4ed8",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "12px",
+            fontWeight: 700,
+          }}
+        >
+
+          <ShieldCheck size={16} />
+
+          {roleName}
+
+        </div>
+
+
+        {/* MENU */}
+
+        <nav
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding:
+              "8px 12px",
+          }}
+        >
+
+          <div
+            style={{
+              padding:
+                "8px 10px",
+              fontSize: "10px",
+              fontWeight: 800,
+              letterSpacing: "1px",
+              color: "#9aa3b2",
+            }}
+          >
+            MAIN MENU
+          </div>
+
+
+          {menuItems.map(
+            (item) => {
+
+              const active =
+                location.pathname ===
+                item.path;
+
+              return (
+
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    minHeight:
+                      "45px",
+                    padding:
+                      "10px 12px",
+                    marginBottom:
+                      "4px",
+                    borderRadius:
+                      "9px",
+                    textDecoration:
+                      "none",
+                    color: active
+                      ? "#2563eb"
+                      : "#5d6879",
+                    background:
+                      active
+                        ? "#eff6ff"
+                        : "transparent",
+                    fontSize:
+                      "13px",
+                    fontWeight: 600,
+                    boxShadow:
+                      active
+                        ? "inset 3px 0 0 #2563eb"
+                        : "none",
+                  }}
+                >
+
+                  <span
+                    style={{
+                      minWidth:
+                        "24px",
+                      display:
+                        "flex",
+                      alignItems:
+                        "center",
+                      justifyContent:
+                        "center",
+                    }}
+                  >
+                    {item.icon}
+                  </span>
+
+                  <span>
+                    {item.label}
+                  </span>
+
+                </NavLink>
+
+              );
+
+            }
+          )}
+
         </nav>
 
-        <div className="p-4 border-t border-white/10">
-          <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="h-9 w-9 rounded-full bg-cyan-400/15 flex items-center justify-center text-cyan-300 font-bold">
-              {user?.username?.charAt(0).toUpperCase() || "U"}
-            </div>
-            <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-medium text-white truncate">{user?.username}</span>
-              <span className="text-xs text-slate-500 truncate">{user?.roles?.join(', ') || "User"}</span>
-            </div>
-          </div>
-          <Button variant="outline" className="w-full justify-start border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white" onClick={logout}>
-            <LogOut className="mr-2 h-4 w-4" />
+
+        {/* BOTTOM */}
+
+        <div
+          style={{
+            padding: "12px",
+            borderTop:
+              "1px solid #eef0f4",
+          }}
+        >
+
+          <button
+            type="button"
+            style={{
+              width: "100%",
+              minHeight: "45px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              padding:
+                "10px 12px",
+              border: "none",
+              borderRadius: "9px",
+              background:
+                "transparent",
+              color: "#667085",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+
+            <Settings size={20} />
+
+            Settings
+
+          </button>
+
+
+          <button
+            type="button"
+            onClick={
+              handleLogout
+            }
+            style={{
+              width: "100%",
+              minHeight: "45px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              padding:
+                "10px 12px",
+              border: "none",
+              borderRadius: "9px",
+              background:
+                "#fff1f2",
+              color: "#dc2626",
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+              textAlign: "left",
+              marginTop: "4px",
+            }}
+          >
+
+            <LogOut size={20} />
+
             Logout
-          </Button>
+
+          </button>
+
         </div>
+
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* Header */}
-        <header className="h-20 flex-shrink-0 bg-white/80 backdrop-blur border-b border-slate-200/70 flex items-center justify-between px-8">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">MediStock workspace</p><h1 className="text-lg font-bold text-slate-900 capitalize">
-            {location.pathname === "/" ? "Dashboard" : location.pathname.split("/")[1]}
-          </h1></div>
-          
-          <div className="flex items-center gap-4">
-            <Link to="/notifications" className="relative rounded-xl p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-            </Link>
-          </div>
-        </header>
 
-        {/* Page Content */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-8">
+      {/* ==================================================
+          MAIN CONTENT
+      ================================================== */}
+
+      <div
+        style={{
+          marginLeft: "260px",
+          width:
+            "calc(100% - 260px)",
+          minHeight: "100vh",
+        }}
+      >
+
+
+
+
+        {/* PAGE */}
+
+        <main
+          style={{
+            padding: "30px",
+            minHeight: "100vh",
+            background:
+              "#f5f7fb",
+          }}
+        >
+
           <Outlet />
-        </div>
-      </main>
+
+        </main>
+
+      </div>
+
     </div>
   );
-};
+}

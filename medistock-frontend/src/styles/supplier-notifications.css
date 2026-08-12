@@ -1,0 +1,342 @@
+/* ============================================================
+   MEDISTOCK - SUPPLIER NOTIFICATIONS
+   ============================================================ */
+
+.supplier-notifications-page {
+  min-height: 100vh;
+  padding: 32px 42px 60px;
+  box-sizing: border-box;
+  background: #f5f7fb;
+  color: #17233d;
+}
+
+/* HEADER */
+
+.supplier-notifications-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.supplier-notifications-eyebrow {
+  margin-bottom: 7px;
+  color: #6f87a7;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.7px;
+}
+
+.supplier-notifications-header h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.supplier-notifications-header p {
+  margin: 8px 0 0;
+  color: #7d92ae;
+  font-size: 15px;
+}
+
+.supplier-notifications-read-all {
+  height: 46px;
+  padding: 0 18px;
+
+  border: 1px solid #dce5f2;
+  border-radius: 11px;
+
+  background: #fff;
+  color: #2864e8;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.supplier-notifications-read-all:disabled {
+  color: #9aa9bc;
+  background: #f7f9fc;
+  cursor: not-allowed;
+}
+
+/* SUMMARY */
+
+.supplier-notifications-summary {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  margin-bottom: 20px;
+  padding: 18px 21px;
+
+  border: 1px solid #dbe7fb;
+  border-radius: 16px;
+
+  background: #edf4ff;
+}
+
+.notification-summary-icon {
+  width: 48px;
+  height: 48px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 13px;
+
+  background: #fff;
+  font-size: 21px;
+}
+
+.supplier-notifications-summary strong {
+  color: #244c8e;
+  font-size: 14px;
+}
+
+.supplier-notifications-summary p {
+  margin: 4px 0 0;
+  color: #6e87aa;
+  font-size: 12px;
+}
+
+/* CARD */
+
+.supplier-notifications-card {
+  overflow: hidden;
+
+  border: 1px solid #e1e8f2;
+  border-radius: 19px;
+
+  background: #fff;
+
+  box-shadow: 0 7px 22px rgba(30, 55, 95, 0.04);
+}
+
+.supplier-notifications-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 21px 24px;
+
+  border-bottom: 1px solid #e9eef5;
+}
+
+.supplier-notifications-card-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.supplier-notifications-card-header p {
+  margin: 5px 0 0;
+  color: #8497b1;
+  font-size: 13px;
+}
+
+.supplier-notifications-card-header > span {
+  padding: 6px 10px;
+
+  border-radius: 8px;
+
+  background: #f1f5fb;
+  color: #536d8f;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* NOTIFICATION */
+
+.supplier-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+
+  padding: 19px 24px;
+
+  border-top: 1px solid #edf1f6;
+
+  transition: background 0.15s ease;
+}
+
+.supplier-notification:first-child {
+  border-top: 0;
+}
+
+.supplier-notification.unread {
+  background: #fbfdff;
+}
+
+.supplier-notification:hover {
+  background: #f8faff;
+}
+
+/* ICON */
+
+.supplier-notification-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 13px;
+
+  font-size: 19px;
+}
+
+.supplier-notification-icon.order {
+  background: #edf4ff;
+}
+
+.supplier-notification-icon.delivery {
+  background: #eaf9f2;
+}
+
+.supplier-notification-icon.stock {
+  background: #fff4e7;
+}
+
+.supplier-notification-icon.system {
+  background: #f1edff;
+}
+
+/* CONTENT */
+
+.supplier-notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.supplier-notification-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.supplier-notification-title-row h3 {
+  margin: 0;
+  color: #263a58;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.supplier-notification-content p {
+  margin: 5px 0;
+
+  color: #657d9b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.supplier-notification-time {
+  color: #9aa9bc;
+  font-size: 11px;
+}
+
+.supplier-notification-new {
+  padding: 3px 6px;
+
+  border-radius: 5px;
+
+  background: #edf4ff;
+  color: #2864e8;
+
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+/* ACTIONS */
+
+.supplier-notification-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.supplier-notification-actions button {
+  border: 0;
+  background: transparent;
+  color: #2864e8;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.supplier-notification-actions .notification-delete {
+  width: 30px;
+  height: 30px;
+
+  border-radius: 7px;
+
+  background: #f4f6fa;
+  color: #8193aa;
+
+  font-size: 18px;
+}
+
+.supplier-notification-actions .notification-delete:hover {
+  background: #fff0f1;
+  color: #d64551;
+}
+
+/* EMPTY */
+
+.supplier-notifications-empty {
+  padding: 70px 20px;
+  text-align: center;
+}
+
+.supplier-notifications-empty div {
+  margin-bottom: 10px;
+  font-size: 36px;
+}
+
+.supplier-notifications-empty h3 {
+  margin: 0;
+  color: #344b69;
+  font-size: 16px;
+}
+
+.supplier-notifications-empty p {
+  margin-top: 6px;
+  color: #92a2b8;
+  font-size: 13px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 700px) {
+  .supplier-notifications-page {
+    padding: 22px 18px 40px;
+  }
+
+  .supplier-notifications-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .supplier-notifications-read-all {
+    width: 100%;
+  }
+
+  .supplier-notification {
+    padding: 16px;
+  }
+
+  .supplier-notification-actions {
+    flex-direction: column;
+  }
+
+  .supplier-notifications-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
