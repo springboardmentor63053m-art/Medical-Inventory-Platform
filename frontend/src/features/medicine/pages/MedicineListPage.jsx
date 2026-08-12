@@ -300,52 +300,90 @@ export default function MedicineListPage() {
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Total Catalog</p>
-            <h3 className="text-xl font-bold text-slate-900 mt-0.5">{totalElements || medicines.length}</h3>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <Pill className="w-5 h-5" />
-          </div>
-        </div>
+{/* Summary KPI Cards */}
+<div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Categories</p>
-            <h3 className="text-xl font-bold text-slate-900 mt-0.5">{categories.length}</h3>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-            <Boxes className="w-5 h-5" />
-          </div>
-        </div>
+  {/* Total Catalog */}
+  <button
+    onClick={() => navigate('/medicines')}
+    className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-blue-300 hover:shadow-md transition cursor-pointer"
+  >
+    <div>
+      <p className="text-xs font-semibold text-slate-500">Total Catalog</p>
+      <h3 className="text-xl font-bold text-slate-900 mt-0.5">
+        {totalElements || medicines.length}
+      </h3>
+    </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Active Formulations</p>
-            <h3 className="text-xl font-bold text-emerald-600 mt-0.5">
-              {medicines.filter((m) => m.status === 'ACTIVE').length}
-            </h3>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <Package className="w-5 h-5" />
-          </div>
-        </div>
+    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+      <Pill className="w-5 h-5" />
+    </div>
+  </button>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500">Manufacturers</p>
-            <h3 className="text-xl font-bold text-slate-900 mt-0.5">
-              {new Set(medicines.map((m) => m.manufacturer)).size}
-            </h3>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-            <FileText className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
+
+  {/* Categories */}
+  <button
+    onClick={() => navigate('/categories')}
+    className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-purple-300 hover:shadow-md transition cursor-pointer"
+  >
+    <div>
+      <p className="text-xs font-semibold text-slate-500">Categories</p>
+      <h3 className="text-xl font-bold text-slate-900 mt-0.5">
+        {categories.length}
+      </h3>
+    </div>
+
+    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+      <Boxes className="w-5 h-5" />
+    </div>
+  </button>
+
+
+  {/* Active Formulations */}
+  <button
+    onClick={() => {
+      setSelectedStatus('ACTIVE');
+      setPage(0);
+    }}
+    className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-emerald-300 hover:shadow-md transition cursor-pointer"
+  >
+    <div>
+      <p className="text-xs font-semibold text-slate-500">
+        Active Formulations
+      </p>
+
+      <h3 className="text-xl font-bold text-emerald-600 mt-0.5">
+        {medicines.filter((m) => m.status === 'ACTIVE').length}
+      </h3>
+    </div>
+
+    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+      <Package className="w-5 h-5" />
+    </div>
+  </button>
+
+
+  {/* Manufacturers */}
+  <button
+    onClick={() => navigate('/medicines')}
+    className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-amber-300 hover:shadow-md transition cursor-pointer"
+  >
+    <div>
+      <p className="text-xs font-semibold text-slate-500">
+        Manufacturers
+      </p>
+
+      <h3 className="text-xl font-bold text-slate-900 mt-0.5">
+        {new Set(medicines.map((m) => m.manufacturer)).size}
+      </h3>
+    </div>
+
+    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+      <FileText className="w-5 h-5" />
+    </div>
+  </button>
+
+</div>
 
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -38,7 +38,7 @@ import { getMedicinesSupplied } from '../../../utils/dataHelpers';
 export default function SupplierListPage() {
   const navigate = useNavigate();
   const { isAdmin, isPharmacist, isSupplier } = useAuth();
-  const canManage = isAdmin || isPharmacist;
+  const canManage = isAdmin ;
 
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
