@@ -30,7 +30,7 @@ public class SupplierController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'SUPPLIER')")
     public ResponseEntity<List<SupplierResponse>> getAllSuppliers() {
         return ResponseEntity.ok(supplierService.getAllSuppliers());
     }

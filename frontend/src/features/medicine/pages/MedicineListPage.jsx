@@ -34,7 +34,9 @@ import {
 
 export default function MedicineListPage() {
   const navigate = useNavigate();
-  const { isAdmin, isPharmacist, isUser } = useAuth();
+  const { isAdmin, isPharmacist, isStaff, isSupplier } = useAuth();
+  const canManage = isAdmin || isPharmacist;
+
   const [masterMedicines, setMasterMedicines] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -127,12 +129,16 @@ export default function MedicineListPage() {
 
   const fetchDropdownData = async () => {
     try {
-      const [cats, sups] = await Promise.all([
+      const [catsResult, supsResult] = await Promise.allSettled([
         categoryService.getAllCategories(),
         supplierService.getAllSuppliers()
       ]);
-      setCategories(Array.isArray(cats) ? cats : []);
-      setSuppliers(Array.isArray(sups) ? sups : []);
+      if (catsResult.status === 'fulfilled' && Array.isArray(catsResult.value)) {
+        setCategories(catsResult.value);
+      }
+      if (supsResult.status === 'fulfilled' && Array.isArray(supsResult.value)) {
+        setSuppliers(supsResult.value);
+      }
     } catch (err) {
       console.error('Failed to fetch dropdown datasets:', err);
     }
@@ -298,14 +304,16 @@ export default function MedicineListPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
-          <button
-            onClick={() => navigate('/categories')}
-            className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition flex items-center gap-1.5"
-          >
-            <Boxes className="w-4 h-4 text-blue-600" /> Manage Categories
-          </button>
+          {canManage && (
+            <button
+              onClick={() => navigate('/categories')}
+              className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition flex items-center gap-1.5"
+            >
+              <Boxes className="w-4 h-4 text-blue-600" /> Manage Categories
+            </button>
+          )}
 
-          {(isAdmin || isPharmacist) && (
+          {canManage && (
             <button
               onClick={handleOpenAddModal}
               className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-2"
@@ -344,13 +352,13 @@ export default function MedicineListPage() {
 
   {/* Categories */}
   <button
-    onClick={() => navigate('/categories')}
-    className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-purple-300 hover:shadow-md transition cursor-pointer"
+    onClick={() => canManage ? navigate('/categories') : null}
+    className={`bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-purple-300 hover:shadow-md transition ${canManage ? 'cursor-pointer' : 'cursor-default'}`}
   >
     <div>
       <p className="text-xs font-semibold text-slate-500">Categories</p>
       <h3 className="text-xl font-bold text-slate-900 mt-0.5">
-        {categories.length}
+        {categories.length > 0 ? categories.length : new Set(masterMedicines.map((m) => m.category?.name).filter(Boolean)).size}
       </h3>
     </div>
 
@@ -532,7 +540,7 @@ export default function MedicineListPage() {
                   </div>
                 </th>
                 <th className="py-3.5 px-6">Status</th>
-                <th className="py-3.5 px-6 text-right">Actions</th>
+                <th className="py-3.5 px-6 text-right">{canManage ? 'ACTIONS' : 'VIEW'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
