@@ -41,4 +41,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @EntityGraph(attributePaths = {"medicine", "medicine.category"})
     @Query("SELECT i FROM Inventory i WHERE i.expiryDate BETWEEN CURRENT_DATE AND :targetDate")
     List<Inventory> findExpiringItems(@Param("targetDate") LocalDate targetDate);
+
+    boolean existsByBatchNumber(String batchNumber);
+
+    boolean existsByBatchNumberAndIdNot(String batchNumber, Long id);
 }

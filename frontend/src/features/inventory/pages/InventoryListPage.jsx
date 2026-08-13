@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { inventoryService } from '../../../services/api/inventoryService';
 import { medicineService } from '../../../services/api/medicineService';
+import { supplierService } from '../../../services/api/supplierService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import Modal from '../../../components/common/Modal';
@@ -24,7 +25,8 @@ import {
   Layers,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Truck
 } from 'lucide-react';
 
 export default function InventoryListPage() {
@@ -32,10 +34,20 @@ export default function InventoryListPage() {
   const canAddEdit = isAdmin || isPharmacist;
   const [inventoryItems, setInventoryItems] = useState([]);
   const [medicines, setMedicines] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [resolvingMedicine, setResolvingMedicine] = useState(false);
+  const [medicineError, setMedicineError] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Stock Movements State
+  const [movements, setMovements] = useState([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
+  const [movementTypeFilter, setMovementTypeFilter] = useState('ALL'); // 'ALL' | 'ADD' | 'ISSUE' | 'RESTOCK'
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState('');
   const [filterMode, setFilterMode] = useState('ALL'); // 'ALL' | 'LOW_STOCK' | 'EXPIRING' | 'EXPIRED'
 
   // Sorting
@@ -51,11 +63,11 @@ export default function InventoryListPage() {
 
   const initialForm = {
     medicineId: '',
-    quantity: 50,
-    minimumStock: 10,
+    quantity: '',
+    minimumStock: '',
     batchNumber: '',
     expiryDate: '',
-    storageLocation: 'Shelf A1',
+    storageLocation: '',
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -82,21 +94,133 @@ export default function InventoryListPage() {
 
   const fetchMedicinesList = async () => {
     try {
-      const res = await medicineService.getAllMedicines(0, 200);
-      const list = res.content || res || [];
-      setMedicines(Array.isArray(list) ? list : []);
+      const res = await medicineService.getAllMedicines(0, 500);
+      const list = res && res.content ? res.content : Array.isArray(res) ? res : [];
+      const validList = Array.isArray(list) ? list : [];
+      setMedicines(validList);
+      return validList;
     } catch (err) {
       console.error('Failed to fetch medicines dropdown:', err);
+      return [];
+    }
+  };
+
+  const generateUniqueBatchNumber = (existingItems) => {
+    const year = new Date().getFullYear();
+    const existingBatches = new Set((existingItems || []).map((i) => (i.batchNumber || '').toUpperCase()));
+    
+    let maxSeq = 0;
+    (existingItems || []).forEach((item) => {
+      if (item.batchNumber) {
+        const match = item.batchNumber.match(/(?:BATCH|BAT)-(?:20\d\d-)?(\d+)/i);
+        if (match) {
+          const seq = parseInt(match[1], 10);
+          if (!isNaN(seq) && seq > maxSeq) {
+            maxSeq = seq;
+          }
+        }
+      }
+    });
+
+    let nextSeq = maxSeq + 1;
+    let batchNo = `BATCH-${year}-${String(nextSeq).padStart(3, '0')}`;
+    
+    while (existingBatches.has(batchNo.toUpperCase())) {
+      nextSeq++;
+      batchNo = `BATCH-${year}-${String(nextSeq).padStart(3, '0')}`;
+    }
+
+    return batchNo;
+  };
+
+  const handleMedicineChange = async (medId) => {
+    if (!medId) {
+      setSelectedMedicine(null);
+      setMedicineError('Please select a medicine item');
+      setFormData((prev) => ({
+        ...prev,
+        medicineId: '',
+        minimumStock: '',
+        storageLocation: '',
+      }));
+      return;
+    }
+
+    setResolvingMedicine(true);
+    setMedicineError(null);
+
+    try {
+      let med = medicines.find((m) => String(m.id) === String(medId));
+      if (!med) {
+        med = await medicineService.getMedicineById(medId);
+      }
+
+      if (!med || !med.id) {
+        setSelectedMedicine(null);
+        setMedicineError('Selected medicine was not found in catalog');
+        toast.error('Medicine not found in catalog');
+        setFormData((prev) => ({
+          ...prev,
+          medicineId: String(medId),
+          storageLocation: '',
+        }));
+      } else {
+        const existingInv = inventoryItems.find((i) => String(i.medicine?.id || i.medicineId) === String(med.id));
+        const resolvedShelf = med.storageLocation || existingInv?.storageLocation || '';
+
+        setSelectedMedicine(med);
+        setMedicineError(null);
+        setFormData((prev) => ({
+          ...prev,
+          medicineId: String(med.id),
+          minimumStock: med.reorderLevel !== undefined && med.reorderLevel !== null ? med.reorderLevel : '',
+          storageLocation: resolvedShelf,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to resolve medicine details:', err);
+      setSelectedMedicine(null);
+      setMedicineError('Failed to retrieve medicine details from catalog');
+      toast.error('Failed to retrieve medicine details from catalog');
+    } finally {
+      setResolvingMedicine(false);
+    }
+  };
+
+  const fetchMovements = async () => {
+    setMovementsLoading(true);
+    try {
+      const data = await inventoryService.getStockMovements(movementTypeFilter, searchTerm);
+      setMovements(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load stock movements:', err);
+    } finally {
+      setMovementsLoading(false);
+    }
+  };
+
+  const fetchSuppliersList = async () => {
+    try {
+      const sups = await supplierService.getAllSuppliers();
+      setSuppliers(Array.isArray(sups) ? sups : []);
+    } catch (err) {
+      console.error('Failed to fetch suppliers dropdown:', err);
     }
   };
 
   useEffect(() => {
     fetchMedicinesList();
+    fetchSuppliersList();
+    fetchMovements();
   }, []);
 
   useEffect(() => {
     fetchInventoryData();
   }, [filterMode]);
+
+  useEffect(() => {
+    fetchMovements();
+  }, [movementTypeFilter]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -107,34 +231,66 @@ export default function InventoryListPage() {
     }
   };
 
-  const handleOpenAddModal = () => {
+  const handleOpenAddModal = async () => {
     setEditingItem(null);
+    setMedicineError(null);
+    setResolvingMedicine(false);
+    const currentMeds = await fetchMedicinesList();
+    const defaultMed = currentMeds.length > 0 ? currentMeds[0] : null;
+    const newBatchNo = generateUniqueBatchNumber(inventoryItems);
+
+    let defaultShelf = '';
+    if (defaultMed) {
+      const existingInv = inventoryItems.find((i) => String(i.medicine?.id || i.medicineId) === String(defaultMed.id));
+      defaultShelf = defaultMed.storageLocation || existingInv?.storageLocation || '';
+    }
+
     setFormData({
-      ...initialForm,
-      medicineId: medicines.length > 0 ? medicines[0].id : '',
-      batchNumber: `BATCH-${Date.now().toString().slice(-4)}`,
-      expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      medicineId: defaultMed ? String(defaultMed.id) : '',
+      quantity: '',
+      minimumStock: defaultMed?.reorderLevel !== undefined && defaultMed?.reorderLevel !== null ? defaultMed.reorderLevel : '',
+      batchNumber: newBatchNo,
+      expiryDate: '',
+      storageLocation: defaultShelf,
     });
+    setSelectedMedicine(defaultMed);
     setModalOpen(true);
   };
 
   const handleOpenEditModal = (item) => {
     setEditingItem(item);
+    setMedicineError(null);
+    const medId = item.medicine?.id || item.medicineId || '';
+    const med = item.medicine || medicines.find((m) => String(m.id) === String(medId)) || null;
+
     setFormData({
-      medicineId: item.medicine?.id || item.medicineId || '',
-      quantity: item.quantity || 0,
-      minimumStock: item.minimumStock || 0,
+      medicineId: medId ? String(medId) : '',
+      quantity: item.quantity !== undefined && item.quantity !== null ? item.quantity : '',
+      minimumStock: item.minimumStock !== undefined && item.minimumStock !== null ? item.minimumStock : (med?.reorderLevel ?? ''),
       batchNumber: item.batchNumber || '',
       expiryDate: item.expiryDate || '',
       storageLocation: item.storageLocation || '',
     });
+    setSelectedMedicine(med);
     setModalOpen(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.medicineId || !formData.batchNumber || !formData.expiryDate || formData.quantity === '') {
-      toast.error('Please fill in required fields: Medicine, Batch, Expiry, and Quantity.');
+    if (resolvingMedicine) {
+      toast.warning('Please wait while medicine catalog details are being resolved');
+      return;
+    }
+    if (!formData.medicineId) {
+      toast.error('Please select a valid medicine item from catalog.');
+      return;
+    }
+    if (medicineError || !selectedMedicine) {
+      toast.error('Cannot create batch: Selected medicine does not exist in catalog.');
+      return;
+    }
+    if (!formData.batchNumber || !formData.expiryDate || formData.quantity === '' || formData.quantity === null) {
+      toast.error('Please fill in required fields: Medicine, Batch Number, Expiration Date, and Quantity.');
       return;
     }
 
@@ -142,7 +298,7 @@ export default function InventoryListPage() {
     const payload = {
       medicineId: Number(formData.medicineId),
       quantity: Number(formData.quantity),
-      minimumStock: Number(formData.minimumStock),
+      minimumStock: Number(formData.minimumStock !== '' ? formData.minimumStock : selectedMedicine.reorderLevel),
       batchNumber: formData.batchNumber,
       expiryDate: formData.expiryDate,
       storageLocation: formData.storageLocation,
@@ -158,6 +314,7 @@ export default function InventoryListPage() {
       }
       setModalOpen(false);
       fetchInventoryData();
+      fetchMovements();
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to save inventory record';
       toast.error(msg);
@@ -174,6 +331,7 @@ export default function InventoryListPage() {
       toast.success('Inventory record deleted');
       setDeleteId(null);
       fetchInventoryData();
+      fetchMovements();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete record');
     } finally {
@@ -182,6 +340,11 @@ export default function InventoryListPage() {
   };
 
   const filteredItems = inventoryItems.filter((item) => {
+    if (selectedSupplier) {
+      const linkedSups = item.medicine?.suppliers || [];
+      const hasSup = linkedSups.some((s) => String(s.id) === String(selectedSupplier) || s.supplierCode === selectedSupplier);
+      if (!hasSup) return false;
+    }
     const medName = item.medicine?.name || '';
     const medCode = item.medicine?.medicineCode || '';
     const batch = item.batchNumber || '';
@@ -258,6 +421,19 @@ export default function InventoryListPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedSupplier}
+            onChange={(e) => setSelectedSupplier(e.target.value)}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Suppliers</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.supplierName} ({s.supplierCode})
+              </option>
+            ))}
+          </select>
+
           <button
             onClick={() => setFilterMode('ALL')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border ${
@@ -474,7 +650,7 @@ export default function InventoryListPage() {
                 <select
                   required
                   value={formData.medicineId}
-                  onChange={(e) => setFormData({ ...formData, medicineId: e.target.value })}
+                  onChange={(e) => handleMedicineChange(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Medicine</option>
@@ -484,6 +660,30 @@ export default function InventoryListPage() {
                     </option>
                   ))}
                 </select>
+                {resolvingMedicine && (
+                  <p className="text-xs text-blue-600 font-medium flex items-center gap-1 mt-1">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Resolving medicine catalog details...
+                  </p>
+                )}
+                {medicineError && (
+                  <p className="text-xs text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" /> {medicineError}
+                  </p>
+                )}
+                {selectedMedicine && !resolvingMedicine && !medicineError && (
+                  <div className="mt-2 p-2.5 bg-blue-50/80 border border-blue-100 rounded-xl text-xs text-slate-700 space-y-1">
+                    <div className="flex items-center justify-between font-bold text-slate-900">
+                      <span>{selectedMedicine.name} ({selectedMedicine.medicineCode})</span>
+                      <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-semibold">
+                        {selectedMedicine.category?.name || 'General'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span>Manufacturer: <strong className="text-slate-700">{selectedMedicine.manufacturer || 'Standard'}</strong></span>
+                      <span>Catalog Reorder Level: <strong className="text-blue-700">{selectedMedicine.reorderLevel ?? 10}</strong></span>
+                    </div>
+                  </div>
+                )}
               </FormField>
 
               <FormField label="Batch Number" required helperText="Manufacturer lot or batch number">

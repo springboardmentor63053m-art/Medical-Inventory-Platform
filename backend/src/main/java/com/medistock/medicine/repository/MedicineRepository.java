@@ -25,8 +25,8 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
     Page<Medicine> findBySupplierId(@org.springframework.data.repository.query.Param("supplierId") Long supplierId, Pageable pageable);
 
     @org.springframework.data.jpa.repository.Query(
-        value = "SELECT DISTINCT m.* FROM medicines m JOIN supplier_medicines sm ON m.id = sm.medicine_id WHERE sm.supplier_id = :supplierId AND (LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.generic_name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.medicine_code) LIKE LOWER(CONCAT('%', :query, '%')))",
-        countQuery = "SELECT COUNT(DISTINCT m.id) FROM medicines m JOIN supplier_medicines sm ON m.id = sm.medicine_id WHERE sm.supplier_id = :supplierId AND (LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.generic_name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.medicine_code) LIKE LOWER(CONCAT('%', :query, '%')))",
+        value = "SELECT DISTINCT m.* FROM medicines m JOIN supplier_medicines sm ON m.id = sm.medicine_id WHERE sm.supplier_id = :supplierId AND (LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.generic_name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.medicine_code) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.manufacturer) LIKE LOWER(CONCAT('%', :query, '%')))",
+        countQuery = "SELECT COUNT(DISTINCT m.id) FROM medicines m JOIN supplier_medicines sm ON m.id = sm.medicine_id WHERE sm.supplier_id = :supplierId AND (LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.generic_name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.medicine_code) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.manufacturer) LIKE LOWER(CONCAT('%', :query, '%')))",
         nativeQuery = true
     )
     Page<Medicine> searchBySupplierId(@org.springframework.data.repository.query.Param("supplierId") Long supplierId, @org.springframework.data.repository.query.Param("query") String query, Pageable pageable);
@@ -38,8 +38,8 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
     List<Medicine> findBySupplierIdAndCategoryId(@org.springframework.data.repository.query.Param("supplierId") Long supplierId, @org.springframework.data.repository.query.Param("categoryId") Long categoryId);
 
     @org.springframework.data.jpa.repository.Query(
-        value = "SELECT m.* FROM medicines m WHERE (LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.generic_name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.medicine_code) LIKE LOWER(CONCAT('%', :query, '%')))",
-        countQuery = "SELECT COUNT(m.id) FROM medicines m WHERE (LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.generic_name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.medicine_code) LIKE LOWER(CONCAT('%', :query, '%')))",
+        value = "SELECT m.* FROM medicines m WHERE (LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.generic_name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.medicine_code) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.manufacturer) LIKE LOWER(CONCAT('%', :query, '%')))",
+        countQuery = "SELECT COUNT(m.id) FROM medicines m WHERE (LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.generic_name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.medicine_code) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(m.manufacturer) LIKE LOWER(CONCAT('%', :query, '%')))",
         nativeQuery = true
     )
     Page<Medicine> searchMasterCatalog(@org.springframework.data.repository.query.Param("query") String query, Pageable pageable);

@@ -42,4 +42,6 @@ public class MedicineRequest {
 
     @Builder.Default
     private String status = "ACTIVE";
+
+    private String storageLocation;
 }

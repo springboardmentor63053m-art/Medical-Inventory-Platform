@@ -16,7 +16,8 @@ import {
   X,
   Activity,
   ShieldCheck,
-  Store
+  Store,
+  ArrowRightLeft
 } from 'lucide-react';
 
 export default function SidebarLayout({ isOpen, onClose }) {
@@ -31,7 +32,10 @@ export default function SidebarLayout({ isOpen, onClose }) {
   ];
 
   if (isStaff) {
-    primaryNavItems.push({ name: 'Inventory', path: '/inventory', icon: Package });
+    primaryNavItems.push(
+      { name: 'Inventory', path: '/inventory', icon: Package },
+      { name: 'Stock Movements', path: '/stock-movements', icon: ArrowRightLeft }
+    );
   }
 
   if (isUser) {
@@ -41,6 +45,7 @@ export default function SidebarLayout({ isOpen, onClose }) {
   if (isAdmin || isPharmacist) {
     primaryNavItems.push(
       { name: 'Inventory', path: '/inventory', icon: Package },
+      { name: 'Stock Movements', path: '/stock-movements', icon: ArrowRightLeft },
       { name: 'Expiring Soon', path: '/expiring', icon: Clock, badge: '< 90d' },
       { name: 'Suppliers', path: '/suppliers', icon: Truck },
       { name: 'Purchase Orders', path: '/purchase-orders', icon: ShoppingCart },

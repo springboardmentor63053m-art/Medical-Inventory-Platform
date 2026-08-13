@@ -55,6 +55,9 @@ public class Medicine {
     @Column(nullable = false, length = 20)
     private String status = "ACTIVE";
 
+    @Column(name = "storage_location", length = 100)
+    private String storageLocation;
+
     @Builder.Default
     @Column(name = "prescription_required", nullable = false)
     private Boolean prescriptionRequired = true;

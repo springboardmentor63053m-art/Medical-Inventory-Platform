@@ -7,6 +7,7 @@ import com.medistock.inventory.dto.response.InventoryResponse;
 import com.medistock.inventory.entity.Inventory;
 import com.medistock.inventory.repository.InventoryRepository;
 import com.medistock.inventory.service.InventoryService;
+import com.medistock.inventory.service.StockMovementService;
 import com.medistock.medicine.dto.response.MedicineResponse;
 import com.medistock.medicine.entity.Medicine;
 import com.medistock.medicine.repository.MedicineRepository;
@@ -24,6 +25,47 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final MedicineRepository medicineRepository;
+    private final StockMovementService stockMovementService;
+
+    private synchronized String resolveUniqueBatchNumber(String requestedBatch, Long currentId) {
+        String year = String.valueOf(LocalDate.now().getYear());
+        String batchNo = (requestedBatch != null && !requestedBatch.trim().isEmpty())
+                ? requestedBatch.trim()
+                : "BATCH-" + year + "-001";
+
+        boolean exists = (currentId == null)
+                ? inventoryRepository.existsByBatchNumber(batchNo)
+                : inventoryRepository.existsByBatchNumberAndIdNot(batchNo, currentId);
+
+        if (!exists) {
+            return batchNo;
+        }
+
+        List<Inventory> all = inventoryRepository.findAll();
+        int maxSeq = 0;
+        for (Inventory item : all) {
+            if (item.getBatchNumber() != null) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:BATCH|BAT)-(?:20\\d\\d-)?(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+                        .matcher(item.getBatchNumber());
+                if (m.find()) {
+                    try {
+                        int seq = Integer.parseInt(m.group(1));
+                        if (seq > maxSeq) {
+                            maxSeq = seq;
+                        }
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+
+        int nextSeq = maxSeq + 1;
+        String candidate = "BATCH-" + year + "-" + String.format("%03d", nextSeq);
+        while (inventoryRepository.existsByBatchNumber(candidate)) {
+            nextSeq++;
+            candidate = "BATCH-" + year + "-" + String.format("%03d", nextSeq);
+        }
+        return candidate;
+    }
 
     @Override
     @Transactional
@@ -31,16 +73,36 @@ public class InventoryServiceImpl implements InventoryService {
         Medicine medicine = medicineRepository.findById(request.getMedicineId())
                 .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + request.getMedicineId()));
 
+        Integer minStock = request.getMinimumStock() != null ? request.getMinimumStock() : (medicine.getReorderLevel() != null ? medicine.getReorderLevel() : 10);
+        String finalBatchNumber = resolveUniqueBatchNumber(request.getBatchNumber(), null);
+
+        Long prevSum = inventoryRepository.sumQuantityByMedicineId(medicine.getId());
+        int previousQty = prevSum != null ? prevSum.intValue() : 0;
+        int addedQty = request.getQuantity() != null ? request.getQuantity() : 0;
+        int newQty = previousQty + addedQty;
+
         Inventory inventory = Inventory.builder()
                 .medicine(medicine)
-                .quantity(request.getQuantity())
-                .minimumStock(request.getMinimumStock())
-                .batchNumber(request.getBatchNumber())
+                .quantity(addedQty)
+                .minimumStock(minStock)
+                .batchNumber(finalBatchNumber)
                 .expiryDate(request.getExpiryDate())
                 .storageLocation(request.getStorageLocation())
                 .build();
 
         Inventory saved = inventoryRepository.save(inventory);
+
+        stockMovementService.recordMovement(
+                medicine,
+                finalBatchNumber,
+                "ADD",
+                addedQty,
+                previousQty,
+                newQty,
+                null,
+                "Stock Added (New Batch)"
+        );
+
         return mapToResponse(saved);
     }
 
@@ -69,14 +131,38 @@ public class InventoryServiceImpl implements InventoryService {
         Medicine medicine = medicineRepository.findById(request.getMedicineId())
                 .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + request.getMedicineId()));
 
+        Integer minStock = request.getMinimumStock() != null ? request.getMinimumStock() : (medicine.getReorderLevel() != null ? medicine.getReorderLevel() : 10);
+        String finalBatchNumber = resolveUniqueBatchNumber(request.getBatchNumber(), id);
+
+        int oldBatchQty = inventory.getQuantity() != null ? inventory.getQuantity() : 0;
+        Long prevSum = inventoryRepository.sumQuantityByMedicineId(medicine.getId());
+        int previousQty = prevSum != null ? prevSum.intValue() : 0;
+        int newBatchQty = request.getQuantity() != null ? request.getQuantity() : 0;
+        int diff = newBatchQty - oldBatchQty;
+        int newQty = previousQty + diff;
+
         inventory.setMedicine(medicine);
-        inventory.setQuantity(request.getQuantity());
-        inventory.setMinimumStock(request.getMinimumStock());
-        inventory.setBatchNumber(request.getBatchNumber());
+        inventory.setQuantity(newBatchQty);
+        inventory.setMinimumStock(minStock);
+        inventory.setBatchNumber(finalBatchNumber);
         inventory.setExpiryDate(request.getExpiryDate());
         inventory.setStorageLocation(request.getStorageLocation());
 
         Inventory updated = inventoryRepository.save(inventory);
+
+        if (diff != 0) {
+            stockMovementService.recordMovement(
+                    medicine,
+                    finalBatchNumber,
+                    diff > 0 ? "RESTOCK" : "ISSUE",
+                    diff,
+                    previousQty,
+                    newQty,
+                    null,
+                    diff > 0 ? "Batch Quantity Restocked" : "Batch Stock Adjusted/Issued"
+            );
+        }
+
         return mapToResponse(updated);
     }
 

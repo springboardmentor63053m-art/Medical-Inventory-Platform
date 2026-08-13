@@ -22,25 +22,27 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
-  Trash2
+  Trash2,
+  Truck
 } from 'lucide-react';
 
 export default function UserMedicinePage() {
   const { isSupplier } = useAuth();
+  const [masterMedicines, setMasterMedicines] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [inventoryByMedicine, setInventoryByMedicine] = useState({});
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState('');
 
   // Pagination State
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalElements, setTotalElements] = useState(0);
 
   // View Modal State
   const [viewMedicine, setViewMedicine] = useState(null);
@@ -73,43 +75,24 @@ export default function UserMedicinePage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      if (searchTerm.trim()) {
-        const searchResults = await medicineService.searchMedicines(searchTerm.trim());
-        const list = Array.isArray(searchResults) ? searchResults : [];
-        setMedicines(list);
-        setTotalPages(1);
-        setTotalElements(list.length);
-      } else if (selectedCategory) {
-        const catResults = await medicineService.getMedicinesByCategory(selectedCategory);
-        const list = Array.isArray(catResults) ? catResults : [];
-        setMedicines(list);
-        setTotalPages(1);
-        setTotalElements(list.length);
-      } else {
-        const [data, inventory] = await Promise.all([
-          medicineService.getAllMedicines(page, pageSize),
-          inventoryService.getAllInventory()
-        ]);
-        const inventoryMap = (Array.isArray(inventory) ? inventory : []).reduce((map, row) => {
-          const id = String(row.medicine?.id || row.medicineId);
-          const current = map[id] || { quantity: 0, minimumStock: 0 };
-          map[id] = {
-            quantity: current.quantity + Number(row.quantity || 0),
-            minimumStock: Math.max(current.minimumStock, Number(row.minimumStock || 0))
-          };
-          return map;
-        }, {});
-        setInventoryByMedicine(inventoryMap);
-        if (data && data.content) {
-          setMedicines(data.content);
-          setTotalPages(data.totalPages || 1);
-          setTotalElements(data.totalElements || data.content.length);
-        } else if (Array.isArray(data)) {
-          setMedicines(data);
-          setTotalPages(1);
-          setTotalElements(data.length);
-        }
-      }
+      const [data, inventory] = await Promise.all([
+        medicineService.getAllMedicines(0, 500),
+        inventoryService.getAllInventory()
+      ]);
+      const list = data && data.content ? data.content : Array.isArray(data) ? data : [];
+      setMasterMedicines(list);
+      setMedicines(list);
+
+      const inventoryMap = (Array.isArray(inventory) ? inventory : []).reduce((map, row) => {
+        const id = String(row.medicine?.id || row.medicineId);
+        const current = map[id] || { quantity: 0, minimumStock: 0 };
+        map[id] = {
+          quantity: current.quantity + Number(row.quantity || 0),
+          minimumStock: Math.max(current.minimumStock, Number(row.minimumStock || 0))
+        };
+        return map;
+      }, {});
+      setInventoryByMedicine(inventoryMap);
     } catch (err) {
       console.error('Failed to load medicines for user view:', err);
       const status = err.response?.status;
@@ -127,27 +110,52 @@ export default function UserMedicinePage() {
     }
   };
 
-  const fetchCategories = async () => {
+  const fetchDropdownData = async () => {
     try {
-      const cats = await categoryService.getAllCategories();
+      const [cats, sups] = await Promise.all([
+        categoryService.getAllCategories(),
+        supplierService.getAllSuppliers()
+      ]);
       setCategories(Array.isArray(cats) ? cats : []);
+      setSuppliers(Array.isArray(sups) ? sups : []);
     } catch (err) {
-      console.error('Failed to load categories for filter:', err);
+      console.error('Failed to load categories/suppliers for filter:', err);
     }
   };
 
   useEffect(() => {
-    fetchCategories();
+    fetchDropdownData();
+    fetchMedicines();
   }, []);
 
-  useEffect(() => {
-    fetchMedicines();
-  }, [page, pageSize, selectedCategory]);
+  const filteredMedicines = masterMedicines.filter((m) => {
+    if (!m) return false;
+    if (selectedCategory && String(m.category?.id) !== String(selectedCategory)) return false;
+    if (selectedSupplier) {
+      const linkedSuppliers = m.suppliers || [];
+      const hasSupplier = linkedSuppliers.some((s) => String(s.id) === String(selectedSupplier) || s.supplierCode === selectedSupplier);
+      if (!hasSupplier) return false;
+    }
+    if (searchTerm.trim()) {
+      const query = searchTerm.trim().toLowerCase();
+      const codeMatch = (m.medicineCode || '').toLowerCase().includes(query);
+      const nameMatch = (m.name || '').toLowerCase().includes(query);
+      const genericMatch = (m.genericName || '').toLowerCase().includes(query);
+      const manufacturerMatch = (m.manufacturer || '').toLowerCase().includes(query);
+      const dosageMatch = (m.dosage || '').toLowerCase().includes(query);
+      const catMatch = (m.category?.name || '').toLowerCase().includes(query);
+      return codeMatch || nameMatch || genericMatch || manufacturerMatch || dosageMatch || catMatch;
+    }
+    return true;
+  });
+
+  const totalElements = filteredMedicines.length;
+  const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
+  const paginatedMedicines = filteredMedicines.slice(page * pageSize, (page + 1) * pageSize);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPage(0);
-    fetchMedicines();
   };
 
   return (
@@ -160,7 +168,7 @@ export default function UserMedicinePage() {
               <Pill className="w-6 h-6 text-blue-600" /> {isSupplier ? 'Supplier Medicine Catalog' : 'Browse Medicines'}
             </h1>
             <span className="px-3 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold">
-              {isSupplier ? `My Medicines: ${totalElements}` : `Total Catalog: ${totalElements}`}
+              {isSupplier ? `My Medicines: ${masterMedicines.length}` : `Total Catalog: ${masterMedicines.length}`}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -197,7 +205,10 @@ export default function UserMedicinePage() {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(0);
+              }}
               placeholder="Search by medicine brand name, generic name, code, or manufacturer..."
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -245,6 +256,28 @@ export default function UserMedicinePage() {
             </button>
           ))}
         </div>
+
+        {/* Supplier Filter Dropdown */}
+        <div className="flex items-center gap-2 border-t border-slate-100 pt-3">
+          <span className="text-xs font-bold text-slate-500 flex items-center gap-1 shrink-0">
+            <Truck className="w-3.5 h-3.5 text-slate-400" /> Supplier:
+          </span>
+          <select
+            value={selectedSupplier}
+            onChange={(e) => {
+              setSelectedSupplier(e.target.value);
+              setPage(0);
+            }}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Suppliers</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.supplierName} ({s.supplierCode})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Medicines Display Grid */}
@@ -269,7 +302,7 @@ export default function UserMedicinePage() {
             Retry Connection
           </button>
         </div>
-      ) : medicines.length === 0 ? (
+      ) : paginatedMedicines.length === 0 ? (
         <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-slate-200 space-y-4">
           <Pill className="w-10 h-10 text-slate-300 mx-auto" />
           {isSupplier && !searchTerm && !selectedCategory ? (
@@ -308,7 +341,7 @@ export default function UserMedicinePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {medicines.map((med) => {
+          {paginatedMedicines.map((med) => {
             const stock = inventoryByMedicine[String(med.id)] || { quantity: 0 };
             const isAvailable = Number(stock.quantity || 0) > 0;
             return (
@@ -387,7 +420,7 @@ export default function UserMedicinePage() {
         <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 text-xs">
           <span className="text-slate-500">
             Page <span className="font-bold text-slate-900">{page + 1}</span> of{' '}
-            <span className="font-bold text-slate-900">{totalPages}</span> ({totalElements} total medicines)
+            <span className="font-bold text-slate-900">{totalPages}</span> ({totalElements} filtered / {masterMedicines.length} total medicines)
           </span>
 
           <div className="flex items-center gap-2">

@@ -47,4 +47,11 @@ export const inventoryService = {
     const response = await apiClient.delete(`/inventory/${id}`);
     return response.data;
   },
+
+  getStockMovements: async (type, search) => {
+    const response = await apiClient.get('/inventory/movements', {
+      params: { type, search },
+    });
+    return response.data;
+  },
 };

@@ -21,4 +21,7 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
             "where s.id = :supplierId and m.id = :medicineId and s.active = true")
     boolean existsApprovedMedicineRelationship(@Param("supplierId") Long supplierId,
                                                @Param("medicineId") Long medicineId);
+
+    @Query("select s from Supplier s join s.medicines m where m.id = :medicineId and s.active = true")
+    List<Supplier> findSuppliersByMedicineId(@Param("medicineId") Long medicineId);
 }

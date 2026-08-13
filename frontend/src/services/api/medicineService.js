@@ -45,10 +45,11 @@ export const medicineService = {
     return response.data;
   },
 
-  getMasterCatalog: async (page = 0, size = 250, search = '', categoryId = '') => {
+  getMasterCatalog: async (page = 0, size = 250, search = '', categoryId = '', supplierId = '') => {
     const params = { page, size };
     if (search) params.search = search;
     if (categoryId) params.categoryId = categoryId;
+    if (supplierId) params.supplierId = supplierId;
     const response = await apiClient.get('/medicines/master', { params });
     return response.data;
   },

@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.medistock.inventory.entity.StockMovement;
+import com.medistock.inventory.repository.StockMovementRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +39,7 @@ public class DataSeeder implements CommandLineRunner {
     private final MedicineRepository medicineRepository;
     private final SupplierRepository supplierRepository;
     private final InventoryRepository inventoryRepository;
+    private final StockMovementRepository stockMovementRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
@@ -412,26 +415,26 @@ public class DataSeeder implements CommandLineRunner {
             int baseHash = mixHash(medName.hashCode() + i * 17);
             int batchCount = isHighDemand ? (2 + (baseHash % 3)) : (1 + (baseHash % 2));
 
+            String medLocation;
+            if (isControlled) {
+                medLocation = "Vault C-" + String.format("%02d", (baseHash % 3) + 1);
+            } else if (isColdChain) {
+                medLocation = "Cold Storage F-" + String.format("%02d", (baseHash % 5) + 1);
+            } else if (isHighDemand) {
+                char shelf = (baseHash % 2 == 0) ? 'A' : 'B';
+                medLocation = "Shelf " + shelf + "-" + String.format("%02d", (baseHash % 15) + 1);
+            } else {
+                char shelf = (baseHash % 2 == 0) ? 'D' : 'E';
+                medLocation = "Shelf " + shelf + "-" + String.format("%02d", (baseHash % 15) + 1);
+            }
+            med.setStorageLocation(medLocation);
+            medicineRepository.save(med);
+
             for (int b = 0; b < batchCount; b++) {
                 int seedHash = mixHash(baseHash + b * 37 + 101);
 
-                String location;
-                int minStock;
-                if (isControlled) {
-                    location = "Vault C-" + String.format("%02d", (seedHash % 3) + 1);
-                    minStock = 5 + (seedHash % 10);
-                } else if (isColdChain) {
-                    location = "Cold Storage F-" + String.format("%02d", (seedHash % 5) + 1);
-                    minStock = 10 + (seedHash % 15);
-                } else if (isHighDemand) {
-                    char shelf = (seedHash % 2 == 0) ? 'A' : 'B';
-                    location = "Shelf " + shelf + "-" + String.format("%02d", (seedHash % 15) + 1);
-                    minStock = 20 + (seedHash % 30);
-                } else {
-                    char shelf = (seedHash % 2 == 0) ? 'D' : 'E';
-                    location = "Shelf " + shelf + "-" + String.format("%02d", (seedHash % 15) + 1);
-                    minStock = 15 + (seedHash % 20);
-                }
+                String location = medLocation;
+                int minStock = med.getReorderLevel() != null ? med.getReorderLevel() : 10;
 
                 boolean isOutOfStock = (seedHash % 97 == 0 && b == 0);
                 boolean isLowStock = !isOutOfStock && (seedHash % 5 == 0 || (b == 0 && (medName.contains("morphine") || medName.contains("fentanyl"))));
@@ -469,6 +472,37 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         inventoryRepository.saveAll(inventoryBatch);
+
+        if (stockMovementRepository.count() == 0) {
+            List<StockMovement> seededMovements = new ArrayList<>();
+            Map<Long, Integer> medRunningStock = new HashMap<>();
+
+            for (Inventory inv : inventoryBatch) {
+                Long medId = inv.getMedicine().getId();
+                int prevStock = medRunningStock.getOrDefault(medId, 0);
+                int newStock = prevStock + inv.getQuantity();
+                medRunningStock.put(medId, newStock);
+
+                StockMovement sm = StockMovement.builder()
+                        .medicine(inv.getMedicine())
+                        .medicineCode(inv.getMedicine().getMedicineCode())
+                        .medicineName(inv.getMedicine().getName())
+                        .batchNumber(inv.getBatchNumber())
+                        .movementType("ADD")
+                        .quantity(inv.getQuantity())
+                        .previousQuantity(prevStock)
+                        .newQuantity(newStock)
+                        .performedBy("Pharmacist Admin")
+                        .reason("Initial Batch Stock Creation")
+                        .timestamp(LocalDateTime.now().minusDays(15 - (seededMovements.size() % 14)))
+                        .build();
+
+                seededMovements.add(sm);
+            }
+
+            stockMovementRepository.saveAll(seededMovements);
+            log.info("Seeded {} stock movement history records!", seededMovements.size());
+        }
         log.info("Saved {} inventory batch records across {} medicines!", inventoryBatch.size(), savedMedicines.size());
     }
 

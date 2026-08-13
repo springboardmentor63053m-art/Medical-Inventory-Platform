@@ -15,5 +15,5 @@ public interface MedicineService {
     List<MedicineResponse> searchMedicines(String name);
     List<MedicineResponse> getMedicinesByCategory(Long categoryId);
     List<MedicineResponse.LinkedSupplierDto> getSuppliersByMedicine(Long medicineId);
-    Page<MedicineResponse> getMasterMedicineCatalog(int page, int size, String search, Long categoryId);
+    Page<MedicineResponse> getMasterMedicineCatalog(int page, int size, String search, Long categoryId, Long supplierId);
 }

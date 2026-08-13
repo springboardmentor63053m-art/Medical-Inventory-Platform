@@ -18,6 +18,7 @@ import MedicineListPage from '../features/medicine/pages/MedicineListPage';
 import UserMedicinePage from '../features/medicine/pages/UserMedicinePage';
 import SupplierListPage from '../features/supplier/pages/SupplierListPage';
 import InventoryListPage from '../features/inventory/pages/InventoryListPage';
+import StockMovementListPage from '../features/inventory/pages/StockMovementListPage';
 import ExpiringMedicinesPage from '../features/inventory/pages/ExpiringMedicinesPage';
 import PurchaseOrderPage from '../features/purchase/pages/PurchaseOrderPage';
 import ReportsPage from '../features/reports/pages/ReportsPage';
@@ -221,6 +222,17 @@ export default function AppRoutes() {
           <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF']}>
             <MainLayout>
               <InventoryListPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/stock-movements"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER']}>
+            <MainLayout>
+              <StockMovementListPage />
             </MainLayout>
           </ProtectedRoute>
         }

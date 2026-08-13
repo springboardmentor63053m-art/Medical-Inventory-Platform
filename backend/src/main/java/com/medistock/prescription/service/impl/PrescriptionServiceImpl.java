@@ -24,6 +24,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.medistock.inventory.service.StockMovementService;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -35,6 +37,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final MedicineRepository medicineRepository;
     private final UserRepository userRepository;
     private final InventoryRepository inventoryRepository;
+    private final StockMovementService stockMovementService;
 
     @Override
     @Transactional
@@ -347,9 +350,25 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             if (remainingToDeduct <= 0) break;
             if (inv.getQuantity() > 0) {
                 int deductAmount = Math.min(inv.getQuantity(), remainingToDeduct);
-                inv.setQuantity(inv.getQuantity() - deductAmount);
+                int oldBatchQty = inv.getQuantity();
+                Long prevSum = inventoryRepository.sumQuantityByMedicineId(medicine.getId());
+                int previousStock = prevSum != null ? prevSum.intValue() : 0;
+                int newStock = previousStock - deductAmount;
+
+                inv.setQuantity(oldBatchQty - deductAmount);
                 remainingToDeduct -= deductAmount;
                 inventoryRepository.save(inv);
+
+                stockMovementService.recordMovement(
+                        medicine,
+                        inv.getBatchNumber(),
+                        "ISSUE",
+                        -deductAmount,
+                        previousStock,
+                        newStock,
+                        null,
+                        "Prescription / Store Counter Dispensing"
+                );
             }
         }
 

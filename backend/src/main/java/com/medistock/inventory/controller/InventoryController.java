@@ -2,7 +2,9 @@ package com.medistock.inventory.controller;
 
 import com.medistock.inventory.dto.request.InventoryRequest;
 import com.medistock.inventory.dto.response.InventoryResponse;
+import com.medistock.inventory.dto.response.StockMovementResponse;
 import com.medistock.inventory.service.InventoryService;
+import com.medistock.inventory.service.StockMovementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,16 @@ import java.util.Map;
 public class InventoryController {
 
     private final InventoryService inventoryService;
+    private final StockMovementService stockMovementService;
+
+    @GetMapping("/movements")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF', 'USER', 'SUPPLIER')")
+    public ResponseEntity<List<StockMovementResponse>> getStockMovements(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String search
+    ) {
+        return ResponseEntity.ok(stockMovementService.getMovements(type, search));
+    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")

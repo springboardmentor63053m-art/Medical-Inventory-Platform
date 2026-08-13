@@ -76,9 +76,10 @@ public class MedicineController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "250") int size,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) Long categoryId
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long supplierId
     ) {
-        return ResponseEntity.ok(medicineService.getMasterMedicineCatalog(page, size, search, categoryId));
+        return ResponseEntity.ok(medicineService.getMasterMedicineCatalog(page, size, search, categoryId, supplierId));
     }
 
     @GetMapping("/{id}/suppliers")

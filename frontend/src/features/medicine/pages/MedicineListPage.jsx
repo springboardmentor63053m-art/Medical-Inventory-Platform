@@ -35,6 +35,7 @@ import {
 export default function MedicineListPage() {
   const navigate = useNavigate();
   const { isAdmin, isPharmacist, isUser } = useAuth();
+  const [masterMedicines, setMasterMedicines] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -43,12 +44,11 @@ export default function MedicineListPage() {
   // Pagination state
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalElements, setTotalElements] = useState(0);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSupplier, setSelectedSupplier] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
 
   // Column Sorting
@@ -87,32 +87,38 @@ export default function MedicineListPage() {
     }).format(val || 0);
   };
 
+  const generateUniqueCode = (existingMeds) => {
+    const existingCodes = new Set((existingMeds || []).map((m) => (m.medicineCode || '').toUpperCase()));
+    let maxNum = 1000;
+    (existingMeds || []).forEach((m) => {
+      if (m.medicineCode) {
+        const match = m.medicineCode.match(/MED-(\d+)/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      }
+    });
+    let nextNum = maxNum + 1;
+    let code = `MED-${nextNum}`;
+    while (existingCodes.has(code.toUpperCase())) {
+      nextNum++;
+      code = `MED-${nextNum}`;
+    }
+    return code;
+  };
+
   const fetchMedicines = async () => {
     setLoading(true);
     try {
-      if (searchTerm.trim()) {
-        const searchResults = await medicineService.searchMedicines(searchTerm.trim());
-        setMedicines(Array.isArray(searchResults) ? searchResults : []);
-        setTotalPages(1);
-        setTotalElements(Array.isArray(searchResults) ? searchResults.length : 0);
-      } else if (selectedCategory) {
-        const catResults = await medicineService.getMedicinesByCategory(selectedCategory);
-        setMedicines(Array.isArray(catResults) ? catResults : []);
-        setTotalPages(1);
-        setTotalElements(Array.isArray(catResults) ? catResults.length : 0);
-      } else {
-        const data = await medicineService.getAllMedicines(page, pageSize);
-        if (data && data.content) {
-          setMedicines(data.content);
-          setTotalPages(data.totalPages || 1);
-          setTotalElements(data.totalElements || data.content.length);
-        } else if (Array.isArray(data)) {
-          setMedicines(data);
-          setTotalPages(1);
-          setTotalElements(data.length);
-        }
-      }
+      const data = await medicineService.getAllMedicines(0, 500);
+      const list = data && data.content ? data.content : Array.isArray(data) ? data : [];
+      setMasterMedicines(list);
+      setMedicines(list);
     } catch (err) {
+      console.error('Failed to fetch medicines:', err);
       toast.error('Failed to fetch medicines');
     } finally {
       setLoading(false);
@@ -121,18 +127,12 @@ export default function MedicineListPage() {
 
   const fetchDropdownData = async () => {
     try {
-      if (isAdmin || isPharmacist) {
-        const [cats, sups] = await Promise.all([
-          categoryService.getAllCategories(),
-          supplierService.getAllSuppliers()
-        ]);
-        setCategories(Array.isArray(cats) ? cats : []);
-        setSuppliers(Array.isArray(sups) ? sups : []);
-      } else {
-        const cats = await categoryService.getAllCategories();
-        setCategories(Array.isArray(cats) ? cats : []);
-        setSuppliers([]);
-      }
+      const [cats, sups] = await Promise.all([
+        categoryService.getAllCategories(),
+        supplierService.getAllSuppliers()
+      ]);
+      setCategories(Array.isArray(cats) ? cats : []);
+      setSuppliers(Array.isArray(sups) ? sups : []);
     } catch (err) {
       console.error('Failed to fetch dropdown datasets:', err);
     }
@@ -140,11 +140,8 @@ export default function MedicineListPage() {
 
   useEffect(() => {
     fetchDropdownData();
-  }, []);
-
-  useEffect(() => {
     fetchMedicines();
-  }, [page, pageSize, searchTerm, selectedCategory]);
+  }, []);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -155,10 +152,9 @@ export default function MedicineListPage() {
     }
   };
 
-  // Image State
   const handleOpenAddModal = () => {
     setEditingMedicine(null);
-    const autoCode = `MED-${Date.now().toString().slice(-4)}`;
+    const autoCode = generateUniqueCode(masterMedicines);
     setFormData({
       ...initialForm,
       medicineCode: autoCode,
@@ -207,7 +203,6 @@ export default function MedicineListPage() {
         await medicineService.createMedicine(payload);
         toast.success('Medicine created successfully');
       }
-
       setModalOpen(false);
       fetchMedicines();
     } catch (err) {
@@ -233,8 +228,25 @@ export default function MedicineListPage() {
     }
   };
 
-  const filteredMedicines = medicines.filter((m) => {
+  const filteredMedicines = masterMedicines.filter((m) => {
+    if (!m) return false;
     if (selectedStatus && m.status !== selectedStatus) return false;
+    if (selectedCategory && String(m.category?.id) !== String(selectedCategory)) return false;
+    if (selectedSupplier) {
+      const linkedSuppliers = m.suppliers || [];
+      const hasSupplier = linkedSuppliers.some((s) => String(s.id) === String(selectedSupplier) || s.supplierCode === selectedSupplier);
+      if (!hasSupplier) return false;
+    }
+    if (searchTerm.trim()) {
+      const query = searchTerm.trim().toLowerCase();
+      const codeMatch = (m.medicineCode || '').toLowerCase().includes(query);
+      const nameMatch = (m.name || '').toLowerCase().includes(query);
+      const genericMatch = (m.genericName || '').toLowerCase().includes(query);
+      const manufacturerMatch = (m.manufacturer || '').toLowerCase().includes(query);
+      const dosageMatch = (m.dosage || '').toLowerCase().includes(query);
+      const catMatch = (m.category?.name || '').toLowerCase().includes(query);
+      return codeMatch || nameMatch || genericMatch || manufacturerMatch || dosageMatch || catMatch;
+    }
     return true;
   });
 
@@ -254,6 +266,10 @@ export default function MedicineListPage() {
     if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
+
+  const totalElements = filteredMedicines.length;
+  const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
+  const paginatedMedicines = sortedMedicines.slice(page * pageSize, (page + 1) * pageSize);
 
   const renderSortIcon = (field) => {
     if (sortField !== field) return <ArrowUpDown className="w-3 h-3 text-slate-400" />;
@@ -305,13 +321,18 @@ export default function MedicineListPage() {
 
   {/* Total Catalog */}
   <button
-    onClick={() => navigate('/medicines')}
+    onClick={() => {
+      setSelectedStatus('');
+      setSelectedCategory('');
+      setSearchTerm('');
+      setPage(0);
+    }}
     className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-blue-300 hover:shadow-md transition cursor-pointer"
   >
     <div>
       <p className="text-xs font-semibold text-slate-500">Total Catalog</p>
       <h3 className="text-xl font-bold text-slate-900 mt-0.5">
-        {totalElements || medicines.length}
+        {masterMedicines.length}
       </h3>
     </div>
 
@@ -342,7 +363,7 @@ export default function MedicineListPage() {
   {/* Active Formulations */}
   <button
     onClick={() => {
-      setSelectedStatus('ACTIVE');
+      setSelectedStatus(selectedStatus === 'ACTIVE' ? '' : 'ACTIVE');
       setPage(0);
     }}
     className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-emerald-300 hover:shadow-md transition cursor-pointer"
@@ -353,7 +374,7 @@ export default function MedicineListPage() {
       </p>
 
       <h3 className="text-xl font-bold text-emerald-600 mt-0.5">
-        {medicines.filter((m) => m.status === 'ACTIVE').length}
+        {masterMedicines.filter((m) => m.status === 'ACTIVE').length}
       </h3>
     </div>
 
@@ -365,7 +386,12 @@ export default function MedicineListPage() {
 
   {/* Manufacturers */}
   <button
-    onClick={() => navigate('/medicines')}
+    onClick={() => {
+      setSelectedStatus('');
+      setSelectedCategory('');
+      setSearchTerm('');
+      setPage(0);
+    }}
     className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-amber-300 hover:shadow-md transition cursor-pointer"
   >
     <div>
@@ -374,7 +400,7 @@ export default function MedicineListPage() {
       </p>
 
       <h3 className="text-xl font-bold text-slate-900 mt-0.5">
-        {new Set(medicines.map((m) => m.manufacturer)).size}
+        {new Set(masterMedicines.map((m) => m.manufacturer).filter(Boolean)).size}
       </h3>
     </div>
 
@@ -392,7 +418,10 @@ export default function MedicineListPage() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(0);
+            }}
             placeholder="Search by code, medicine name or generic name..."
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
           />
@@ -420,8 +449,27 @@ export default function MedicineListPage() {
           </select>
 
           <select
+            value={selectedSupplier}
+            onChange={(e) => {
+              setSelectedSupplier(e.target.value);
+              setPage(0);
+            }}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Suppliers</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.supplierName} ({s.supplierCode})
+              </option>
+            ))}
+          </select>
+
+          <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
+            onChange={(e) => {
+              setSelectedStatus(e.target.value);
+              setPage(0);
+            }}
             className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Statuses</option>
@@ -451,7 +499,7 @@ export default function MedicineListPage() {
                   className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Medicine Name</span>
+                    <span>Name & Generic</span>
                     {renderSortIcon('name')}
                   </div>
                 </th>
@@ -464,7 +512,7 @@ export default function MedicineListPage() {
                     {renderSortIcon('category')}
                   </div>
                 </th>
-                <th className="py-3.5 px-6">Dosage</th>
+                <th className="py-3.5 px-6">Dosage Form</th>
                 <th
                   onClick={() => handleSort('manufacturer')}
                   className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
@@ -479,7 +527,7 @@ export default function MedicineListPage() {
                   className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Unit Price (INR)</span>
+                    <span>Unit Price</span>
                     {renderSortIcon('unitPrice')}
                   </div>
                 </th>
@@ -492,17 +540,17 @@ export default function MedicineListPage() {
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600 mb-2" />
-                    Loading medicine catalog...
+                    Loading medicine details...
                   </td>
                 </tr>
-              ) : sortedMedicines.length === 0 ? (
+              ) : paginatedMedicines.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-500">
                     No medicine items found.
                   </td>
                 </tr>
               ) : (
-                sortedMedicines.map((med) => (
+                paginatedMedicines.map((med) => (
                   <tr key={med.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-4 px-6 font-mono font-semibold text-slate-800">
                       {med.medicineCode}

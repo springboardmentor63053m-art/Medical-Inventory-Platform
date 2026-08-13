@@ -24,6 +24,7 @@ public class MedicineResponse {
     private Integer reorderLevel;
     private String description;
     private String status;
+    private String storageLocation;
     private String drugClass;
     private String therapeuticClass;
     private String packSize;

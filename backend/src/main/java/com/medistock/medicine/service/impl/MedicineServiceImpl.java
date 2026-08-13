@@ -14,6 +14,7 @@ import com.medistock.supplier.entity.Supplier;
 import com.medistock.supplier.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -70,6 +71,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .reorderLevel(request.getReorderLevel() != null ? request.getReorderLevel() : 10)
                 .description(request.getDescription())
                 .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
+                .storageLocation(request.getStorageLocation())
                 .build();
 
         Medicine saved = medicineRepository.save(medicine);
@@ -128,6 +130,9 @@ public class MedicineServiceImpl implements MedicineService {
         if (request.getStatus() != null) {
             medicine.setStatus(request.getStatus());
         }
+        if (request.getStorageLocation() != null) {
+            medicine.setStorageLocation(request.getStorageLocation());
+        }
 
         Medicine updated = medicineRepository.save(medicine);
         return mapToResponse(updated);
@@ -144,14 +149,18 @@ public class MedicineServiceImpl implements MedicineService {
     @Override
     @Transactional(readOnly = true)
     public List<MedicineResponse> searchMedicines(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return getAllMedicines(0, 250, "id", "asc").getContent();
+        }
+        String query = name.trim();
         Supplier supplier = resolveAuthenticatedSupplier();
         if (supplier != null) {
-            return medicineRepository.searchBySupplierId(supplier.getId(), name, PageRequest.of(0, 250))
+            return medicineRepository.searchBySupplierId(supplier.getId(), query, PageRequest.of(0, 250))
                     .getContent().stream()
                     .map(this::mapToResponse)
                     .collect(Collectors.toList());
         }
-        return medicineRepository.findByNameContainingIgnoreCase(name).stream()
+        return medicineRepository.searchMasterCatalog(query, PageRequest.of(0, 250)).getContent().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -172,9 +181,18 @@ public class MedicineServiceImpl implements MedicineService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<MedicineResponse> getMasterMedicineCatalog(int page, int size, String search, Long categoryId) {
+    public Page<MedicineResponse> getMasterMedicineCatalog(int page, int size, String search, Long categoryId, Long supplierId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
-        if (search != null && !search.trim().isEmpty()) {
+        if (supplierId != null) {
+            if (search != null && !search.trim().isEmpty()) {
+                return medicineRepository.searchBySupplierId(supplierId, search.trim(), pageable).map(this::mapToResponse);
+            } else if (categoryId != null) {
+                List<MedicineResponse> list = medicineRepository.findBySupplierIdAndCategoryId(supplierId, categoryId)
+                        .stream().map(this::mapToResponse).collect(Collectors.toList());
+                return new PageImpl<>(list, pageable, list.size());
+            }
+            return medicineRepository.findBySupplierId(supplierId, pageable).map(this::mapToResponse);
+        } else if (search != null && !search.trim().isEmpty()) {
             return medicineRepository.searchMasterCatalog(search.trim(), pageable).map(this::mapToResponse);
         } else if (categoryId != null) {
             return medicineRepository.findByCategoryIdMaster(categoryId, pageable).map(this::mapToResponse);
@@ -218,20 +236,25 @@ public class MedicineServiceImpl implements MedicineService {
         }
 
         List<MedicineResponse.LinkedSupplierDto> linkedSuppliers = null;
-        if (org.hibernate.Hibernate.isInitialized(medicine.getSuppliers()) && medicine.getSuppliers() != null && !medicine.getSuppliers().isEmpty()) {
-            linkedSuppliers = medicine.getSuppliers().stream()
-                    .filter(s -> Boolean.TRUE.equals(s.getActive()))
-                    .map(s -> MedicineResponse.LinkedSupplierDto.builder()
-                            .id(s.getId())
-                            .supplierCode(s.getSupplierCode())
-                            .supplierName(s.getSupplierName())
-                            .contactPerson(s.getContactPerson())
-                            .phone(s.getPhone())
-                            .email(s.getEmail())
-                            .city(s.getCity())
-                            .country(s.getCountry())
-                            .build())
-                    .collect(Collectors.toList());
+        try {
+            List<Supplier> sups = supplierRepository.findSuppliersByMedicineId(medicine.getId());
+            if (sups != null && !sups.isEmpty()) {
+                linkedSuppliers = sups.stream()
+                        .filter(s -> Boolean.TRUE.equals(s.getActive()))
+                        .map(s -> MedicineResponse.LinkedSupplierDto.builder()
+                                .id(s.getId())
+                                .supplierCode(s.getSupplierCode())
+                                .supplierName(s.getSupplierName())
+                                .contactPerson(s.getContactPerson())
+                                .phone(s.getPhone())
+                                .email(s.getEmail())
+                                .city(s.getCity())
+                                .country(s.getCountry())
+                                .build())
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            // Log warning fallback if query fails
         }
 
         return MedicineResponse.builder()
@@ -246,6 +269,7 @@ public class MedicineServiceImpl implements MedicineService {
                 .reorderLevel(medicine.getReorderLevel())
                 .description(medicine.getDescription())
                 .status(medicine.getStatus())
+                .storageLocation(medicine.getStorageLocation())
                 .prescriptionRequired(medicine.getPrescriptionRequired() != null ? medicine.getPrescriptionRequired() : true)
                 .suppliers(linkedSuppliers)
                 .createdAt(medicine.getCreatedAt())
