@@ -12,7 +12,9 @@ import {
   LogOut,
   Activity,
   Receipt,
-  History
+  History,
+  User,
+  Bell
 } from 'lucide-react';
 
 const Layout = () => {
@@ -30,6 +32,12 @@ const Layout = () => {
       path: '/supplier/dashboard',
       label: 'Supplier Dashboard',
       icon: <LayoutDashboard />,
+      roles: ['ROLE_SUPPLIER']
+    },
+    {
+      path: '/supplier/profile',
+      label: 'My Supplier Profile',
+      icon: <User />,
       roles: ['ROLE_SUPPLIER']
     },
     {
@@ -54,7 +62,7 @@ const Layout = () => {
       path: '/categories',
       label: 'Categories',
       icon: <Tags />,
-      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF', 'ROLE_SUPPLIER']
     },
     {
       path: '/suppliers',
@@ -76,6 +84,18 @@ const Layout = () => {
       roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_SUPPLIER', 'ROLE_STAFF']
     },
     {
+      path: '/notifications',
+      label: 'Notifications',
+      icon: <Bell />,
+      roles: ['ROLE_SUPPLIER']
+    },
+    {
+      path: '/profile',
+      label: 'Profile',
+      icon: <User />,
+      roles: ['ROLE_SUPPLIER']
+    },
+    {
       path: '/users',
       label: 'Users Control',
       icon: <UsersIcon />,
@@ -89,8 +109,15 @@ const Layout = () => {
   );
 
   const getPageTitle = () => {
+    const isSupplier = user?.roles?.includes('ROLE_SUPPLIER');
     const currentItem = menuItems.find(item => item.path === location.pathname);
-    return currentItem ? currentItem.label : 'MediStock Inventory';
+    if (currentItem) {
+      if (isSupplier && currentItem.path === '/purchase-orders') {
+        return 'Orders From MediStock';
+      }
+      return currentItem.label;
+    }
+    return 'MediStock Inventory';
   };
 
   return (
@@ -105,14 +132,32 @@ const Layout = () => {
         <nav className="sidebar-menu">
           {filteredMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const isSupplier = user?.roles?.includes('ROLE_SUPPLIER');
+            const label = isSupplier && item.path === '/purchase-orders' ? 'Orders From MediStock' : item.label;
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`menu-item ${isActive ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '8px' }}
               >
                 {item.icon}
-                <span>{item.label}</span>
+                <span>{label}</span>
+                {isSupplier && item.path === '/purchase-orders' && (
+                  <span style={{
+                    marginLeft: 'auto',
+                    fontSize: '0.65rem',
+                    background: 'rgba(147, 51, 234, 0.15)',
+                    border: '1px solid rgba(147, 51, 234, 0.3)',
+                    color: '#c084fc',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap'
+                  }}>
+                    MediStock Orders
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -155,12 +200,39 @@ const Layout = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="main-content">
+      <main className="main-content min-w-0">
         <header className="top-header">
           <div className="header-title">
             <h1>{getPageTitle()}</h1>
           </div>
-          <div className="header-actions">
+          <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <Link 
+              to="/notifications" 
+              style={{ 
+                color: 'var(--text-secondary)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                padding: '6px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                transition: 'all 0.2s',
+                cursor: 'pointer'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.color = 'var(--primary)';
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+              }}
+            >
+              <Bell size={18} />
+            </Link>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
               Server: <strong style={{ color: 'var(--success)' }}>Online</strong>
             </span>

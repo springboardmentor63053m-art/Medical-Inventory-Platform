@@ -4,6 +4,7 @@ import com.medistock.medistock_backend.dto.JwtResponse;
 import com.medistock.medistock_backend.dto.LoginRequest;
 import com.medistock.medistock_backend.dto.RegisterRequest;
 import com.medistock.medistock_backend.dto.UserDto;
+import com.medistock.medistock_backend.dto.ChangePasswordRequest;
 import com.medistock.medistock_backend.entity.ERole;
 import com.medistock.medistock_backend.entity.Role;
 import com.medistock.medistock_backend.entity.User;
@@ -200,5 +201,17 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return resolvedRoles;
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(String username, ChangePasswordRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new com.medistock.medistock_backend.exception.ResourceNotFoundException("User not found: " + username));
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BadRequestException("Current password does not match");
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

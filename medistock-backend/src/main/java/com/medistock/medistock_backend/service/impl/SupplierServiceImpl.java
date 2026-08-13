@@ -2,6 +2,7 @@ package com.medistock.medistock_backend.service.impl;
 
 import com.medistock.medistock_backend.dto.SupplierDto;
 import com.medistock.medistock_backend.entity.Supplier;
+import com.medistock.medistock_backend.exception.BadRequestException;
 import com.medistock.medistock_backend.exception.ResourceNotFoundException;
 import com.medistock.medistock_backend.repository.SupplierRepository;
 import com.medistock.medistock_backend.service.SupplierService;
@@ -66,10 +67,15 @@ public class SupplierServiceImpl implements SupplierService {
     @Override
     @Transactional
     public void deleteSupplier(Long id) {
-        if (!supplierRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Supplier not found with id: " + id);
+        Supplier supplier = supplierRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
+        if (supplier.getMedicines() != null && !supplier.getMedicines().isEmpty()) {
+            throw new BadRequestException("Cannot delete supplier because they have associated medicines.");
         }
-        supplierRepository.deleteById(id);
+        if (supplier.getPurchaseOrders() != null && !supplier.getPurchaseOrders().isEmpty()) {
+            throw new BadRequestException("Cannot delete supplier because they have associated purchase orders.");
+        }
+        supplierRepository.delete(supplier);
     }
 
     private SupplierDto mapToDto(Supplier supplier) {

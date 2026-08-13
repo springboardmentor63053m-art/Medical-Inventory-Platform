@@ -232,6 +232,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 /* Header Navbar */
@@ -990,4 +991,60 @@ tr:hover td {
   .page-container {
     padding: 16px;
   }
+}
+
+/* ==========================================
+   MEDICINES PAGE TABLE RESPONSIVE LAYOUT FIXES
+   ========================================== */
+.medicines-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.medicines-table th,
+.medicines-table td {
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.col-code {
+  width: 75px;
+}
+
+.col-brand {
+  width: 15%;
+}
+
+.col-generic {
+  width: 15%;
+}
+
+.col-category {
+  width: 11%;
+}
+
+.col-price {
+  width: 9%;
+}
+
+.col-stock {
+  width: 9%;
+}
+
+.col-status {
+  width: 12%;
+}
+
+.col-expiry {
+  width: 10%;
+}
+
+.col-supplier {
+  width: 14%;
+}
+
+.col-actions {
+  width: 90px;
 }

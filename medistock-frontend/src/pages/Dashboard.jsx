@@ -27,6 +27,11 @@ const Dashboard = () => {
   const isAdmin = user?.roles?.includes('ROLE_ADMIN');
 
   useEffect(() => {
+    if (user?.roles?.includes('ROLE_SUPPLIER')) {
+      navigate('/supplier/dashboard', { replace: true });
+      return;
+    }
+
     const fetchDashboard = async () => {
       try {
         const response = await api.get('/dashboard');

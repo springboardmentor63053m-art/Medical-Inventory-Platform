@@ -29,7 +29,6 @@ const Users = () => {
     { value: 'ROLE_ADMIN', label: 'Admin' },
     { value: 'ROLE_PHARMACIST', label: 'Pharmacist' },
     { value: 'ROLE_DOCTOR', label: 'Doctor' },
-    { value: 'ROLE_SUPPLIER', label: 'Supplier' },
     { value: 'ROLE_USER', label: 'User Standard' }
   ];
 

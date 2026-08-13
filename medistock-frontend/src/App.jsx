@@ -17,6 +17,9 @@ import Users from './pages/Users';
 import Billing from './pages/Billing';
 import SalesHistory from './pages/SalesHistory';
 import SupplierDashboard from './pages/supplier/SupplierDashboard';
+import SupplierProfile from './pages/supplier/SupplierProfile';
+import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
 
 function App() {
   return (
@@ -36,14 +39,21 @@ function App() {
               {/* Supplier Dashboard accessible by Supplier */}
               <Route element={<ProtectedRoute allowedRoles={['ROLE_SUPPLIER']} />}>
                 <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
+                <Route path="/supplier/profile" element={<SupplierProfile />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/notifications" element={<Notifications />} />
               </Route>
 
               {/* Medicines catalog accessible by all roles */}
               <Route path="/medicines" element={<Medicines />} />
 
-              {/* Category, Billing, Sales accessible by Admin, Pharmacist, and Staff */}
-              <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']} />}>
+              {/* Category accessible by Admin, Pharmacist, Staff, and Supplier */}
+              <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF', 'ROLE_SUPPLIER']} />}>
                 <Route path="/categories" element={<Categories />} />
+              </Route>
+
+              {/* Billing and Sales accessible by Admin, Pharmacist, and Staff */}
+              <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF']} />}>
                 <Route path="/billing" element={<Billing />} />
                 <Route path="/sales" element={<SalesHistory />} />
               </Route>
