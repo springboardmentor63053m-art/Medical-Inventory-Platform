@@ -18,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/purchase-orders")
 @RequiredArgsConstructor
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF', 'ROLE_SUPPLIER')")
 public class PurchaseOrderController {
 
     private final PurchaseOrderService purchaseOrderService;
@@ -43,6 +44,7 @@ public class PurchaseOrderController {
     }
 
     @PostMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> createPurchaseOrder(
             @Valid @RequestBody PurchaseOrderRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -53,6 +55,7 @@ public class PurchaseOrderController {
     }
 
     @PatchMapping("/{id}/status")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_SUPPLIER')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> updateOrderStatus(
             @PathVariable Long id,
             @RequestParam OrderStatus status) {
@@ -60,6 +63,7 @@ public class PurchaseOrderController {
     }
 
     @DeleteMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deletePurchaseOrder(@PathVariable Long id) {
         purchaseOrderService.deletePurchaseOrder(id);
         return ResponseEntity.ok(ApiResponse.success("Purchase order deleted successfully", null));

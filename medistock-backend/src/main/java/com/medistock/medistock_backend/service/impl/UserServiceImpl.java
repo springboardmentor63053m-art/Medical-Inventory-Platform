@@ -31,7 +31,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<UserDto> getAllUsers() {
-        return userRepository.findAll().stream()
+        return userRepository.findAllNormalUsers().stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
@@ -41,12 +41,18 @@ public class UserServiceImpl implements UserService {
     public UserDto getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        if (user.getRoles().stream().anyMatch(r -> r.getName() == ERole.ROLE_SUPPLIER)) {
+            throw new ResourceNotFoundException("User not found with id: " + id);
+        }
         return mapToDto(user);
     }
 
     @Override
     @Transactional
     public UserDto createUser(UserRequest userRequest) {
+        if (userRequest.getRoles() != null && userRequest.getRoles().stream().anyMatch(r -> r.toUpperCase().contains("SUPPLIER"))) {
+            throw new BadRequestException("Cannot create supplier account via user control");
+        }
         if (userRepository.existsByUsername(userRequest.getUsername())) {
             throw new BadRequestException("Username already exists");
         }
@@ -72,6 +78,12 @@ public class UserServiceImpl implements UserService {
     public UserDto updateUser(Long id, UserRequest userRequest) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        if (user.getRoles().stream().anyMatch(r -> r.getName() == ERole.ROLE_SUPPLIER)) {
+            throw new ResourceNotFoundException("User not found with id: " + id);
+        }
+        if (userRequest.getRoles() != null && userRequest.getRoles().stream().anyMatch(r -> r.toUpperCase().contains("SUPPLIER"))) {
+            throw new BadRequestException("Cannot assign supplier role via user control");
+        }
 
         user.setFullName(userRequest.getFullName());
         user.setPhone(userRequest.getPhone());
@@ -91,10 +103,12 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        if (user.getRoles().stream().anyMatch(r -> r.getName() == ERole.ROLE_SUPPLIER)) {
             throw new ResourceNotFoundException("User not found with id: " + id);
         }
-        userRepository.deleteById(id);
+        userRepository.delete(user);
     }
 
     private UserDto mapToDto(User user) {

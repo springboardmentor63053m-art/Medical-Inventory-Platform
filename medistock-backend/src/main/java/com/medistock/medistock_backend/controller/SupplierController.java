@@ -14,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/suppliers")
 @RequiredArgsConstructor
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF')")
 public class SupplierController {
 
     private final SupplierService supplierService;
@@ -29,7 +30,7 @@ public class SupplierController {
     }
 
     @PostMapping
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_STAFF')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<SupplierDto>> createSupplier(@Valid @RequestBody SupplierDto supplierDto) {
         SupplierDto created = supplierService.createSupplier(supplierDto);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -37,13 +38,13 @@ public class SupplierController {
     }
 
     @PutMapping("/{id}")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_STAFF')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<SupplierDto>> updateSupplier(@PathVariable Long id, @Valid @RequestBody SupplierDto supplierDto) {
         return ResponseEntity.ok(ApiResponse.success("Supplier updated successfully", supplierService.updateSupplier(id, supplierDto)));
     }
 
     @DeleteMapping("/{id}")
-    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_STAFF')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteSupplier(@PathVariable Long id) {
         supplierService.deleteSupplier(id);
         return ResponseEntity.ok(ApiResponse.success("Supplier deleted successfully", null));

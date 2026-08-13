@@ -1,5 +1,6 @@
 package com.medistock.medistock_backend.service.impl;
 
+import java.util.Optional;
 import com.medistock.medistock_backend.dto.CategoryDto;
 import com.medistock.medistock_backend.dto.MedicineFilterRequest;
 import com.medistock.medistock_backend.dto.MedicineRequest;
@@ -12,9 +13,14 @@ import com.medistock.medistock_backend.entity.Supplier;
 import com.medistock.medistock_backend.entity.StockStatus;
 import com.medistock.medistock_backend.exception.BadRequestException;
 import com.medistock.medistock_backend.exception.ResourceNotFoundException;
+import com.medistock.medistock_backend.entity.ERole;
+import com.medistock.medistock_backend.entity.User;
+import com.medistock.medistock_backend.entity.SupplierMedicine;
 import com.medistock.medistock_backend.repository.CategoryRepository;
 import com.medistock.medistock_backend.repository.InventoryRepository;
 import com.medistock.medistock_backend.repository.MedicineRepository;
+import com.medistock.medistock_backend.repository.SupplierMedicineRepository;
+import com.medistock.medistock_backend.repository.UserRepository;
 import com.medistock.medistock_backend.service.StockMovementService;
 import com.medistock.medistock_backend.entity.MovementType;
 import com.medistock.medistock_backend.repository.SupplierRepository;
@@ -42,6 +48,8 @@ public class MedicineServiceImpl implements MedicineService {
     private final SupplierRepository supplierRepository;
     private final InventoryRepository inventoryRepository;
     private final StockMovementService stockMovementService;
+    private final UserRepository userRepository;
+    private final SupplierMedicineRepository supplierMedicineRepository;
 
     @Value("${inventory.near-expiry-days:30}")
     private int nearExpiryDays;
@@ -49,6 +57,57 @@ public class MedicineServiceImpl implements MedicineService {
     @Override
     @Transactional(readOnly = true)
     public Page<MedicineResponse> getAllMedicines(MedicineFilterRequest filter) {
+        Long currentSupplierId = getCurrentSupplierId();
+        if (currentSupplierId != null) {
+            int pageNum = filter.getPage() != null ? filter.getPage() : 0;
+            int pageSize = filter.getSize() != null ? filter.getSize() : 10;
+
+            Sort sort = Sort.unsorted();
+            if (filter.getSortBy() != null) {
+                String sortByProperty = "medicine.name";
+                switch (filter.getSortBy()) {
+                    case NAME:
+                        sortByProperty = "medicine.name";
+                        break;
+                    case QUANTITY:
+                        sortByProperty = "medicine.inventory.quantity";
+                        break;
+                    case EXPIRY_DATE:
+                        sortByProperty = "medicine.expiryDate";
+                        break;
+                    case CATEGORY:
+                        sortByProperty = "medicine.category.name";
+                        break;
+                    case SUPPLIER:
+                        sortByProperty = "supplier.name";
+                        break;
+                }
+
+                Sort.Direction direction = Sort.Direction.ASC;
+                if (filter.getSortDirection() != null && filter.getSortDirection() == com.medistock.medistock_backend.entity.SortDirection.DESC) {
+                    direction = Sort.Direction.DESC;
+                }
+                sort = Sort.by(direction, sortByProperty);
+            }
+
+            Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
+            LocalDate today = LocalDate.now();
+            LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
+            String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
+
+            Page<SupplierMedicine> page = supplierMedicineRepository.filterSupplierMedicines(
+                currentSupplierId,
+                filter.getSearch(),
+                filter.getCategoryId(),
+                statusStr,
+                today,
+                nearExpiryDate,
+                pageable
+            );
+
+            return page.map(this::mapSupplierMedicineToResponse);
+        }
+
         int pageNum = filter.getPage() != null ? filter.getPage() : 0;
         int pageSize = filter.getSize() != null ? filter.getSize() : 10;
 
@@ -101,9 +160,24 @@ public class MedicineServiceImpl implements MedicineService {
     @Override
     @Transactional(readOnly = true)
     public List<MedicineResponse> getAllMedicinesList(MedicineFilterRequest filter) {
+        Long currentSupplierId = getCurrentSupplierId();
         LocalDate today = LocalDate.now();
         LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
         String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
+
+        if (currentSupplierId != null && filter.getAll() != Boolean.TRUE) {
+            List<SupplierMedicine> list = supplierMedicineRepository.filterSupplierMedicinesList(
+                currentSupplierId,
+                filter.getSearch(),
+                filter.getCategoryId(),
+                statusStr,
+                today,
+                nearExpiryDate
+            );
+            return list.stream()
+                    .map(this::mapSupplierMedicineToResponse)
+                    .collect(Collectors.toList());
+        }
 
         List<Medicine> list = medicineRepository.filterMedicinesList(
             filter.getSearch(),
@@ -113,6 +187,55 @@ public class MedicineServiceImpl implements MedicineService {
             today,
             nearExpiryDate
         );
+
+        if (currentSupplierId != null) {
+            return list.stream()
+                    .map(medicine -> {
+                        CategoryDto categoryDto = medicine.getCategory() != null ?
+                                CategoryDto.builder()
+                                        .id(medicine.getCategory().getId())
+                                        .name(medicine.getCategory().getName())
+                                        .description(medicine.getCategory().getDescription())
+                                        .build() : null;
+
+                        Integer supplierQty = 0;
+                        Optional<SupplierMedicine> supMedOpt = supplierMedicineRepository
+                                .findBySupplierIdAndMedicineId(currentSupplierId, medicine.getId());
+                        if (supMedOpt.isPresent()) {
+                            supplierQty = supMedOpt.get().getAvailableQuantity();
+                        }
+
+                        SupplierDto supplierDto = supMedOpt.isPresent() ?
+                                SupplierDto.builder()
+                                        .id(supMedOpt.get().getSupplier().getId())
+                                        .name(supMedOpt.get().getSupplier().getName())
+                                        .contactPerson(supMedOpt.get().getSupplier().getContactPerson())
+                                        .email(supMedOpt.get().getSupplier().getEmail())
+                                        .phone(supMedOpt.get().getSupplier().getPhone())
+                                        .address(supMedOpt.get().getSupplier().getAddress())
+                                        .build() : null;
+
+                        Integer stock = medicine.getInventory() != null ? medicine.getInventory().getQuantity() : 0;
+                        Integer reorder = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
+
+                        return MedicineResponse.builder()
+                                .id(medicine.getId())
+                                .name(medicine.getName())
+                                .code(medicine.getCode())
+                                .genericName(medicine.getGenericName())
+                                .manufacturer(medicine.getManufacturer())
+                                .price(medicine.getPrice())
+                                .expiryDate(medicine.getExpiryDate())
+                                .batchNumber(medicine.getBatchNumber())
+                                .category(categoryDto)
+                                .supplier(supplierDto)
+                                .currentStock(stock)
+                                .reorderLevel(reorder)
+                                .supplierAvailableQuantity(supplierQty)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+        }
 
         return list.stream()
                 .map(this::mapToResponse)
@@ -124,6 +247,12 @@ public class MedicineServiceImpl implements MedicineService {
     public MedicineResponse getMedicineById(Long id) {
         Medicine medicine = medicineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + id));
+        Long currentSupplierId = getCurrentSupplierId();
+        if (currentSupplierId != null) {
+            SupplierMedicine sm = supplierMedicineRepository.findBySupplierIdAndMedicineId(currentSupplierId, id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + id));
+            return mapSupplierMedicineToResponse(sm);
+        }
         return mapToResponse(medicine);
     }
 
@@ -132,12 +261,28 @@ public class MedicineServiceImpl implements MedicineService {
     public MedicineResponse getMedicineByCode(String code) {
         Medicine medicine = medicineRepository.findByCode(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with code: " + code));
+        Long currentSupplierId = getCurrentSupplierId();
+        if (currentSupplierId != null) {
+            SupplierMedicine sm = supplierMedicineRepository.findBySupplierIdAndMedicineId(currentSupplierId, medicine.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with code: " + code));
+            return mapSupplierMedicineToResponse(sm);
+        }
         return mapToResponse(medicine);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<MedicineResponse> searchMedicines(String query) {
+        Long currentSupplierId = getCurrentSupplierId();
+        if (currentSupplierId != null) {
+            List<SupplierMedicine> list = supplierMedicineRepository.findBySupplierId(currentSupplierId);
+            return list.stream()
+                    .filter(sm -> sm.getMedicine().getName().toLowerCase().contains(query.toLowerCase())
+                            || sm.getMedicine().getCode().toLowerCase().contains(query.toLowerCase())
+                            || (sm.getMedicine().getGenericName() != null && sm.getMedicine().getGenericName().toLowerCase().contains(query.toLowerCase())))
+                    .map(this::mapSupplierMedicineToResponse)
+                    .collect(Collectors.toList());
+        }
         return medicineRepository.searchMedicines(query).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -146,6 +291,14 @@ public class MedicineServiceImpl implements MedicineService {
     @Override
     @Transactional(readOnly = true)
     public List<MedicineResponse> getMedicinesByCategory(Long categoryId) {
+        Long currentSupplierId = getCurrentSupplierId();
+        if (currentSupplierId != null) {
+            List<SupplierMedicine> list = supplierMedicineRepository.findBySupplierId(currentSupplierId);
+            return list.stream()
+                    .filter(sm -> sm.getMedicine().getCategory() != null && sm.getMedicine().getCategory().getId().equals(categoryId))
+                    .map(this::mapSupplierMedicineToResponse)
+                    .collect(Collectors.toList());
+        }
         return medicineRepository.findByCategoryId(categoryId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -290,6 +443,15 @@ public class MedicineServiceImpl implements MedicineService {
         Integer stock = medicine.getInventory() != null ? medicine.getInventory().getQuantity() : 0;
         Integer reorder = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
 
+        Integer supplierQty = 0;
+        if (medicine.getSupplier() != null) {
+            Optional<SupplierMedicine> supMedOpt = supplierMedicineRepository
+                    .findBySupplierIdAndMedicineId(medicine.getSupplier().getId(), medicine.getId());
+            if (supMedOpt.isPresent()) {
+                supplierQty = supMedOpt.get().getAvailableQuantity();
+            }
+        }
+
         return MedicineResponse.builder()
                 .id(medicine.getId())
                 .name(medicine.getName())
@@ -303,8 +465,129 @@ public class MedicineServiceImpl implements MedicineService {
                 .supplier(supplierDto)
                 .currentStock(stock)
                 .reorderLevel(reorder)
-                .supplierAvailableQuantity(medicine.getSupplierAvailableQuantity() != null ? medicine.getSupplierAvailableQuantity() : 0)
+                .supplierAvailableQuantity(supplierQty)
                 .stockStatus(calculateStockStatus(medicine))
                 .build();
+    }
+
+    private List<StockStatus> calculateSupplierStockStatus(Medicine medicine, Integer quantity) {
+        List<StockStatus> statuses = new ArrayList<>();
+        Integer reorderLevel = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 30;
+        LocalDate expiryDate = medicine.getExpiryDate();
+        LocalDate today = LocalDate.now();
+        LocalDate nearExpiryLimit = today.plusDays(nearExpiryDays);
+
+        if (expiryDate != null) {
+            if (expiryDate.isBefore(today)) {
+                statuses.add(StockStatus.EXPIRED);
+            } else if (!expiryDate.isAfter(nearExpiryLimit)) {
+                statuses.add(StockStatus.NEAR_EXPIRY);
+            }
+        }
+        if (quantity == null || quantity == 0) {
+            statuses.add(StockStatus.OUT_OF_STOCK);
+        }
+        if (quantity != null && quantity <= reorderLevel) {
+            statuses.add(StockStatus.LOW_STOCK);
+        } else {
+            statuses.add(StockStatus.AVAILABLE);
+        }
+
+        if (statuses.isEmpty()) {
+            statuses.add(StockStatus.AVAILABLE);
+        }
+        return statuses;
+    }
+
+    private MedicineResponse mapSupplierMedicineToResponse(SupplierMedicine sm) {
+        Medicine medicine = sm.getMedicine();
+        CategoryDto categoryDto = medicine.getCategory() != null ?
+                CategoryDto.builder()
+                        .id(medicine.getCategory().getId())
+                        .name(medicine.getCategory().getName())
+                        .description(medicine.getCategory().getDescription())
+                        .build() : null;
+
+        SupplierDto supplierDto = sm.getSupplier() != null ?
+                SupplierDto.builder()
+                        .id(sm.getSupplier().getId())
+                        .name(sm.getSupplier().getName())
+                        .contactPerson(sm.getSupplier().getContactPerson())
+                        .email(sm.getSupplier().getEmail())
+                        .phone(sm.getSupplier().getPhone())
+                        .address(sm.getSupplier().getAddress())
+                        .build() : null;
+
+        Integer reorder = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
+        Integer supplierQty = sm.getAvailableQuantity() != null ? sm.getAvailableQuantity() : 0;
+
+        return MedicineResponse.builder()
+                .id(medicine.getId())
+                .name(medicine.getName())
+                .code(medicine.getCode())
+                .genericName(medicine.getGenericName())
+                .manufacturer(medicine.getManufacturer())
+                .price(medicine.getPrice())
+                .expiryDate(medicine.getExpiryDate())
+                .batchNumber(medicine.getBatchNumber())
+                .category(categoryDto)
+                .supplier(supplierDto)
+                .currentStock(supplierQty)
+                .reorderLevel(reorder)
+                .supplierAvailableQuantity(supplierQty)
+                .stockStatus(calculateSupplierStockStatus(medicine, supplierQty))
+                .build();
+    }
+
+    private Long getCurrentSupplierId() {
+        org.springframework.security.core.Authentication authentication = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            String username = authentication.getName();
+            java.util.Optional<User> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                if (user.getRoles().stream().anyMatch(r -> r.getName() == ERole.ROLE_SUPPLIER)) {
+                    Supplier supplier = resolveSupplierForUser(user);
+                    if (supplier != null) {
+                        return supplier.getId();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private Supplier resolveSupplierForUser(User user) {
+        Optional<Supplier> supplierOpt = supplierRepository.findByUserId(user.getId());
+        if (supplierOpt.isPresent()) {
+            return supplierOpt.get();
+        }
+
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            Optional<Supplier> byEmail = supplierRepository.findByEmail(user.getEmail());
+            if (byEmail.isPresent()) {
+                Supplier s = byEmail.get();
+                s.setUser(user);
+                return supplierRepository.save(s);
+            }
+        }
+
+        String name = user.getFullName() != null && !user.getFullName().isBlank() ? user.getFullName() : user.getUsername();
+        List<Supplier> byName = supplierRepository.findByNameContainingIgnoreCase(name);
+        if (!byName.isEmpty()) {
+            Supplier s = byName.get(0);
+            s.setUser(user);
+            return supplierRepository.save(s);
+        }
+
+        Supplier newSupplier = Supplier.builder()
+                .name(name)
+                .contactPerson(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .user(user)
+                .build();
+        return supplierRepository.save(newSupplier);
     }
 }

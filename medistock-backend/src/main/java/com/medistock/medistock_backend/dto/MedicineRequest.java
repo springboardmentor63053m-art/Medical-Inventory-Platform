@@ -27,6 +27,7 @@ public class MedicineRequest {
     private String batchNumber;
 
     private Long categoryId;
+    private String categoryName;
     private Long supplierId;
 
     private Integer initialQuantity = 0;

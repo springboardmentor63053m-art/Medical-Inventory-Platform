@@ -36,7 +36,7 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     @Transactional(readOnly = true)
     public DashboardSummaryDto getDashboardSummary() {
-        long totalUsers = userRepository.count();
+        long totalUsers = userRepository.countNormalUsers();
         long totalMedicines = medicineRepository.count();
         long totalSuppliers = supplierRepository.count();
         long totalOrders = purchaseOrderRepository.count();

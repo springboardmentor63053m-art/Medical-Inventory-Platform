@@ -2,27 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../api/api';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Search, 
-  X, 
-  Filter, 
-  ChevronUp, 
-  ChevronDown, 
-  ChevronsUpDown, 
-  RotateCcw 
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Search,
+  X,
+  Filter,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  RotateCcw
 } from 'lucide-react';
 
 const Medicines = () => {
   const { user } = useAuth();
   const location = useLocation();
-  
+
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState('');
@@ -58,7 +58,7 @@ const Medicines = () => {
     maxQuantity: 100,
     locationRack: ''
   });
-  
+
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -73,39 +73,72 @@ const Medicines = () => {
   const [supplierAvailQty, setSupplierAvailQty] = useState(0);
   const [submittingSupplierMed, setSubmittingSupplierMed] = useState(false);
   const [supplierFormError, setSupplierFormError] = useState('');
+  const [createNewFormulation, setCreateNewFormulation] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const openSupplierAddModal = async (med = null) => {
     setSupplierFormError('');
-    setSupplierAvailQty(med ? (med.supplierAvailableQuantity || 0) : 0);
-    setSelectedSupplierMedId(med ? med.id.toString() : '');
-    try {
-      const res = await api.get('/medicines');
-      if (res.data.success) {
-        const list = Array.isArray(res.data.data) ? res.data.data : (res.data.data.content || []);
-        setSupplierAllMeds(list);
-        if (!med && list.length > 0) {
-          setSelectedSupplierMedId(list[0].id.toString());
-          setSupplierAvailQty(list[0].supplierAvailableQuantity || 0);
-        }
-      }
-    } catch (err) {
-      console.error('Error loading master medicines', err);
+    setNewCategoryName('');
+    if (med) {
+      setCreateNewFormulation(false);
+      setSupplierAvailQty(med.supplierAvailableQuantity || 0);
+      setSelectedSupplierMedId(med.id.toString());
+      setFormData({
+        name: med.name,
+        code: med.code,
+        genericName: med.genericName || '',
+        manufacturer: med.manufacturer || '',
+        price: med.price?.toString() || '',
+        expiryDate: med.expiryDate || '',
+        categoryId: med.category?.id?.toString() || '',
+        initialQuantity: med.supplierAvailableQuantity || 0
+      });
+    } else {
+      setCreateNewFormulation(true);
+      setSupplierAvailQty(0);
+      setSelectedSupplierMedId('');
+      setFormData({
+        name: '',
+        code: '',
+        genericName: '',
+        manufacturer: '',
+        price: '',
+        expiryDate: '',
+        categoryId: '',
+        initialQuantity: 0
+      });
     }
     setSupplierModalOpen(true);
   };
 
   const handleSaveSupplierAvailability = async (e) => {
     e.preventDefault();
-    if (!selectedSupplierMedId) {
+    if (!createNewFormulation && !selectedSupplierMedId) {
       setSupplierFormError('Please select a medicine');
       return;
     }
     try {
       setSubmittingSupplierMed(true);
       setSupplierFormError('');
-      const res = await api.put(`/supplier/medicines/${selectedSupplierMedId}/availability`, null, {
-        params: { availableQuantity: parseInt(supplierAvailQty) || 0 }
-      });
+      let res;
+      if (createNewFormulation) {
+        const payload = {
+          name: formData.name,
+          code: formData.code,
+          genericName: formData.genericName,
+          manufacturer: formData.manufacturer,
+          price: parseFloat(formData.price) || 0,
+          expiryDate: formData.expiryDate || null,
+          categoryId: formData.categoryId === 'NEW' ? null : (formData.categoryId ? parseInt(formData.categoryId) : null),
+          categoryName: formData.categoryId === 'NEW' ? newCategoryName : null,
+          initialQuantity: parseInt(supplierAvailQty) || 0
+        };
+        res = await api.post('/supplier/medicines', payload);
+      } else {
+        res = await api.put(`/supplier/medicines/${selectedSupplierMedId}/availability`, null, {
+          params: { availableQuantity: parseInt(supplierAvailQty) || 0 }
+        });
+      }
       if (res.data.success) {
         setSupplierModalOpen(false);
         fetchMedicines();
@@ -386,11 +419,11 @@ const Medicines = () => {
     const maxVisible = 5;
     let start = Math.max(1, currentPage - 2);
     let end = Math.min(totalPages, start + maxVisible - 1);
-    
+
     if (end - start + 1 < maxVisible) {
       start = Math.max(1, end - maxVisible + 1);
     }
-    
+
     for (let i = start; i <= end; i++) {
       pages.push(
         <button
@@ -432,8 +465,8 @@ const Medicines = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <select 
-            value={selectedCategory} 
+          <select
+            value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             style={{ width: '160px', height: '42px' }}
           >
@@ -443,19 +476,21 @@ const Medicines = () => {
             ))}
           </select>
 
-          <select 
-            value={selectedSupplier} 
-            onChange={(e) => setSelectedSupplier(e.target.value)}
-            style={{ width: '160px', height: '42px' }}
-          >
-            <option value="">All Suppliers</option>
-            {suppliers.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          {!isSupplier && (
+            <select
+              value={selectedSupplier}
+              onChange={(e) => setSelectedSupplier(e.target.value)}
+              style={{ width: '160px', height: '42px' }}
+            >
+              <option value="">All Suppliers</option>
+              {suppliers.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          )}
 
-          <select 
-            value={selectedStockStatus} 
+          <select
+            value={selectedStockStatus}
             onChange={(e) => setSelectedStockStatus(e.target.value)}
             style={{ width: '160px', height: '42px' }}
           >
@@ -467,9 +502,9 @@ const Medicines = () => {
             <option value="EXPIRED">Expired</option>
           </select>
 
-          <button 
-            className="btn btn-secondary" 
-            onClick={handleResetFilters} 
+          <button
+            className="btn btn-secondary"
+            onClick={handleResetFilters}
             title="Reset Filters"
             style={{ height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
           >
@@ -500,13 +535,14 @@ const Medicines = () => {
           </div>
         ) : (
           <>
-            <div className="table-responsive" style={{ maxHeight: 'calc(100vh - 290px)', overflowY: 'auto' }}>
-              <table style={{ position: 'relative' }}>
+            <div className="table-responsive">
+              <table className="medicines-table" style={{ position: 'relative' }}>
                 <thead>
                   <tr>
-                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Code</th>
-                    <th 
-                      onClick={() => handleSort('NAME')} 
+                    <th className="col-code" style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Code</th>
+                    <th
+                      className="col-brand"
+                      onClick={() => handleSort('NAME')}
                       style={{ cursor: 'pointer', position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', userSelect: 'none' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -514,9 +550,10 @@ const Medicines = () => {
                         {getSortIcon('NAME')}
                       </div>
                     </th>
-                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Generic Formula</th>
-                    <th 
-                      onClick={() => handleSort('CATEGORY')} 
+                    <th className="col-generic" style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Generic Formula</th>
+                    <th
+                      className="col-category"
+                      onClick={() => handleSort('CATEGORY')}
                       style={{ cursor: 'pointer', position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', userSelect: 'none' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -524,9 +561,10 @@ const Medicines = () => {
                         {getSortIcon('CATEGORY')}
                       </div>
                     </th>
-                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Price</th>
-                    <th 
-                      onClick={() => handleSort('QUANTITY')} 
+                    <th className="col-price" style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Price</th>
+                    <th
+                      className="col-stock"
+                      onClick={() => handleSort('QUANTITY')}
                       style={{ cursor: 'pointer', position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', userSelect: 'none' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -534,9 +572,10 @@ const Medicines = () => {
                         {getSortIcon('QUANTITY')}
                       </div>
                     </th>
-                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Status</th>
-                    <th 
-                      onClick={() => handleSort('EXPIRY_DATE')} 
+                    <th className="col-status" style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Status</th>
+                    <th
+                      className="col-expiry"
+                      onClick={() => handleSort('EXPIRY_DATE')}
                       style={{ cursor: 'pointer', position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', userSelect: 'none' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -544,9 +583,9 @@ const Medicines = () => {
                         {getSortIcon('EXPIRY_DATE')}
                       </div>
                     </th>
-                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Supplier</th>
-                    <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Supplier Avail Qty</th>
-                    {(canModify || isSupplier) && <th style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', width: '120px', textAlign: 'right' }}>Actions</th>}
+                    {!isSupplier && <th className="col-supplier" style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Supplier</th>}
+
+                    {(canModify || isSupplier) && <th className="col-actions" style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a', textAlign: 'right' }}>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -563,30 +602,32 @@ const Medicines = () => {
                       <td><strong>{med.currentStock || 0} unit(s)</strong></td>
                       <td>{renderStockBadge(med)}</td>
                       <td>{med.expiryDate || 'N/A'}</td>
-                      <td>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
-                          {med.supplier?.name || 'Unassigned'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="badge badge-success" style={{ fontWeight: 600 }}>
-                          {med.supplierAvailableQuantity || 0} units
-                        </span>
-                      </td>
+                      {!isSupplier && (
+                        <td>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                            {med.supplier?.name || 'Unassigned'}
+                          </div>
+                          <div style={{ marginTop: '4px' }}>
+                            <span className="badge badge-success" style={{ fontWeight: 600, textTransform: 'none' }}>
+                              {med.supplierAvailableQuantity || 0} units
+                            </span>
+                          </div>
+                        </td>
+                      )}
                       {(canModify || isSupplier) && (
                         <td>
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                             {canModify && (
                               <>
-                                <button 
-                                  className="btn-icon edit" 
+                                <button
+                                  className="btn-icon edit"
                                   onClick={() => openEditModal(med)}
                                   title="Edit Details"
                                 >
                                   <Edit2 size={14} />
                                 </button>
-                                <button 
-                                  className="btn-icon delete" 
+                                <button
+                                  className="btn-icon delete"
                                   onClick={() => handleDelete(med.id, med.name)}
                                   title="Remove Medicine"
                                 >
@@ -596,15 +637,15 @@ const Medicines = () => {
                             )}
                             {isSupplier && (
                               <>
-                                <button 
-                                  className="btn-icon edit" 
+                                <button
+                                  className="btn-icon edit"
                                   onClick={() => openSupplierAddModal(med)}
                                   title="Edit Available Quantity"
                                 >
                                   <Edit2 size={14} />
                                 </button>
-                                <button 
-                                  className="btn-icon delete" 
+                                <button
+                                  className="btn-icon delete"
                                   onClick={() => handleRemoveSupplierMedicine(med.id, med.name)}
                                   title="Remove from Supply List"
                                 >
@@ -627,20 +668,20 @@ const Medicines = () => {
                 Showing <strong>{((currentPage - 1) * pageSize) + 1}</strong> to <strong>{Math.min(currentPage * pageSize, totalElements)}</strong> of <strong>{totalElements}</strong> medicines
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   style={{ padding: '6px 12px', fontSize: '0.85rem', height: '34px' }}
                 >
                   Previous
                 </button>
-                
+
                 {renderPageNumbers()}
-                
-                <button 
-                  className="btn btn-secondary" 
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
+
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
                   style={{ padding: '6px 12px', fontSize: '0.85rem', height: '34px' }}
                 >
@@ -874,29 +915,114 @@ const Medicines = () => {
             {supplierFormError && <div className="alert alert-danger">{supplierFormError}</div>}
 
             <form onSubmit={handleSaveSupplierAvailability}>
-              <div className="form-group">
-                <label htmlFor="supMedSelect">Select Existing Medicine *</label>
-                <select
-                  id="supMedSelect"
-                  value={selectedSupplierMedId}
-                  onChange={(e) => {
-                    setSelectedSupplierMedId(e.target.value);
-                    const selected = supplierAllMeds.find(m => m.id.toString() === e.target.value);
-                    if (selected) {
-                      setSupplierAvailQty(selected.supplierAvailableQuantity || 0);
-                    }
-                  }}
-                  disabled={submittingSupplierMed}
-                  required
-                >
-                  <option value="">-- Choose Existing Medicine --</option>
-                  {supplierAllMeds.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.code}) {m.supplier?.name ? `- Currently Supplied By: ${m.supplier.name}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {createNewFormulation ? (
+                <>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Brand Name *</label>
+                      <input 
+                        type="text" 
+                        value={formData.name} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g. Paracetamol"
+                        required 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Unique Code *</label>
+                      <input 
+                        type="text" 
+                        value={formData.code} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+                        placeholder="e.g. MED-0012"
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Generic/Chemical Name</label>
+                      <input 
+                        type="text" 
+                        value={formData.genericName} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, genericName: e.target.value }))}
+                        placeholder="e.g. Acetaminophen"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Manufacturer</label>
+                      <input 
+                        type="text" 
+                        value={formData.manufacturer} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, manufacturer: e.target.value }))}
+                        placeholder="e.g. GSK"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Unit Price (INR) *</label>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        value={formData.price} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                        placeholder="0.00"
+                        required 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Expiry Date</label>
+                      <input 
+                        type="date" 
+                        value={formData.expiryDate} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Category Classification</label>
+                    <select
+                      value={formData.categoryId}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, categoryId: e.target.value }));
+                        if (e.target.value !== 'NEW') {
+                          setNewCategoryName('');
+                        }
+                      }}
+                      required
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                      <option value="NEW">+ Create New Category</option>
+                    </select>
+                    {formData.categoryId === 'NEW' && (
+                      <input 
+                        type="text" 
+                        value={newCategoryName} 
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="Enter new category name..."
+                        required 
+                        style={{ marginTop: '8px' }}
+                      />
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Supplied Medicine
+                  </span>
+                  <h4 style={{ margin: '6px 0 0 0', color: 'white', fontWeight: 600, fontSize: '1.05rem', fontFamily: 'Outfit' }}>
+                    {formData.name}
+                  </h4>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+                    Code: {formData.code}
+                  </span>
+                </div>
+              )}
 
               <div className="form-group">
                 <label htmlFor="supQtyInput">Available Supplier Quantity (Units) *</label>

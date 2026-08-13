@@ -153,6 +153,16 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         PurchaseOrder order = purchaseOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase Order not found with id: " + id));
 
+        Long supplierId = getAuthenticatedSupplierIdIfSupplierRole();
+        if (supplierId != null) {
+            if (order.getSupplier() == null || !order.getSupplier().getId().equals(supplierId)) {
+                throw new BadRequestException("Access denied: You cannot update purchase orders for another supplier");
+            }
+            if (status == OrderStatus.RECEIVED) {
+                throw new BadRequestException("Access denied: Suppliers cannot mark orders as RECEIVED");
+            }
+        }
+
         OrderStatus oldStatus = order.getStatus();
         if (oldStatus == OrderStatus.RECEIVED && status != OrderStatus.RECEIVED) {
             throw new BadRequestException("Cannot change status of an already RECEIVED order");

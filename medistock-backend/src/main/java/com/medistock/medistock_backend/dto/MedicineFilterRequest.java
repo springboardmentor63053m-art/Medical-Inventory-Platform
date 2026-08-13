@@ -21,4 +21,5 @@ public class MedicineFilterRequest {
     private SortDirection sortDirection;
     private Integer page;
     private Integer size;
+    private Boolean all;
 }
