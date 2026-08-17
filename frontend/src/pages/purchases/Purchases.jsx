@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { purchaseAPI, supplierAPI, medicineAPI } from '../../api/services'
-import { ShoppingCart, Plus, CheckCircle, XCircle, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { ShoppingCart, Plus, CheckCircle, XCircle, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Portal from '../../components/Portal'
 
 function PurchaseRow({ purchase, onReceive, onCancel }) {
   const [expanded, setExpanded] = useState(false)
@@ -149,6 +150,7 @@ export default function Purchases() {
 
       {/* Create modal */}
       {modal && (
+      <Portal>
         <div className="modal-overlay">
           <div className="modal-content max-w-2xl">
             <div className="modal-header">
@@ -160,7 +162,7 @@ export default function Purchases() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="form-label">Invoice Number *</label>
-                    <input className="form-input" value={form.invoiceNumber} onChange={e => setForm(p => ({...p, invoiceNumber: e.target.value}))} required placeholder="INV-2024-XXXX"/>
+                    <input className="form-input" value={form.invoiceNumber} onChange={e => setForm(p => ({...p, invoiceNumber: e.target.value}))} required placeholder="INV-2026-XXXX"/>
                   </div>
                   <div>
                     <label className="form-label">Supplier *</label>
@@ -175,7 +177,8 @@ export default function Purchases() {
                   </div>
                   <div>
                     <label className="form-label">Discount (₹)</label>
-                    <input type="number" className="form-input" value={form.discount} onChange={e => setForm(p => ({...p, discount: e.target.value}))}/>
+                    <input type="number" min="0" step="0.01" className="form-input" value={form.discount}
+                      onChange={e => setForm(p => ({...p, discount: Math.max(0, parseFloat(e.target.value) || 0)}))}/>
                   </div>
                 </div>
 
@@ -186,23 +189,34 @@ export default function Purchases() {
                   </div>
                   <div className="space-y-2">
                     {form.items.map((item, idx) => (
-                      <div key={idx} className="grid grid-cols-5 gap-2 p-3 bg-slate-50 rounded-xl items-end">
+                      <div key={idx} className="grid grid-cols-5 gap-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl items-end border border-slate-100 dark:border-slate-800">
                         <div className="col-span-2">
                           <label className="form-label text-xs">Medicine</label>
                           <select className="form-select text-xs" value={item.medicine.id} onChange={e => updateItem(idx, 'medicine', e.target.value)} required>
-                            <option value="">Select</option>
+                            <option value="">Select Medicine</option>
                             {medicines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                           </select>
                         </div>
                         <div>
                           <label className="form-label text-xs">Qty</label>
-                          <input type="number" className="form-input text-xs" value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} min="1" required/>
+                          <input type="number" min="1" className="form-input text-xs" value={item.quantity}
+                            onChange={e => updateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value) || 1))} required/>
                         </div>
                         <div>
-                          <label className="form-label text-xs">Unit Cost</label>
-                          <input type="number" step="0.01" className="form-input text-xs" value={item.unitCost} onChange={e => updateItem(idx, 'unitCost', e.target.value)} required/>
+                          <label className="form-label text-xs">Unit Cost (₹)</label>
+                          <input type="number" min="0" step="0.01" className="form-input text-xs" value={item.unitCost}
+                            onChange={e => updateItem(idx, 'unitCost', Math.max(0, parseFloat(e.target.value) || 0))} required/>
                         </div>
-                        <button type="button" onClick={() => removeItem(idx)} className="btn-ghost text-red-500 !p-2 self-end"><X className="w-4 h-4"/></button>
+                        <div className="flex items-end pb-0.5">
+                          {form.items.length > 1 ? (
+                            <button type="button" onClick={() => removeItem(idx)}
+                              className="w-full text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 px-2 py-2 rounded-lg border border-red-200/60 transition-colors flex items-center justify-center gap-1">
+                              <Trash2 className="w-3.5 h-3.5" /> Remove
+                            </button>
+                          ) : (
+                            <div className="w-full py-2" />
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -215,6 +229,7 @@ export default function Purchases() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
     </div>
   )

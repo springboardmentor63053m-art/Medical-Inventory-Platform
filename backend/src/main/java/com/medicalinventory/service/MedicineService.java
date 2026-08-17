@@ -15,16 +15,27 @@ public class MedicineService {
 
     private static final Logger log = LoggerFactory.getLogger(MedicineService.class);
 
-    private final MedicineRepository  medicineRepository;
-    private final CategoryRepository  categoryRepository;
-    private final SupplierRepository  supplierRepository;
-    private final InventoryRepository inventoryRepository;
+    private final MedicineRepository       medicineRepository;
+    private final CategoryRepository       categoryRepository;
+    private final SupplierRepository       supplierRepository;
+    private final InventoryRepository      inventoryRepository;
+    private final StockMovementRepository  stockMovementRepository;
+    private final AlertRepository          alertRepository;
+    private final PurchaseItemRepository   purchaseItemRepository;
+    private final SaleItemRepository       saleItemRepository;
 
-    public MedicineService(MedicineRepository medicineRepository, CategoryRepository categoryRepository, SupplierRepository supplierRepository, InventoryRepository inventoryRepository) {
-        this.medicineRepository = medicineRepository;
-        this.categoryRepository = categoryRepository;
-        this.supplierRepository = supplierRepository;
-        this.inventoryRepository = inventoryRepository;
+    public MedicineService(MedicineRepository medicineRepository, CategoryRepository categoryRepository,
+                           SupplierRepository supplierRepository, InventoryRepository inventoryRepository,
+                           StockMovementRepository stockMovementRepository, AlertRepository alertRepository,
+                           PurchaseItemRepository purchaseItemRepository, SaleItemRepository saleItemRepository) {
+        this.medicineRepository      = medicineRepository;
+        this.categoryRepository      = categoryRepository;
+        this.supplierRepository      = supplierRepository;
+        this.inventoryRepository     = inventoryRepository;
+        this.stockMovementRepository = stockMovementRepository;
+        this.alertRepository         = alertRepository;
+        this.purchaseItemRepository  = purchaseItemRepository;
+        this.saleItemRepository      = saleItemRepository;
     }
 
     public List<Medicine> getAllMedicines() {
@@ -37,11 +48,26 @@ public class MedicineService {
     }
 
     public List<Medicine> searchMedicines(String keyword) {
-        return medicineRepository.searchByKeyword(keyword);
+        if (keyword == null || keyword.isBlank()) {
+            return getAllMedicines();
+        }
+        String clean = keyword.trim().replace("#", "");
+        try {
+            Long id = Long.parseLong(clean);
+            return medicineRepository.findById(id)
+                    .map(List::of)
+                    .orElseGet(List::of);
+        } catch (NumberFormatException e) {
+            return medicineRepository.searchByText(clean);
+        }
     }
 
     public List<Medicine> getMedicinesByCategory(Long categoryId) {
         return medicineRepository.findByCategoryId(categoryId);
+    }
+
+    public List<Medicine> getMedicinesBySupplier(Long supplierId) {
+        return medicineRepository.findBySupplierId(supplierId);
     }
 
     @Transactional
@@ -98,13 +124,37 @@ public class MedicineService {
     }
 
     @Transactional
+    public Medicine linkSupplier(Long medicineId, Long supplierId) {
+        Medicine medicine = getMedicineById(medicineId);
+        Supplier supplier = supplierRepository.findById(supplierId)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier", supplierId));
+        medicine.setSupplier(supplier);
+        log.info("Linked medicine {} with supplier {}", medicine.getName(), supplier.getName());
+        return medicineRepository.save(medicine);
+    }
+
+    @Transactional
+    public Medicine unlinkSupplier(Long medicineId) {
+        Medicine medicine = getMedicineById(medicineId);
+        medicine.setSupplier(null);
+        log.info("Unlinked supplier from medicine {}", medicine.getName());
+        return medicineRepository.save(medicine);
+    }
+
+    @Transactional
     public void deleteMedicine(Long id) {
         Medicine medicine = getMedicineById(id);
-        inventoryRepository.findByMedicineId(id).ifPresent(inv -> {
-            if (inv.getQuantity() > 0) {
-                throw new BadRequestException("Cannot delete medicine with active inventory. Current stock: " + inv.getQuantity());
-            }
-        });
+        // 1. Delete associated alerts
+        alertRepository.deleteByMedicineId(id);
+        // 2. Delete stock movements
+        stockMovementRepository.deleteByMedicineId(id);
+        // 3. Delete purchase items referencing this medicine
+        purchaseItemRepository.deleteByMedicineId(id);
+        // 4. Delete sale items referencing this medicine
+        saleItemRepository.deleteByMedicineId(id);
+        // 5. Delete inventory record
+        inventoryRepository.findByMedicineId(id).ifPresent(inventoryRepository::delete);
+        // 6. Delete the medicine
         medicineRepository.delete(medicine);
         log.info("Deleted medicine id={}", id);
     }

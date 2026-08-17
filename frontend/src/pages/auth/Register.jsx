@@ -12,6 +12,7 @@ const ROLES = [
   { value: 'PHARMACIST',        label: 'Pharmacist',    desc: 'Medicine dispensing & sales', color: 'from-emerald-500 to-teal-600' },
   { value: 'INVENTORY_MANAGER', label: 'Inv. Manager',  desc: 'Stock & procurement',         color: 'from-orange-500 to-amber-600' },
   { value: 'STAFF',             label: 'Staff',         desc: 'Read-only access',            color: 'from-slate-500 to-slate-600' },
+  { value: 'SUPPLIER',          label: 'Supplier',      desc: 'Supplier profile & catalog',  color: 'from-purple-500 to-pink-600' },
 ]
 
 const getPasswordStrength = (pwd) => {
@@ -21,11 +22,19 @@ const getPasswordStrength = (pwd) => {
     return { score: 1, label: 'Too short', textColor: 'text-[#22D3EE] font-semibold' }
   }
 
+  if (pwd.length >= 15) {
+    return { score: 6, label: 'Excellent ✨', textColor: 'text-[#22D3EE] font-bold' }
+  }
+
   let criteriaCount = 0
   if (/[A-Z]/.test(pwd)) criteriaCount++
   if (/[a-z]/.test(pwd)) criteriaCount++
   if (/[0-9]/.test(pwd)) criteriaCount++
   if (/[^A-Za-z0-9]/.test(pwd)) criteriaCount++
+
+  if (pwd.length >= 13) {
+    return { score: 5, label: 'Strong', textColor: 'text-[#22D3EE] font-bold' }
+  }
 
   if (criteriaCount <= 1) {
     return { score: 2, label: 'Weak', textColor: 'text-[#22D3EE] font-semibold' }
@@ -36,11 +45,8 @@ const getPasswordStrength = (pwd) => {
   if (criteriaCount === 3) {
     return { score: 4, label: 'Good', textColor: 'text-[#22D3EE] font-semibold' }
   }
-  if (pwd.length < 12) {
-    return { score: 5, label: 'Strong', textColor: 'text-[#22D3EE] font-bold' }
-  }
 
-  return { score: 6, label: 'Excellent ✨', textColor: 'text-[#22D3EE] font-bold' }
+  return { score: 5, label: 'Strong', textColor: 'text-[#22D3EE] font-bold' }
 }
 
 export default function Register() {
@@ -96,22 +102,23 @@ export default function Register() {
       navigate('/dashboard')
     } catch (err) {
       const status = err.response?.status
-      const msg    = err.response?.data?.message
+      const msg    = err.response?.data?.message || err.response?.data?.error || err.message || 'Registration failed'
+      const lower  = String(msg).toLowerCase()
 
-      if (status === 409) {
-        if (msg?.toLowerCase().includes('email')) {
+      if (status === 409 || lower.includes('already') || lower.includes('exists') || lower.includes('taken')) {
+        if (lower.includes('email')) {
           setErrors(prev => ({ ...prev, email: 'This email is already registered' }))
-          toast.error('Email already in use � try logging in instead.')
-        } else if (msg?.toLowerCase().includes('username')) {
+          toast.error('Email is already registered. Please sign in or use a different email.')
+        } else if (lower.includes('username')) {
           setErrors(prev => ({ ...prev, username: 'This username is already taken' }))
-          toast.error('Username taken � please choose a different one.')
+          toast.error('Username is already taken. Please choose a different username.')
         } else {
-          toast.error(msg || 'Account already exists. Try logging in.')
+          toast.error(msg || 'Account already exists. Try signing in instead.')
         }
       } else if (status === 400) {
         toast.error(msg || 'Invalid details. Please check your inputs.')
       } else {
-        toast.error(msg || 'Registration failed. Please try again.')
+        toast.error(msg || 'Registration failed. Please check your details and try again.')
       }
     } finally {
       setLoading(false)

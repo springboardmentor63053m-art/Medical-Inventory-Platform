@@ -142,10 +142,10 @@ public class Medicine {
     public void setHsnCode(String hsnCode) { this.hsnCode = hsnCode; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public BigDecimal getUnitPrice() { return unitPrice; }
-    public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
-    public BigDecimal getMrp() { return mrp; }
-    public void setMrp(BigDecimal mrp) { this.mrp = mrp; }
+    public BigDecimal getUnitPrice() { return unitPrice != null ? unitPrice.abs() : BigDecimal.ZERO; }
+    public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice != null ? unitPrice.abs() : BigDecimal.ZERO; }
+    public BigDecimal getMrp() { return mrp != null ? mrp.abs() : BigDecimal.ZERO; }
+    public void setMrp(BigDecimal mrp) { this.mrp = mrp != null ? mrp.abs() : BigDecimal.ZERO; }
     public Integer getReorderLevel() { return reorderLevel; }
     public void setReorderLevel(Integer reorderLevel) { this.reorderLevel = reorderLevel; }
     public MedicineStatus getStatus() { return status; }

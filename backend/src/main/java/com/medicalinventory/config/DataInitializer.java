@@ -60,14 +60,19 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void initRoles() {
-        if (roleRepository.count() > 0) return;
-        log.info("Seeding roles...");
-        roleRepository.saveAll(List.of(
-                Role.builder().name("ADMIN").description("Full system access — User management, all modules, configuration").build(),
-                Role.builder().name("PHARMACIST").description("Medicine dispensing, sales, stock lookup").build(),
-                Role.builder().name("INVENTORY_MANAGER").description("Procurement, supplier management, stock control").build(),
-                Role.builder().name("STAFF").description("Read-only access to inventory and dashboard").build()
-        ));
+        if (roleRepository.count() == 0) {
+            log.info("Seeding roles...");
+            roleRepository.saveAll(List.of(
+                    Role.builder().name("ADMIN").description("Full system access — User management, all modules, configuration").build(),
+                    Role.builder().name("PHARMACIST").description("Medicine dispensing, sales, stock lookup").build(),
+                    Role.builder().name("INVENTORY_MANAGER").description("Procurement, supplier management, stock control").build(),
+                    Role.builder().name("STAFF").description("Read-only access to inventory and dashboard").build(),
+                    Role.builder().name("SUPPLIER").description("Supplier profile & catalog management").build()
+            ));
+        } else if (roleRepository.findByName("SUPPLIER").isEmpty()) {
+            log.info("Seeding SUPPLIER role...");
+            roleRepository.save(Role.builder().name("SUPPLIER").description("Supplier profile & catalog management").build());
+        }
     }
 
     private void initUsers() {
@@ -80,6 +85,8 @@ public class DataInitializer implements CommandLineRunner {
 
         userRepository.saveAll(List.of(
                 User.builder().username("admin").email("admin@medicalinv.com")
+                        .password(passwordEncoder.encode("Admin@123")).role(adminRole).isActive(true).build(),
+                User.builder().username("pavan").email("pavan@gmail.com")
                         .password(passwordEncoder.encode("Admin@123")).role(adminRole).isActive(true).build(),
                 User.builder().username("dr_patel").email("patel@medicalinv.com")
                         .password(passwordEncoder.encode("Pharma@123")).role(pharmRole).isActive(true).build(),
@@ -461,7 +468,7 @@ public class DataInitializer implements CommandLineRunner {
                 SaleItem.builder().sale(sale8).medicine(m[5]).quantity(10).unitPrice(new BigDecimal("8.00")).totalPrice(new BigDecimal("80.00")).build()
         ));
 
-        Sale sale9 = Sale.builder().saleNumber("SALE-2024-0009").customerName("Meera Agarwal").customerPhone("9009900112")
+        Sale sale9 = Sale.builder().saleNumber("SALE-2026-0009").customerName("Meera Agarwal").customerPhone("9009900112")
                 .saleDate(LocalDate.of(2026,6,8)).totalAmount(new BigDecimal("240.00")).discount(new BigDecimal("10.00"))
                 .taxAmount(new BigDecimal("11.50")).netAmount(new BigDecimal("241.50"))
                 .paymentMethod(Sale.PaymentMethod.CASH).status(Sale.SaleStatus.COMPLETED).createdBy(sneha).build();
@@ -470,7 +477,7 @@ public class DataInitializer implements CommandLineRunner {
                 SaleItem.builder().sale(sale9).medicine(m[9]).quantity(15).unitPrice(new BigDecimal("9.33")).totalPrice(new BigDecimal("140.00")).build()
         ));
 
-        Sale sale10 = Sale.builder().saleNumber("SALE-2024-0010").customerName("Kiran Rao").customerPhone("9010011223")
+        Sale sale10 = Sale.builder().saleNumber("SALE-2026-0010").customerName("Kiran Rao").customerPhone("9010011223")
                 .saleDate(LocalDate.of(2026,7,25)).totalAmount(new BigDecimal("780.00")).discount(new BigDecimal("0.00"))
                 .taxAmount(new BigDecimal("39.00")).netAmount(new BigDecimal("819.00"))
                 .paymentMethod(Sale.PaymentMethod.INSURANCE).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
@@ -481,46 +488,47 @@ public class DataInitializer implements CommandLineRunner {
 
         saleRepository.saveAll(List.of(sale1, sale2, sale3, sale4, sale5, sale6, sale7, sale8, sale9, sale10));
 
-        // ── Stock Movements (matching sample_data.sql lines 178-190) ───────
-        log.info("Seeding stock movements...");
+        // ── 10 Stock Movements (Exact 1:1 mapping for all 10 medicines) ───
+        stockMovementRepository.deleteAll();
+        log.info("Seeding 10 distinct stock movements for all 10 medicines...");
         stockMovementRepository.saveAll(List.of(
-                StockMovement.builder().medicine(m[0]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(500).quantityBefore(0).quantityAfter(500).referenceType("PURCHASE").referenceId(1L).reason("Initial stock from INV-2024-0001").performedBy(ravi).build(),
-                StockMovement.builder().medicine(m[3]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(600).quantityBefore(0).quantityAfter(600).referenceType("PURCHASE").referenceId(1L).reason("Initial stock from INV-2024-0001").performedBy(ravi).build(),
-                StockMovement.builder().medicine(m[8]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(700).quantityBefore(0).quantityAfter(700).referenceType("PURCHASE").referenceId(1L).reason("Initial stock from INV-2024-0001").performedBy(ravi).build(),
-                StockMovement.builder().medicine(m[1]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(300).quantityBefore(0).quantityAfter(300).referenceType("PURCHASE").referenceId(2L).reason("Initial stock from INV-2024-0002").performedBy(ravi).build(),
-                StockMovement.builder().medicine(m[4]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(500).quantityBefore(0).quantityAfter(500).referenceType("PURCHASE").referenceId(2L).reason("Initial stock from INV-2024-0002").performedBy(ravi).build(),
-                StockMovement.builder().medicine(m[3]).movementType(StockMovement.MovementType.SALE_OUT).quantity(30).quantityBefore(600).quantityAfter(570).referenceType("SALE").referenceId(1L).reason("Sale SALE-2024-0001").performedBy(patel).build(),
-                StockMovement.builder().medicine(m[8]).movementType(StockMovement.MovementType.SALE_OUT).quantity(15).quantityBefore(700).quantityAfter(685).referenceType("SALE").referenceId(1L).reason("Sale SALE-2024-0001").performedBy(patel).build(),
-                StockMovement.builder().medicine(m[1]).movementType(StockMovement.MovementType.SALE_OUT).quantity(10).quantityBefore(300).quantityAfter(290).referenceType("SALE").referenceId(2L).reason("Sale SALE-2024-0002").performedBy(patel).build(),
-                StockMovement.builder().medicine(m[0]).movementType(StockMovement.MovementType.SALE_OUT).quantity(60).quantityBefore(600).quantityAfter(540).referenceType("SALE").referenceId(4L).reason("Sale SALE-2024-0004").performedBy(patel).build(),
-                StockMovement.builder().medicine(m[6]).movementType(StockMovement.MovementType.SALE_OUT).quantity(10).quantityBefore(200).quantityAfter(190).referenceType("SALE").referenceId(5L).reason("Sale SALE-2024-0005").performedBy(sneha).build(),
-                StockMovement.builder().medicine(m[5]).movementType(StockMovement.MovementType.ADJUSTMENT_IN).quantity(50).quantityBefore(180).quantityAfter(230).reason("Stock count adjustment - physical count 2024-04").performedBy(admin).build(),
-                StockMovement.builder().medicine(m[7]).movementType(StockMovement.MovementType.EXPIRED_REMOVAL).quantity(30).quantityBefore(150).quantityAfter(120).reason("Batch DOX-2023-OLD expired - removed from stock").performedBy(admin).build()
+                StockMovement.builder().medicine(m[0]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(500).quantityBefore(0).quantityAfter(500).referenceType("PURCHASE").referenceId(1L).reason("Initial batch procurement from INV-2026-0001").performedBy(ravi).build(),
+                StockMovement.builder().medicine(m[1]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(300).quantityBefore(0).quantityAfter(300).referenceType("PURCHASE").referenceId(2L).reason("Procured from Cipla MedCorp INV-2026-0002").performedBy(ravi).build(),
+                StockMovement.builder().medicine(m[2]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(400).quantityBefore(0).quantityAfter(400).referenceType("PURCHASE").referenceId(3L).reason("Stock received from Dr. Reddy's INV-2026-0003").performedBy(ravi).build(),
+                StockMovement.builder().medicine(m[3]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(600).quantityBefore(0).quantityAfter(600).referenceType("PURCHASE").referenceId(1L).reason("Initial batch procurement from INV-2026-0001").performedBy(ravi).build(),
+                StockMovement.builder().medicine(m[4]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(500).quantityBefore(0).quantityAfter(500).referenceType("PURCHASE").referenceId(2L).reason("Supplied by Lupin Healthcare INV-2026-0002").performedBy(ravi).build(),
+                StockMovement.builder().medicine(m[5]).movementType(StockMovement.MovementType.ADJUSTMENT_IN).quantity(50).quantityBefore(180).quantityAfter(230).reason("Stock count adjustment - physical audit").performedBy(admin).build(),
+                StockMovement.builder().medicine(m[6]).movementType(StockMovement.MovementType.SALE_OUT).quantity(10).quantityBefore(200).quantityAfter(190).referenceType("SALE").referenceId(5L).reason("Dispensed for Sale SALE-2026-0005").performedBy(sneha).build(),
+                StockMovement.builder().medicine(m[7]).movementType(StockMovement.MovementType.EXPIRED_REMOVAL).quantity(30).quantityBefore(150).quantityAfter(120).reason("Batch LAN-2025 expired - removed from stock").performedBy(admin).build(),
+                StockMovement.builder().medicine(m[8]).movementType(StockMovement.MovementType.SALE_OUT).quantity(15).quantityBefore(700).quantityAfter(685).referenceType("SALE").referenceId(1L).reason("Dispensed for Sale SALE-2026-0001").performedBy(patel).build(),
+                StockMovement.builder().medicine(m[9]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(450).quantityBefore(0).quantityAfter(450).referenceType("PURCHASE").referenceId(4L).reason("Initial stock from INV-2026-0004").performedBy(ravi).build()
         ));
 
         // ── 6 Alerts (matching sample_data.sql lines 195-201) ───────────────
-        log.info("Seeding 6 alerts...");
-        alertRepository.saveAll(List.of(
-                Alert.builder().alertType(Alert.AlertType.LOW_STOCK).medicine(m[7])
-                        .message("Doxycycline 100mg Capsules stock (120) is below reorder level (30). Immediate reorder recommended.")
-                        .status(Alert.AlertStatus.ACTIVE).build(),
-                Alert.builder().alertType(Alert.AlertType.EXPIRY_30_DAYS).medicine(m[5])
-                        .message("Diclofenac 50mg Tablets (Batch: DIC-2024-006) expires on 2025-08-31. Only 2 months remaining.")
-                        .status(Alert.AlertStatus.ACTIVE).build(),
-                Alert.builder().alertType(Alert.AlertType.EXPIRY_30_DAYS).medicine(m[1])
-                        .message("Glimepiride 2mg Tablets (Batch: GLI-2024-012) expires on 2025-09-30. Please review and initiate return/disposal.")
-                        .status(Alert.AlertStatus.ACTIVE).build(),
-                Alert.builder().alertType(Alert.AlertType.EXPIRY_30_DAYS).medicine(m[7])
-                        .message("Doxycycline 100mg Capsules (Batch: DOX-2024-018) expires on 2025-10-31. Consider promotions or return to supplier.")
-                        .status(Alert.AlertStatus.ACKNOWLEDGED).acknowledgedBy(admin).acknowledgedAt(LocalDateTime.now()).build(),
-                Alert.builder().alertType(Alert.AlertType.LOW_STOCK).medicine(m[1])
-                        .message("Azithromycin 250mg Tablets stock (200) approaching reorder level (30). Consider placing a new purchase order with HealthFirst Supplies.")
-                        .status(Alert.AlertStatus.RESOLVED).resolvedAt(LocalDateTime.now()).build(),
-                Alert.builder().alertType(Alert.AlertType.LOW_STOCK).medicine(m[9])
-                        .message("Vitamin D3 60000 IU Capsules stock (150) is approaching reorder level (30). Demand is high this quarter.")
-                        .status(Alert.AlertStatus.ACTIVE).build()
-        ));
+        if (alertRepository.count() == 0) {
+            log.info("Seeding 6 alerts...");
+            alertRepository.saveAll(List.of(
+                    Alert.builder().alertType(Alert.AlertType.LOW_STOCK).medicine(m[7])
+                            .message("Doxycycline 100mg Capsules stock (120) is below reorder level (30). Immediate reorder recommended.")
+                            .status(Alert.AlertStatus.ACTIVE).build(),
+                    Alert.builder().alertType(Alert.AlertType.EXPIRY_30_DAYS).medicine(m[5])
+                            .message("Diclofenac 50mg Tablets (Batch: DIC-2026-006) expires on 2026-08-31. Only 2 months remaining.")
+                            .status(Alert.AlertStatus.ACTIVE).build(),
+                    Alert.builder().alertType(Alert.AlertType.EXPIRY_30_DAYS).medicine(m[1])
+                            .message("Glimepiride 2mg Tablets (Batch: GLI-2026-012) expires on 2026-09-30. Please review and initiate return/disposal.")
+                            .status(Alert.AlertStatus.ACTIVE).build(),
+                    Alert.builder().alertType(Alert.AlertType.EXPIRY_30_DAYS).medicine(m[7])
+                            .message("Doxycycline 100mg Capsules (Batch: DOX-2026-018) expires on 2026-10-31. Near expiry alert.")
+                            .status(Alert.AlertStatus.ACTIVE).build(),
+                    Alert.builder().alertType(Alert.AlertType.EXPIRY_30_DAYS).medicine(m[0])
+                            .message("Amoxicillin 500mg (Batch: AMX-2026-001) expires on 2027-01-30. Monitor consumption rate.")
+                            .status(Alert.AlertStatus.ACTIVE).build(),
+                    Alert.builder().alertType(Alert.AlertType.LOW_STOCK).medicine(m[9])
+                            .message("Supradyn Multivitamin Tablets stock (400) optimal. Reorder threshold 100.")
+                            .status(Alert.AlertStatus.RESOLVED).build()
+            ));
+        }
 
-        log.info("Complete sample_data.sql seeded! (10 medicines, 10 inventory, 10 suppliers, 8 purchases, 10 sales, 12 movements, 6 alerts)");
+        log.info("Complete sample_data.sql seeded! (10 medicines, 10 inventory, 10 suppliers, 8 purchases, 10 sales, 10 movements, 6 alerts)");
     }
 }

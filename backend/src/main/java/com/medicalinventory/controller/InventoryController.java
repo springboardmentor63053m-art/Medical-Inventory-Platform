@@ -4,6 +4,7 @@ import com.medicalinventory.entity.Inventory;
 import com.medicalinventory.entity.User;
 import com.medicalinventory.repository.UserRepository;
 import com.medicalinventory.service.InventoryService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -29,6 +30,11 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getAllInventory());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Inventory> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(inventoryService.getInventoryById(id));
+    }
+
     @GetMapping("/medicine/{medicineId}")
     public ResponseEntity<Inventory> getByMedicine(@PathVariable Long medicineId) {
         return ResponseEntity.ok(inventoryService.getInventoryByMedicineId(medicineId));
@@ -43,6 +49,29 @@ public class InventoryController {
     public ResponseEntity<List<Inventory>> getExpiring(
             @RequestParam(defaultValue = "30") int days) {
         return ResponseEntity.ok(inventoryService.getExpiringItems(days));
+    }
+
+    @PostMapping
+    public ResponseEntity<Inventory> createInventory(
+            @RequestBody Inventory inventory,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userDetails != null ? userRepository.findByEmail(userDetails.getUsername()).orElse(null) : null;
+        return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.createOrUpdateInventory(inventory, user));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Inventory> updateInventory(
+            @PathVariable Long id,
+            @RequestBody Inventory inventory,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userDetails != null ? userRepository.findByEmail(userDetails.getUsername()).orElse(null) : null;
+        return ResponseEntity.ok(inventoryService.updateInventory(id, inventory, user));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteInventory(@PathVariable Long id) {
+        inventoryService.deleteInventory(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/adjust")
@@ -60,3 +89,4 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.adjustStock(medicineId, adjustment, reason, user));
     }
 }
+

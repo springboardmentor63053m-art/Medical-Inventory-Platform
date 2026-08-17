@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { dashboardAPI, inventoryAPI, supplierAPI, saleAPI, purchaseAPI } from '../../api/services'
+import { dashboardAPI, inventoryAPI, supplierAPI, medicineAPI, saleAPI, purchaseAPI } from '../../api/services'
 import {
   Pill, Package, AlertTriangle, Calendar, TrendingUp, TrendingDown,
   Users, Truck, ShoppingCart, Receipt, Bell, Sparkles, ArrowRight,
-  Activity, Shield, Eye, Layers, CheckCircle2, Clock, FileText, Cpu, ChevronRight
+  Activity, Shield, Eye, Layers, CheckCircle2, Clock, FileText, Cpu, ChevronRight,
+  Search, ExternalLink, Filter, Star, Phone, Mail, MapPin, Check
 } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 
@@ -24,9 +25,12 @@ function formatCurrency(v) {
 export default function Dashboard() {
   const { user }   = useAuth()
   const { isDark } = useTheme()
-  const [stats,     setStats]     = useState(null)
-  const [loading,   setLoading]   = useState(true)
-  const [viewMode,  setViewMode]  = useState('ADMIN') // 'ADMIN' or 'PHARMACIST' per PDF page 5
+  const navigate   = useNavigate()
+  const [stats,          setStats]          = useState(null)
+  const [suppliers,      setSuppliers]      = useState([])
+  const [medicines,      setMedicines]      = useState([])
+  const [loading,        setLoading]        = useState(true)
+  const [viewMode,       setViewMode]       = useState('ADMIN') // 'ADMIN' or 'PHARMACIST' per PDF page 5
 
   const gridColor    = isDark ? '#1e2d40' : '#f1f5f9'
   const tickColor    = isDark ? '#475569' : '#94a3b8'
@@ -42,8 +46,16 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    dashboardAPI.getStats()
-      .then(r => setStats(r.data))
+    Promise.all([
+      dashboardAPI.getStats(),
+      supplierAPI.getAll(),
+      medicineAPI.getAll(),
+    ])
+      .then(([dRes, sRes, mRes]) => {
+        setStats(dRes.data)
+        setSuppliers(sRes.data)
+        setMedicines(mRes.data)
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -165,7 +177,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 dark:text-white">Inventory Sales Analytics</h3>
-                  <p className="text-xs text-slate-400">Monthly revenue trend analysis (2024)</p>
+                  <p className="text-xs text-slate-400">Monthly revenue trend analysis (2026)</p>
                 </div>
                 <span className="badge badge-blue">Live API</span>
               </div>
@@ -215,6 +227,94 @@ export default function Dashboard() {
                   <span className="badge badge-blue">Active</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* ── COMPLETE 10 MEDICINES INVENTORY CATALOGUE (PDF Page 4 & 5) ── */}
+          <div className="card space-y-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center">
+                  <Pill className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Complete Medicine Inventory Catalogue
+                    <span className="badge badge-blue !text-[11px]">{medicines.length} Medicines</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Live stock catalogue of all 10 pharmaceutical formulation SKUs, categories & pricing
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-200/50 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  All 10 Records Live
+                </span>
+                <Link to="/medicines" className="btn-secondary !text-xs !py-1.5 !px-3 flex items-center gap-1">
+                  Manage in Catalogue <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* 10 Medicines Table */}
+            <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
+              <table className="table w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-900/80">
+                    <th>SKU ID</th>
+                    <th>Medicine Name</th>
+                    <th>Generic Name</th>
+                    <th>Category</th>
+                    <th>Supplier Vendor</th>
+                    <th>Form</th>
+                    <th>Purchase (₹)</th>
+                    <th>MRP (₹)</th>
+                    <th>Reorder Level</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {medicines.map((m) => (
+                    <tr key={m.id} className="hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors">
+                      <td>
+                        <span className="font-mono font-bold text-xs bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md border border-blue-200/60 shadow-2xs">
+                          #{m.id}
+                        </span>
+                      </td>
+                      <td>
+                        <div>
+                          <p className="font-bold text-slate-800 dark:text-slate-100">{m.name}</p>
+                          {m.brandName && <p className="text-[11px] text-slate-400">{m.brandName}</p>}
+                        </div>
+                      </td>
+                      <td className="text-slate-600 dark:text-slate-400">{m.genericName || '—'}</td>
+                      <td><span className="badge badge-blue">{m.category?.name || 'General'}</span></td>
+                      <td>
+                        {m.supplier ? (
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                            <Truck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                            {m.supplier.name}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="text-slate-600 dark:text-slate-400">{m.unit}</td>
+                      <td className="font-mono font-semibold text-slate-600 dark:text-slate-400">₹{m.unitPrice}</td>
+                      <td className="font-mono font-bold text-slate-800 dark:text-slate-100">₹{m.mrp}</td>
+                      <td className="font-semibold text-slate-600 dark:text-slate-400">{m.reorderLevel} units</td>
+                      <td>
+                        <span className={m.status === 'ACTIVE' ? 'badge badge-green' : 'badge badge-gray'}>
+                          {m.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </>

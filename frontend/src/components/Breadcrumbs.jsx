@@ -5,6 +5,7 @@ const routeLabels = {
   dashboard: 'Dashboard',
   medicines: 'Medicines',
   inventory: 'Inventory',
+  'stock-tracking': 'Stock Tracking',
   suppliers: 'Suppliers',
   purchases: 'Purchases',
   sales: 'Sales',

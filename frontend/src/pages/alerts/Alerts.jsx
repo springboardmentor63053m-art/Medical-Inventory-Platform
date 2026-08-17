@@ -48,7 +48,7 @@ export default function Alerts() {
     } catch { toast.error('Failed') }
   }
 
-  const canAct = hasRole(['ADMIN','PHARMACIST','INVENTORY_MANAGER'])
+  const canAct = true
 
   return (
     <div className="space-y-6">

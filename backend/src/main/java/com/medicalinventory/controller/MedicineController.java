@@ -36,6 +36,11 @@ public class MedicineController {
         return ResponseEntity.ok(medicineService.getMedicinesByCategory(categoryId));
     }
 
+    @GetMapping("/supplier/{supplierId}")
+    public ResponseEntity<List<Medicine>> getBySupplier(@PathVariable Long supplierId) {
+        return ResponseEntity.ok(medicineService.getMedicinesBySupplier(supplierId));
+    }
+
     @PostMapping
     public ResponseEntity<Medicine> create(@RequestBody Medicine medicine) {
         return ResponseEntity.status(HttpStatus.CREATED).body(medicineService.createMedicine(medicine));
@@ -44,6 +49,16 @@ public class MedicineController {
     @PutMapping("/{id}")
     public ResponseEntity<Medicine> update(@PathVariable Long id, @RequestBody Medicine medicine) {
         return ResponseEntity.ok(medicineService.updateMedicine(id, medicine));
+    }
+
+    @PutMapping("/{medicineId}/link-supplier/{supplierId}")
+    public ResponseEntity<Medicine> linkSupplier(@PathVariable Long medicineId, @PathVariable Long supplierId) {
+        return ResponseEntity.ok(medicineService.linkSupplier(medicineId, supplierId));
+    }
+
+    @PutMapping("/{medicineId}/unlink-supplier")
+    public ResponseEntity<Medicine> unlinkSupplier(@PathVariable Long medicineId) {
+        return ResponseEntity.ok(medicineService.unlinkSupplier(medicineId));
     }
 
     @DeleteMapping("/{id}")

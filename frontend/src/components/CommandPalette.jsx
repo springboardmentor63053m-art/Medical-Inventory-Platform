@@ -13,17 +13,18 @@ let _globalOpen = null
 export const openCommandPaletteGlobal = () => { if (_globalOpen) _globalOpen(true) }
 
 const allItems = [
-  { to: '/dashboard',  label: 'Dashboard',   icon: LayoutDashboard, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'home overview stats' },
-  { to: '/medicines',  label: 'Medicines',    icon: Pill,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER'], keywords: 'drugs catalog pills' },
-  { to: '/inventory',  label: 'Inventory',    icon: Package,         roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'stock warehouse' },
-  { to: '/suppliers',  label: 'Suppliers',    icon: Truck,           roles: ['ADMIN','INVENTORY_MANAGER'], keywords: 'vendors' },
-  { to: '/purchases',  label: 'Purchases',    icon: ShoppingCart,    roles: ['ADMIN','INVENTORY_MANAGER'], keywords: 'orders procurement' },
-  { to: '/sales',      label: 'Sales',        icon: Receipt,         roles: ['ADMIN','PHARMACIST'], keywords: 'billing invoice' },
-  { to: '/employees',  label: 'Employees',    icon: Users,           roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'staff team' },
-  { to: '/alerts',     label: 'Alerts',       icon: Bell,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'notifications warnings' },
-  { to: '/reports',    label: 'Reports',      icon: BarChart2,       roles: ['ADMIN','INVENTORY_MANAGER'], keywords: 'analytics charts' },
-  { to: '/profile',    label: 'My Profile',   icon: User,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'account' },
-  { to: '/settings',   label: 'Settings',     icon: Settings,        roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'preferences theme' },
+  { to: '/dashboard',      label: 'Dashboard',       icon: LayoutDashboard, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'home overview stats' },
+  { to: '/medicines',      label: 'Medicines',       icon: Pill,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER'], keywords: 'drugs catalog pills' },
+  { to: '/inventory',      label: 'Inventory',       icon: Package,         roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'stock warehouse' },
+  { to: '/stock-tracking', label: 'Stock Tracking',  icon: BarChart2,       roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'audit movements logs stream' },
+  { to: '/suppliers',      label: 'Suppliers',       icon: Truck,           roles: ['ADMIN','INVENTORY_MANAGER'], keywords: 'vendors' },
+  { to: '/purchases',      label: 'Purchases',       icon: ShoppingCart,    roles: ['ADMIN','INVENTORY_MANAGER'], keywords: 'orders procurement' },
+  { to: '/sales',          label: 'Sales',           icon: Receipt,         roles: ['ADMIN','PHARMACIST'], keywords: 'billing invoice' },
+  { to: '/employees',      label: 'Employees',       icon: Users,           roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'staff team' },
+  { to: '/alerts',         label: 'Alerts',          icon: Bell,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'notifications warnings' },
+  { to: '/reports',        label: 'Reports',         icon: BarChart2,       roles: ['ADMIN','INVENTORY_MANAGER'], keywords: 'analytics charts' },
+  { to: '/profile',        label: 'My Profile',      icon: User,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'account' },
+  { to: '/settings',       label: 'Settings',        icon: Settings,        roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], keywords: 'preferences theme' },
 ]
 
 export default function CommandPalette() {

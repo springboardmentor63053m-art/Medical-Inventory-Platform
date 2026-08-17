@@ -4,13 +4,6 @@ import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Lock, Mail, LogIn, Sparkles, ChevronRight, Key, X, CheckCircle2 } from 'lucide-react'
 
-const demoAccounts = [
-  { role: 'Admin',         email: 'admin@medicalinv.com',  password: 'Admin@123',  color: 'from-blue-500 to-indigo-600' },
-  { role: 'Pharmacist',    email: 'patel@medicalinv.com',  password: 'Pharma@123', color: 'from-emerald-500 to-teal-600' },
-  { role: 'Inventory Mgr', email: 'ravi@medicalinv.com',   password: 'Inv@12345',  color: 'from-orange-500 to-amber-600' },
-  { role: 'Staff',         email: 'priya@medicalinv.com',  password: 'Staff@123',  color: 'from-slate-500 to-slate-600' },
-]
-
 export default function Login() {
   const { login }  = useAuth()
   const navigate   = useNavigate()
@@ -70,18 +63,7 @@ export default function Login() {
     toast.success('Password reset link sent to ' + resetEmail)
   }
 
-  const quickLogin = async (email, password) => {
-    setLoading(true)
-    try {
-      await login(email, password)
-      toast.success('Welcome to MediStock Platform! 👋')
-      navigate('/dashboard')
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Login failed. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
+
 
   return (
     <div>
@@ -121,39 +103,6 @@ export default function Login() {
         <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
         <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">or sign in with email</span>
         <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
-      </div>
-
-      {/* Quick Demo Account Tiles */}
-      <div className="mb-5">
-        <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-          ⚡ Quick Demo Login
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {demoAccounts.map(({ role, email, password, color }) => (
-            <button
-              key={role}
-              type="button"
-              onClick={() => quickLogin(email, password)}
-              className={`
-                flex items-center gap-2.5 p-2 rounded-xl
-                border border-slate-100 dark:border-slate-800
-                bg-slate-50 dark:bg-slate-800/50
-                hover:border-blue-300 dark:hover:border-blue-700
-                hover:bg-blue-50/50 dark:hover:bg-blue-950/20
-                transition-all duration-200 text-left group
-                ${form.email === email ? 'border-blue-400 dark:border-blue-600 bg-blue-50/80 dark:bg-blue-950/40' : ''}
-              `}
-            >
-              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                <span className="text-white text-[11px] font-bold">{role[0]}</span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-none">{role}</p>
-                <p className="text-[10px] text-slate-400 truncate mt-0.5">{email.split('@')[0]}</p>
-              </div>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Manual Form */}

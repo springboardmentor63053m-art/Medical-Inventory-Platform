@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     Optional<Inventory> findByMedicineId(Long medicineId);
+    void deleteByMedicineId(Long medicineId);
 
     /** Find all inventory records where quantity <= minQuantity (low stock) */
     @Query("SELECT i FROM Inventory i WHERE i.quantity <= i.minQuantity")

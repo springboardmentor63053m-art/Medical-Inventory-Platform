@@ -9,6 +9,7 @@ C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medic
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\controller\MedicineController.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\controller\PurchaseController.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\controller\SalesController.java
+C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\controller\StockMovementController.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\controller\SupplierController.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\dto\AuthResponse.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\dto\LoginRequest.java
@@ -38,8 +39,10 @@ C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medic
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\EmployeeRepository.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\InventoryRepository.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\MedicineRepository.java
+C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\PurchaseItemRepository.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\PurchaseRepository.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\RoleRepository.java
+C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\SaleItemRepository.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\SaleRepository.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\StockMovementRepository.java
 C:\Users\USER\Desktop\MedicalInventoryManagement\backend\src\main\java\com\medicalinventory\repository\SupplierRepository.java

@@ -19,7 +19,7 @@ public class SupplierController {
 
     @GetMapping
     public ResponseEntity<List<Supplier>> getAll() {
-        return ResponseEntity.ok(supplierService.getAllSuppliers());
+        return ResponseEntity.ok(supplierService.getActiveSuppliers());
     }
 
     @GetMapping("/{id}")

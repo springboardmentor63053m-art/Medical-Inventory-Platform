@@ -19,6 +19,9 @@ export const medicineAPI = {
   update:    (id, d)  => axiosInstance.put(`/medicines/${id}`, d),
   delete:    (id)     => axiosInstance.delete(`/medicines/${id}`),
   getByCategory: (cid) => axiosInstance.get(`/medicines/category/${cid}`),
+  getBySupplier: (sid) => axiosInstance.get(`/medicines/supplier/${sid}`),
+  linkSupplier:  (mid, sid) => axiosInstance.put(`/medicines/${mid}/link-supplier/${sid}`),
+  unlinkSupplier:(mid) => axiosInstance.put(`/medicines/${mid}/unlink-supplier`),
 }
 
 // ── Categories ────────────────────────────────────────────────
@@ -42,9 +45,13 @@ export const supplierAPI = {
 // ── Inventory ─────────────────────────────────────────────────
 export const inventoryAPI = {
   getAll:       ()       => axiosInstance.get('/inventory'),
+  getById:      (id)     => axiosInstance.get(`/inventory/${id}`),
   getByMedicine:(mid)    => axiosInstance.get(`/inventory/medicine/${mid}`),
   getLowStock:  ()       => axiosInstance.get('/inventory/low-stock'),
   getExpiring:  (days)   => axiosInstance.get('/inventory/expiring', { params: { days } }),
+  create:       (data)   => axiosInstance.post('/inventory', data),
+  update:       (id, d)  => axiosInstance.put(`/inventory/${id}`, d),
+  delete:       (id)     => axiosInstance.delete(`/inventory/${id}`),
   adjust:       (data)   => axiosInstance.post('/inventory/adjust', data),
 }
 

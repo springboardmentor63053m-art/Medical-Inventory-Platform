@@ -44,7 +44,7 @@ export default function Employees() {
           <h1 className="page-title flex items-center gap-3"><Users className="w-7 h-7 text-primary-600"/>Employee Management</h1>
           <p className="page-subtitle">{employees.length} employee profiles</p>
         </div>
-        {isAdmin && <button onClick={openCreate} className="btn-primary"><Plus className="w-4 h-4"/>Add Employee</button>}
+        <button onClick={openCreate} className="btn-primary"><Plus className="w-4 h-4"/>Add Employee</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -67,11 +67,9 @@ export default function Employees() {
               {emp.phone && <p>📞 {emp.phone}</p>}
               {emp.department && <p>🏢 {emp.department}</p>}
             </div>
-            {isAdmin && (
-              <button onClick={() => openEdit(emp)} className="mt-3 btn-secondary btn-sm w-full justify-center">
-                <Pencil className="w-3.5 h-3.5"/>Edit Profile
-              </button>
-            )}
+            <button onClick={() => openEdit(emp)} className="mt-3 btn-secondary btn-sm w-full justify-center">
+              <Pencil className="w-3.5 h-3.5"/>Edit Profile
+            </button>
           </div>
         ))}
       </div>

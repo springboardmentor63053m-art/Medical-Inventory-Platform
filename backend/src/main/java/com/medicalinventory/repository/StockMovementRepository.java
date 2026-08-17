@@ -20,4 +20,6 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
     List<StockMovement> findByDateRange(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     List<StockMovement> findTop20ByOrderByCreatedAtDesc();
+
+    void deleteByMedicineId(Long medicineId);
 }

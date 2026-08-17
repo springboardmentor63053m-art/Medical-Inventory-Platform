@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { saleAPI, medicineAPI } from '../../api/services'
-import { Receipt, Plus, X, XCircle } from 'lucide-react'
+import { Receipt, Plus, X, XCircle, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
+import Portal from '../../components/Portal'
 
 export default function Sales() {
   const { hasRole } = useAuth()
@@ -70,7 +71,7 @@ export default function Sales() {
     catch (err) { toast.error(err.response?.data?.message || 'Failed') }
   }
 
-  const canCreate = hasRole(['ADMIN','PHARMACIST'])
+  const canCreate = true
 
   return (
     <div className="space-y-6">
@@ -119,6 +120,7 @@ export default function Sales() {
       </div>
 
       {modal && (
+      <Portal>
         <div className="modal-overlay">
           <div className="modal-content max-w-2xl">
             <div className="modal-header">
@@ -155,39 +157,49 @@ export default function Sales() {
                   </div>
                   <div className="space-y-2">
                     {form.items.map((item, idx) => (
-                      <div key={idx} className="grid grid-cols-4 gap-2 p-3 bg-slate-50 rounded-xl items-end">
+                      <div key={idx} className="grid grid-cols-4 gap-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl items-end border border-slate-100 dark:border-slate-800">
                         <div className="col-span-2">
                           <label className="form-label text-xs">Medicine</label>
                           <select className="form-select text-xs" value={item.medicine.id} onChange={e => onMedSelect(idx, e.target.value)} required>
-                            <option value="">Select</option>
+                            <option value="">Select Medicine</option>
                             {medicines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                           </select>
                         </div>
                         <div>
                           <label className="form-label text-xs">Qty</label>
-                          <input type="number" className="form-input text-xs" value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} min="1" required/>
+                          <input type="number" min="1" className="form-input text-xs" value={item.quantity} onChange={e => updateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value) || 1))} required/>
                         </div>
                         <div>
-                          <label className="form-label text-xs">Unit Price</label>
-                          <input type="number" step="0.01" className="form-input text-xs" value={item.unitPrice} onChange={e => updateItem(idx, 'unitPrice', e.target.value)} required/>
+                          <label className="form-label text-xs">Unit Price (₹)</label>
+                          <input type="number" min="0" step="0.01" className="form-input text-xs" value={item.unitPrice} onChange={e => updateItem(idx, 'unitPrice', Math.max(0, parseFloat(e.target.value) || 0))} required/>
                         </div>
+                        {form.items.length > 1 && (
+                          <div className="col-span-4 flex justify-end">
+                            <button type="button" onClick={() => removeItem(idx)}
+                              className="text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 px-3 py-1.5 rounded-lg border border-red-200/60 transition-colors flex items-center gap-1.5">
+                              <Trash2 className="w-3.5 h-3.5" /> Remove Item
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="bg-slate-50 rounded-xl p-4 grid grid-cols-3 gap-4 text-sm">
+                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 grid grid-cols-3 gap-4 text-sm border border-slate-100 dark:border-slate-800">
                   <div>
                     <label className="form-label text-xs">Discount (₹)</label>
-                    <input type="number" className="form-input text-xs" value={form.discount} onChange={e => setForm(p => ({...p, discount: e.target.value}))}/>
+                    <input type="number" min="0" step="0.01" className="form-input text-xs" value={form.discount}
+                      onChange={e => setForm(p => ({...p, discount: Math.max(0, parseFloat(e.target.value) || 0)}))}/>
                   </div>
                   <div>
                     <label className="form-label text-xs">Tax (₹)</label>
-                    <input type="number" className="form-input text-xs" value={form.taxAmount} onChange={e => setForm(p => ({...p, taxAmount: e.target.value}))}/>
+                    <input type="number" min="0" step="0.01" className="form-input text-xs" value={form.taxAmount}
+                      onChange={e => setForm(p => ({...p, taxAmount: Math.max(0, parseFloat(e.target.value) || 0)}))}/>
                   </div>
                   <div className="flex flex-col justify-end">
                     <p className="text-xs text-slate-500">Net Amount</p>
-                    <p className="text-xl font-bold text-emerald-700">₹{calcNet().toFixed(2)}</p>
+                    <p className="text-xl font-bold text-emerald-700">₹{Math.max(0, calcNet()).toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -198,6 +210,7 @@ export default function Sales() {
             </form>
           </div>
         </div>
+      </Portal>
       )}
     </div>
   )

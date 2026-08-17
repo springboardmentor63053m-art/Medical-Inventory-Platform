@@ -23,9 +23,11 @@ com\medicalinventory\repository\PurchaseRepository.class
 com\medicalinventory\entity\Sale$PaymentMethod.class
 com\medicalinventory\exception\ResourceNotFoundException.class
 com\medicalinventory\security\JwtAuthFilter.class
+com\medicalinventory\controller\StockMovementController.class
 com\medicalinventory\repository\AlertRepository.class
 com\medicalinventory\exception\BadRequestException.class
 com\medicalinventory\entity\Medicine$MedicineStatus.class
+com\medicalinventory\repository\PurchaseItemRepository.class
 com\medicalinventory\service\MedicineService.class
 com\medicalinventory\service\PurchaseService.class
 com\medicalinventory\config\SecurityConfig.class
@@ -66,6 +68,7 @@ com\medicalinventory\controller\SalesController.class
 com\medicalinventory\entity\Category$CategoryBuilder.class
 com\medicalinventory\entity\User$UserBuilder.class
 com\medicalinventory\controller\MedicineController.class
+com\medicalinventory\repository\SaleItemRepository.class
 com\medicalinventory\security\UserDetailsServiceImpl.class
 com\medicalinventory\exception\GlobalExceptionHandler.class
 com\medicalinventory\repository\RoleRepository.class

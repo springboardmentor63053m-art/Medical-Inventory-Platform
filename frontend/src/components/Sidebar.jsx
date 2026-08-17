@@ -2,23 +2,24 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Pill, Package, Truck, ShoppingCart,
-  Receipt, Users, Bell, BarChart2, X, Activity, Settings, Zap, Shield, Cpu
+  Receipt, Users, Bell, BarChart2, X, Activity, Settings, Zap, Shield, Cpu, TrendingUp
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard',  icon: LayoutDashboard, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'],    color: 'from-blue-500 to-indigo-500' },
-  { to: '/medicines', label: 'Medicines',   icon: Pill,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER'],             color: 'from-emerald-500 to-teal-500' },
-  { to: '/inventory', label: 'Inventory',   icon: Package,         roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'],    color: 'from-violet-500 to-purple-500' },
-  { to: '/suppliers', label: 'Suppliers',   icon: Truck,           roles: ['ADMIN','INVENTORY_MANAGER'],                         color: 'from-orange-500 to-amber-500' },
-  { to: '/purchases', label: 'Purchases',   icon: ShoppingCart,    roles: ['ADMIN','INVENTORY_MANAGER'],                         color: 'from-pink-500 to-rose-500' },
-  { to: '/sales',     label: 'Sales',       icon: Receipt,         roles: ['ADMIN','PHARMACIST'],                                color: 'from-teal-500 to-cyan-500' },
-  { to: '/employees', label: 'Employees',   icon: Users,           roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'],    color: 'from-indigo-500 to-blue-500' },
-  { to: '/alerts',    label: 'Alerts',      icon: Bell,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'],    color: 'from-red-500 to-rose-500' },
-  { to: '/reports',     label: 'Reports',      icon: BarChart2,  roles: ['ADMIN','INVENTORY_MANAGER'],                         color: 'from-amber-500 to-yellow-500' },
+  { to: '/dashboard',      label: 'Dashboard',       icon: LayoutDashboard, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-blue-500 to-indigo-500' },
+  { to: '/medicines',      label: 'Medicines',       icon: Pill,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','SUPPLIER'],          color: 'from-emerald-500 to-teal-500' },
+  { to: '/inventory',      label: 'Inventory',       icon: Package,         roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-violet-500 to-purple-500' },
+  { to: '/stock-tracking', label: 'Stock Tracking',  icon: TrendingUp,      roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-cyan-500 to-blue-500' },
+  { to: '/suppliers',      label: 'Suppliers',       icon: Truck,           roles: ['ADMIN','INVENTORY_MANAGER','SUPPLIER'],                      color: 'from-orange-500 to-amber-500' },
+  { to: '/purchases',      label: 'Purchases',       icon: ShoppingCart,    roles: ['ADMIN','INVENTORY_MANAGER','SUPPLIER'],                      color: 'from-pink-500 to-rose-500' },
+  { to: '/sales',          label: 'Sales',           icon: Receipt,         roles: ['ADMIN','PHARMACIST'],                                         color: 'from-teal-500 to-cyan-500' },
+  { to: '/employees',      label: 'Employees',       icon: Users,           roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'],             color: 'from-indigo-500 to-blue-500' },
+  { to: '/alerts',         label: 'Alerts',          icon: Bell,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-red-500 to-rose-500' },
+  { to: '/reports',        label: 'Reports',         icon: BarChart2,       roles: ['ADMIN','INVENTORY_MANAGER'],                                  color: 'from-amber-500 to-yellow-500' },
 ]
 
 const bottomItems = [
-  { to: '/settings', label: 'Settings', icon: Settings, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'], color: 'from-slate-500 to-slate-600' },
+  { to: '/settings', label: 'Settings', icon: Settings, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-slate-500 to-slate-600' },
 ]
 
 export default function Sidebar({ open, onClose, onOpenArch }) {
@@ -33,7 +34,8 @@ export default function Sidebar({ open, onClose, onOpenArch }) {
     PHARMACIST:         'from-emerald-400 to-teal-500',
     INVENTORY_MANAGER:  'from-orange-400 to-amber-500',
     STAFF:              'from-slate-400 to-slate-500',
-  }[user?.role] || 'from-blue-400 to-indigo-500'
+    SUPPLIER:           'from-purple-400 to-pink-500',
+  }[user?.role] || 'from-purple-400 to-pink-500'
 
   const roleLabel = user?.role?.replace('_', ' ').toLowerCase()
 
