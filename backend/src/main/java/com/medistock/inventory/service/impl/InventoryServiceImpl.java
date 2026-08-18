@@ -241,8 +241,48 @@ public class InventoryServiceImpl implements InventoryService {
                     .build();
         }
 
-        boolean isLowStock = inventory.getQuantity() <= inventory.getMinimumStock();
-        boolean isExpired = inventory.getExpiryDate() != null && inventory.getExpiryDate().isBefore(LocalDate.now());
+        int quantity = inventory.getQuantity() != null
+                ? inventory.getQuantity()
+                : 0;
+
+        int minimumStock = inventory.getMinimumStock() != null
+                ? inventory.getMinimumStock()
+                : 0;
+
+        LocalDate today = LocalDate.now();
+        LocalDate expiryDate = inventory.getExpiryDate();
+
+        boolean isOutOfStock = quantity == 0;
+        boolean isLowStock = quantity <= minimumStock;
+
+        boolean isExpired =
+                expiryDate != null &&
+                expiryDate.isBefore(today);
+
+        boolean isExpiringSoon =
+            expiryDate != null &&
+            !isExpired &&
+            !expiryDate.isAfter(today.plusDays(30));
+
+        String stockStatus;
+
+        if (isOutOfStock) {
+            stockStatus = "OUT_OF_STOCK";
+        } else if (isLowStock) {
+            stockStatus = "LOW_STOCK";
+        } else {
+            stockStatus = "NORMAL";
+        }
+
+        String expiryStatus;
+
+        if (isExpired) {
+            expiryStatus = "EXPIRED";
+        } else if (isExpiringSoon) {
+            expiryStatus = "EXPIRING_SOON";
+        } else {
+            expiryStatus = "VALID";
+        }
 
         return InventoryResponse.builder()
                 .id(inventory.getId())
@@ -253,8 +293,10 @@ public class InventoryServiceImpl implements InventoryService {
                 .expiryDate(inventory.getExpiryDate())
                 .storageLocation(inventory.getStorageLocation())
                 .isLowStock(isLowStock)
-                .isOutOfStock(inventory.getQuantity() == 0)
+                .isOutOfStock(isOutOfStock)
                 .isExpired(isExpired)
+                .stockStatus(stockStatus)
+                .expiryStatus(expiryStatus)
                 .createdAt(inventory.getCreatedAt())
                 .updatedAt(inventory.getUpdatedAt())
                 .build();

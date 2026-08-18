@@ -21,6 +21,8 @@ public class InventoryResponse {
     private Boolean isLowStock;
     private Boolean isOutOfStock;
     private Boolean isExpired;
+    private String stockStatus;
+    private String expiryStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

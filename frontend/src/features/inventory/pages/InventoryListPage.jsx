@@ -464,6 +464,16 @@ export default function InventoryListPage() {
           >
             <Clock className="w-3.5 h-3.5" /> Expiring Soon
           </button>
+          <button
+            onClick={() => setFilterMode('EXPIRED')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border flex items-center gap-1.5 ${
+              filterMode === 'EXPIRED'
+                ? 'bg-red-700 text-white border-red-700'
+                : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+            }`}
+          >
+            <AlertCircle className="w-3.5 h-3.5" /> Expired
+          </button>
         </div>
       </div>
 
@@ -538,9 +548,33 @@ export default function InventoryListPage() {
                 </tr>
               ) : (
                 sortedItems.map((item) => {
-                  const isLow = item.isLowStock || (item.quantity <= item.minimumStock);
-                  const isOutOfStock = item.isOutOfStock || item.quantity === 0;
-                  const isExpired = item.isExpired;
+                  const quantity = Number(item.quantity ?? 0);
+                  const minimumStock = Number(item.minimumStock ?? 0);
+
+                  const isOutOfStock = item.isOutOfStock || quantity === 0;
+                  const isLowStock =
+                    !isOutOfStock &&
+                    (item.isLowStock || quantity <= minimumStock);
+
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+
+                  const expiryDate = item.expiryDate
+                    ? new Date(`${item.expiryDate}T00:00:00`)
+                    : null;
+
+                  const expiringLimit = new Date(today);
+                  expiringLimit.setDate(expiringLimit.getDate() + 30);
+
+                  const isExpired =
+                    item.isExpired ||
+                    (expiryDate !== null && expiryDate < today);
+
+                  const isExpiringSoon =
+                    !isExpired &&
+                    expiryDate !== null &&
+                    expiryDate >= today &&
+                    expiryDate <= expiringLimit;
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition">
@@ -568,15 +602,23 @@ export default function InventoryListPage() {
                         {item.expiryDate}
                       </td>
                       <td className="py-4 px-6">
-                        {isExpired ? (
-                          <StatusBadge status="EXPIRED" label="EXPIRED" />
-                        ) : isOutOfStock ? (
+                        <div className="flex flex-col items-start gap-1.5">
+                        {isOutOfStock ? (
                           <StatusBadge status="OUT_OF_STOCK" label="OUT OF STOCK" />
-                        ) : isLow ? (
+                        ) : isLowStock ? (
                           <StatusBadge status="LOW_STOCK" label="LOW STOCK" />
                         ) : (
-                          <StatusBadge status="HEALTHY" label="HEALTHY" />
+                          <StatusBadge status="HEALTHY" label="NORMAL" />
                         )}
+
+                        {isExpired ? (
+                          <StatusBadge status="EXPIRED" label="EXPIRED" />
+                        ) : isExpiringSoon ? (
+                          <StatusBadge status="EXPIRING SOON" label="EXPIRING SOON" />
+                        ) : (
+                          <StatusBadge status="HEALTHY" label="VALID" />
+                        )}
+                      </div>
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
