@@ -172,9 +172,9 @@ const Suppliers = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredSuppliers.map((supplier) => (
+                {filteredSuppliers.map((supplier, index) => (
                   <tr key={supplier.id}>
-                    <td>#{supplier.id}</td>
+                    <td>#{index + 1}</td>
                     <td>
                       <strong style={{ color: 'white' }}>{supplier.name}</strong>
                       {supplier.contactPerson && (

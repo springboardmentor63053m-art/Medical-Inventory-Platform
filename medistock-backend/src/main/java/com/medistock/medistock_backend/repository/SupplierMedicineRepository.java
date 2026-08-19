@@ -14,23 +14,25 @@ import java.util.Optional;
 
 @Repository
 public interface SupplierMedicineRepository extends JpaRepository<SupplierMedicine, Long> {
-    Optional<SupplierMedicine> findBySupplierIdAndMedicineId(Long supplierId, Long medicineId);
+    Optional<SupplierMedicine> findBySupplierIdAndCode(Long supplierId, String code);
     List<SupplierMedicine> findBySupplierId(Long supplierId);
 
-    @Query("SELECT sm FROM SupplierMedicine sm JOIN sm.medicine m LEFT JOIN m.inventory i WHERE " +
-           "sm.supplier.id = :supplierId AND " +
+    @Query("SELECT sm FROM SupplierMedicine sm " +
+           "LEFT JOIN Medicine m ON sm.code = m.code " +
+           "LEFT JOIN m.inventory i WHERE " +
+           "(:supplierId IS NULL OR sm.supplier.id = :supplierId) AND " +
            "(:search IS NULL OR :search = '' OR " +
-           " LOWER(m.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           " LOWER(m.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           " LOWER(m.genericName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           " LOWER(m.manufacturer) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
-           "(:categoryId IS NULL OR m.category.id = :categoryId) AND " +
+           " LOWER(sm.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(sm.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(sm.genericName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(sm.manufacturer) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:categoryId IS NULL OR sm.category.id = :categoryId) AND " +
            "(:stockStatus IS NULL OR :stockStatus = '' OR :stockStatus = 'ALL' OR " +
-           "   (:stockStatus = 'EXPIRED' AND m.expiryDate < :today) OR " +
-           "   (:stockStatus = 'NEAR_EXPIRY' AND m.expiryDate >= :today AND m.expiryDate <= :nearExpiryDate) OR " +
+           "   (:stockStatus = 'EXPIRED' AND sm.expiryDate < :today) OR " +
+           "   (:stockStatus = 'NEAR_EXPIRY' AND COALESCE(i.quantity, 0) > 0 AND sm.expiryDate >= :today AND sm.expiryDate <= :nearExpiryDate) OR " +
            "   (:stockStatus = 'OUT_OF_STOCK' AND COALESCE(i.quantity, 0) = 0) OR " +
-           "   (:stockStatus = 'LOW_STOCK' AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 0)) OR " +
-           "   (:stockStatus = 'AVAILABLE' AND COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 0)))")
+           "   (:stockStatus = 'LOW_STOCK' AND COALESCE(i.quantity, 0) > 0 AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 10)) OR " +
+           "   (:stockStatus = 'AVAILABLE' AND COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 10)))")
     Page<SupplierMedicine> filterSupplierMedicines(
         @Param("supplierId") Long supplierId,
         @Param("search") String search,
@@ -41,20 +43,22 @@ public interface SupplierMedicineRepository extends JpaRepository<SupplierMedici
         Pageable pageable
     );
 
-    @Query("SELECT sm FROM SupplierMedicine sm JOIN sm.medicine m LEFT JOIN m.inventory i WHERE " +
-           "sm.supplier.id = :supplierId AND " +
+    @Query("SELECT sm FROM SupplierMedicine sm " +
+           "LEFT JOIN Medicine m ON sm.code = m.code " +
+           "LEFT JOIN m.inventory i WHERE " +
+           "(:supplierId IS NULL OR sm.supplier.id = :supplierId) AND " +
            "(:search IS NULL OR :search = '' OR " +
-           " LOWER(m.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           " LOWER(m.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           " LOWER(m.genericName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           " LOWER(m.manufacturer) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
-           "(:categoryId IS NULL OR m.category.id = :categoryId) AND " +
+           " LOWER(sm.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(sm.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(sm.genericName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+           " LOWER(sm.manufacturer) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:categoryId IS NULL OR sm.category.id = :categoryId) AND " +
            "(:stockStatus IS NULL OR :stockStatus = '' OR :stockStatus = 'ALL' OR " +
-           "   (:stockStatus = 'EXPIRED' AND m.expiryDate < :today) OR " +
-           "   (:stockStatus = 'NEAR_EXPIRY' AND m.expiryDate >= :today AND m.expiryDate <= :nearExpiryDate) OR " +
+           "   (:stockStatus = 'EXPIRED' AND sm.expiryDate < :today) OR " +
+           "   (:stockStatus = 'NEAR_EXPIRY' AND COALESCE(i.quantity, 0) > 0 AND sm.expiryDate >= :today AND sm.expiryDate <= :nearExpiryDate) OR " +
            "   (:stockStatus = 'OUT_OF_STOCK' AND COALESCE(i.quantity, 0) = 0) OR " +
-           "   (:stockStatus = 'LOW_STOCK' AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 0)) OR " +
-           "   (:stockStatus = 'AVAILABLE' AND COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 0)))")
+           "   (:stockStatus = 'LOW_STOCK' AND COALESCE(i.quantity, 0) > 0 AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 10)) OR " +
+           "   (:stockStatus = 'AVAILABLE' AND COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 10)))")
     List<SupplierMedicine> filterSupplierMedicinesList(
         @Param("supplierId") Long supplierId,
         @Param("search") String search,
@@ -63,4 +67,28 @@ public interface SupplierMedicineRepository extends JpaRepository<SupplierMedici
         @Param("today") LocalDate today,
         @Param("nearExpiryDate") LocalDate nearExpiryDate
     );
+
+    @Query("SELECT COUNT(sm) FROM SupplierMedicine sm " +
+           "LEFT JOIN Medicine m ON sm.code = m.code " +
+           "LEFT JOIN m.inventory i " +
+           "WHERE COALESCE(i.quantity, 0) > COALESCE(i.reorderLevel, 10)")
+    long countAvailableSupplierMedicines();
+
+    @Query("SELECT COUNT(sm) FROM SupplierMedicine sm " +
+           "LEFT JOIN Medicine m ON sm.code = m.code " +
+           "LEFT JOIN m.inventory i " +
+           "WHERE COALESCE(i.quantity, 0) > 0 AND COALESCE(i.quantity, 0) <= COALESCE(i.reorderLevel, 10)")
+    long countLowStockSupplierMedicines();
+
+    @Query("SELECT COUNT(sm) FROM SupplierMedicine sm " +
+           "LEFT JOIN Medicine m ON sm.code = m.code " +
+           "LEFT JOIN m.inventory i " +
+           "WHERE COALESCE(i.quantity, 0) = 0")
+    long countOutOfStockSupplierMedicines();
+
+    @Query("SELECT COUNT(sm) FROM SupplierMedicine sm " +
+           "LEFT JOIN Medicine m ON sm.code = m.code " +
+           "LEFT JOIN m.inventory i " +
+           "WHERE COALESCE(i.quantity, 0) > 0 AND sm.expiryDate >= :today AND sm.expiryDate <= :nearExpiryDate")
+    long countNearExpirySupplierMedicines(@Param("today") LocalDate today, @Param("nearExpiryDate") LocalDate nearExpiryDate);
 }

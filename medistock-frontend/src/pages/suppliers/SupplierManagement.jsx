@@ -432,10 +432,10 @@ export const SupplierManagement = () => {
                     </td>
                   </tr>
                 ) : (
-                  paginatedSuppliers.map((sup) => (
+                  paginatedSuppliers.map((sup, index) => (
                     <tr key={sup.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={{ padding: '16px 20px', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-                        #{sup.id}
+                        #{(currentPage - 1) * itemsPerPage + index + 1}
                       </td>
 
                       <td style={{ padding: '16px 20px', fontWeight: 700, color: 'var(--color-text-primary)' }}>

@@ -14,17 +14,21 @@ import {
   XCircle,
   Clock,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  Receipt,
+  History
 } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [metrics, setMetrics] = useState(null);
+  const [recentSales, setRecentSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isStaff = user?.roles?.includes('ROLE_STAFF');
 
   useEffect(() => {
     if (user?.roles?.includes('ROLE_SUPPLIER')) {
@@ -34,11 +38,19 @@ const Dashboard = () => {
 
     const fetchDashboard = async () => {
       try {
-        const response = await api.get('/dashboard');
-        if (response.data.success) {
-          setMetrics(response.data.data);
+        const [dashRes, salesRes] = await Promise.all([
+          api.get('/dashboard'),
+          api.get('/sales').catch(() => null)
+        ]);
+
+        if (dashRes.data.success) {
+          setMetrics(dashRes.data.data);
         } else {
-          setError(response.data.message || 'Failed to retrieve metrics');
+          setError(dashRes.data.message || 'Failed to retrieve metrics');
+        }
+
+        if (salesRes && salesRes.data.success) {
+          setRecentSales(salesRes.data.data?.slice(0, 5) || []);
         }
       } catch (err) {
         setError(err.response?.data?.message || err.message || 'Error fetching dashboard data');
@@ -76,40 +88,44 @@ const Dashboard = () => {
 
   return (
     <div>
-      {/* Inventory Metrics Row */}
-      <h3 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'Outfit, sans-serif' }}>Inventory Metrics</h3>
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginBottom: '28px' }}>
-        <div className="card stat-card blue">
-          <div className="stat-info">
-            <span className="stat-label">Total Medicines</span>
-            <span className="stat-value">{metrics?.totalMedicines || 0}</span>
-            <span 
-              onClick={() => navigate('/medicines', { state: { filterStatus: 'ALL' } })} 
-              style={{ fontSize: '0.8rem', color: 'var(--primary)', cursor: 'pointer', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              View Catalogue <ArrowRight size={12} />
-            </span>
-          </div>
-          <div className="stat-icon">
-            <Pill size={24} />
-          </div>
-        </div>
+      {/* Inventory Metrics Row - Hidden for STAFF */}
+      {!isStaff && (
+        <>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'Outfit, sans-serif' }}>Inventory Metrics</h3>
+          <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginBottom: '28px' }}>
+            <div className="card stat-card blue">
+              <div className="stat-info">
+                <span className="stat-label">Total Medicines</span>
+                <span className="stat-value">{metrics?.totalMedicines || 0}</span>
+                <span 
+                  onClick={() => navigate('/medicines', { state: { filterStatus: 'ALL' } })} 
+                  style={{ fontSize: '0.8rem', color: 'var(--primary)', cursor: 'pointer', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  View Catalogue <ArrowRight size={12} />
+                </span>
+              </div>
+              <div className="stat-icon">
+                <Pill size={24} />
+              </div>
+            </div>
 
-        <div className="card stat-card emerald">
-          <div className="stat-info">
-            <span className="stat-label">Inventory Valuation</span>
-            <span className="stat-value">{formatCurrency(metrics?.totalInventoryValue)}</span>
-            <span 
-              style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              Total Assets Value
-            </span>
+            <div className="card stat-card emerald">
+              <div className="stat-info">
+                <span className="stat-label">Inventory Valuation</span>
+                <span className="stat-value">{formatCurrency(metrics?.totalInventoryValue)}</span>
+                <span 
+                  style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  Total Assets Value
+                </span>
+              </div>
+              <div className="stat-icon">
+                <IndianRupee size={24} />
+              </div>
+            </div>
           </div>
-          <div className="stat-icon">
-            <IndianRupee size={24} />
-          </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Stock Level Metrics Row */}
       <h3 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'Outfit, sans-serif' }}>Stock Metrics</h3>
@@ -271,51 +287,122 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Recent Orders Section */}
-        <div className="card">
-          <div className="card-header-flex">
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', fontFamily: 'Outfit, sans-serif' }}>
-              <ClipboardList size={18} style={{ color: 'var(--primary)' }} />
-              Recent Purchase Orders
-            </h3>
-          </div>
+        {/* Recent Orders / Staff Billing & Sales Section */}
+        {isStaff ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Reduced Compact Billing POS Card */}
+            <div className="card" style={{ padding: '20px' }}>
+              <div className="card-header-flex" style={{ marginBottom: '8px' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontFamily: 'Outfit, sans-serif' }}>
+                  <Receipt size={18} style={{ color: 'var(--primary)' }} />
+                  Billing / POS Terminal
+                </h3>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '14px', lineHeight: '1.4' }}>
+                Quick customer checkout, invoice generation & instant stock reduction.
+              </p>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => navigate('/billing')} 
+                style={{ width: '100%', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.88rem' }}
+              >
+                <Receipt size={16} />
+                <span>Open POS Terminal</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
 
-          {metrics?.recentOrders?.length === 0 ? (
-            <div style={{ color: 'var(--text-secondary)', padding: '20px 0', textAlign: 'center' }}>
-              No purchase orders recorded yet.
+            {/* Recent Sales History Card */}
+            <div className="card">
+              <div className="card-header-flex">
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontFamily: 'Outfit, sans-serif' }}>
+                  <History size={18} style={{ color: 'var(--success)' }} />
+                  Recent Sales History
+                </h3>
+                <span 
+                  onClick={() => navigate('/sales')} 
+                  style={{ fontSize: '0.8rem', color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  View All <ArrowRight size={12} />
+                </span>
+              </div>
+
+              {recentSales.length === 0 ? (
+                <div style={{ color: 'var(--text-secondary)', padding: '20px 0', textAlign: 'center', fontSize: '0.85rem' }}>
+                  No recent sales transactions.
+                </div>
+              ) : (
+                <div className="table-responsive" style={{ maxHeight: '220px' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Payment</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentSales.map(sale => (
+                        <tr key={sale.id}>
+                          <td><strong>{sale.invoiceNumber}</strong></td>
+                          <td>{sale.customerName || 'Walk-in'}</td>
+                          <td style={{ color: 'var(--success)', fontWeight: 'bold' }}>{formatCurrency(sale.finalAmount)}</td>
+                          <td><span className="badge badge-info">{sale.paymentMethod || 'CASH'}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="table-responsive" style={{ maxHeight: '350px' }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Order #</th>
-                    <th>Supplier</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metrics?.recentOrders?.map(order => (
-                    <tr key={order.id}>
-                      <td><strong>{order.orderNumber}</strong></td>
-                      <td>{order.supplier?.name}</td>
-                      <td>{formatCurrency(order.totalAmount)}</td>
-                      <td>
-                        <span className={`badge ${
-                          order.status === 'COMPLETED' ? 'badge-success' :
-                          order.status === 'CANCELLED' ? 'badge-danger' : 'badge-warning'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </td>
+          </div>
+        ) : (
+          <div className="card">
+            <div className="card-header-flex">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', fontFamily: 'Outfit, sans-serif' }}>
+                <ClipboardList size={18} style={{ color: 'var(--primary)' }} />
+                Recent Purchase Orders
+              </h3>
+            </div>
+
+            {metrics?.recentOrders?.length === 0 ? (
+              <div style={{ color: 'var(--text-secondary)', padding: '20px 0', textAlign: 'center' }}>
+                No purchase orders recorded yet.
+              </div>
+            ) : (
+              <div className="table-responsive" style={{ maxHeight: '350px' }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Supplier</th>
+                      <th>Total</th>
+                      <th>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {metrics?.recentOrders?.map(order => (
+                      <tr key={order.id}>
+                        <td><strong>{order.orderNumber}</strong></td>
+                        <td>{order.supplier?.name}</td>
+                        <td>{formatCurrency(order.totalAmount)}</td>
+                        <td>
+                          <span className={`badge ${
+                            order.status === 'COMPLETED' ? 'badge-success' :
+                            order.status === 'CANCELLED' ? 'badge-danger' : 'badge-warning'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

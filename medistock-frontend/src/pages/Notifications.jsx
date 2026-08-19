@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
+import { useAuth } from '../context/AuthContext';
 import { 
   Bell, 
   AlertTriangle, 
@@ -8,137 +9,145 @@ import {
   Search, 
   ArrowRight,
   ShieldAlert,
-  Clock
+  Clock,
+  CheckCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const [medicines, setMedicines] = useState([]);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('ALL');
+  const [readAlertIds, setReadAlertIds] = useState([]);
 
-  const fetchSupplierMedicines = async () => {
+  const isSupplier = user?.roles?.includes('ROLE_SUPPLIER');
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN');
+  const isStaff = user?.roles?.includes('ROLE_PHARMACIST') || user?.roles?.includes('ROLE_STAFF');
+
+  const storageKey = `medistock_read_notifications_${user?.id || user?.username}`;
+
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        setReadAlertIds(JSON.parse(saved));
+      } catch (e) {
+        setReadAlertIds([]);
+      }
+    }
+  }, [user]);
+
+  const fetchNotifications = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/medicines');
+      const res = await api.get('/notifications');
       if (res.data.success) {
-        setMedicines(res.data.data);
+        setNotifications(res.data.data);
       } else {
-        setError(res.data.message || 'Failed to fetch medicines catalog');
+        setError(res.data.message || 'Failed to fetch notifications');
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Error loading medicines catalog');
+      setError(err.response?.data?.message || err.message || 'Error loading notifications');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSupplierMedicines();
+    fetchNotifications();
   }, []);
 
-  // Generate notifications dynamically from catalog data
-  const generateNotifications = () => {
-    const alerts = [];
-    const today = new Date();
-    const ninetyDaysFromNow = new Date();
-    ninetyDaysFromNow.setDate(today.getDate() + 90);
-
-    medicines.forEach(med => {
-      const qty = med.supplierAvailableQuantity || 0;
-      const reorder = med.reorderLevel || 30; // Use inventory reorderLevel or default 30
-
-      // 1. Check Expiry
-      if (med.expiryDate) {
-        const expDate = new Date(med.expiryDate);
-        if (expDate < today) {
-          alerts.push({
-            id: `exp-${med.id}`,
-            type: 'CRITICAL',
-            title: 'Critical Expiry Alert',
-            message: `Supplied batch of "${med.name}" (Code: ${med.code}) has EXPIRED on ${med.expiryDate}.`,
-            medicineId: med.id,
-            icon: <XOctagon size={18} />,
-            color: '#ef4444',
-            bg: 'rgba(239, 68, 68, 0.08)',
-            border: 'rgba(239, 68, 68, 0.2)'
-          });
-        } else if (expDate <= ninetyDaysFromNow) {
-          alerts.push({
-            id: `near-exp-${med.id}`,
-            type: 'WARNING',
-            title: 'Near Expiry Warning',
-            message: `Supplied batch of "${med.name}" (Code: ${med.code}) is nearing expiration on ${med.expiryDate} (under 90 days).`,
-            medicineId: med.id,
-            icon: <Clock size={18} />,
-            color: '#f59e0b',
-            bg: 'rgba(245, 158, 11, 0.08)',
-            border: 'rgba(245, 158, 11, 0.2)'
-          });
-        }
-      }
-
-      // 2. Check Stock Levels
-      if (qty === 0) {
-        alerts.push({
-          id: `oos-${med.id}`,
-          type: 'CRITICAL',
-          title: 'Critical Out-Of-Stock Alert',
-          message: `Supplied formulation "${med.name}" (Code: ${med.code}) is OUT OF STOCK. Please replenish availability immediately.`,
-          medicineId: med.id,
-          icon: <ShieldAlert size={18} />,
-          color: '#ef4444',
-          bg: 'rgba(239, 68, 68, 0.08)',
-          border: 'rgba(239, 68, 68, 0.2)'
-        });
-      } else if (qty <= reorder) {
-        alerts.push({
-          id: `low-${med.id}`,
-          type: 'WARNING',
-          title: 'Low Stock Warning',
-          message: `Supply alert: Formulation "${med.name}" (Code: ${med.code}) is in LOW STOCK with only ${qty} units remaining (Reorder: ${reorder}).`,
-          medicineId: med.id,
-          icon: <AlertTriangle size={18} />,
-          color: '#f97316',
-          bg: 'rgba(249, 115, 22, 0.08)',
-          border: 'rgba(249, 115, 22, 0.2)'
-        });
-      }
-    });
-
-    return alerts;
+  const markAllAsRead = () => {
+    const allIds = notifications.map(n => n.id);
+    setReadAlertIds(allIds);
+    localStorage.setItem(storageKey, JSON.stringify(allIds));
   };
 
-  const allAlerts = generateNotifications();
+  // Enhance alerts with UI styling details
+  const allAlerts = notifications.map(item => {
+    const isRead = readAlertIds.includes(item.id);
+    let icon = <AlertTriangle size={18} />;
+    let color = '#f97316';
+    let bg = 'rgba(249, 115, 22, 0.08)';
+    let border = 'rgba(249, 115, 22, 0.2)';
+
+    if (item.type === 'CRITICAL') {
+      color = '#ef4444';
+      bg = 'rgba(239, 68, 68, 0.08)';
+      border = 'rgba(239, 68, 68, 0.2)';
+      if (item.category === 'EXPIRY') {
+        icon = <XOctagon size={18} />;
+      } else {
+        icon = <ShieldAlert size={18} />;
+      }
+    } else if (item.type === 'WARNING') {
+      if (item.category === 'EXPIRY') {
+        icon = <Clock size={18} />;
+        color = '#f59e0b';
+        bg = 'rgba(245, 158, 11, 0.08)';
+        border = 'rgba(245, 158, 11, 0.2)';
+      }
+    }
+
+    return {
+      ...item,
+      icon,
+      color,
+      bg,
+      border,
+      isRead
+    };
+  });
 
   // Filter alerts by search query and active tab
   const filteredAlerts = allAlerts.filter(alert => {
-    const matchesSearch = alert.message.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          alert.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = 
+      (alert.message && alert.message.toLowerCase().includes(searchLower)) || 
+      (alert.title && alert.title.toLowerCase().includes(searchLower)) ||
+      (alert.medicineName && alert.medicineName.toLowerCase().includes(searchLower)) ||
+      (alert.supplierName && alert.supplierName.toLowerCase().includes(searchLower));
+    
     const matchesTab = activeTab === 'ALL' || alert.type === activeTab;
     return matchesSearch && matchesTab;
   });
 
   const criticalCount = allAlerts.filter(a => a.type === 'CRITICAL').length;
   const warningCount = allAlerts.filter(a => a.type === 'WARNING').length;
+  const unreadCount = allAlerts.filter(a => !a.isRead).length;
 
   if (loading) {
     return (
       <div className="card" style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'var(--text-secondary)' }}>Loading alerts feed...</div>
+        <div style={{ color: 'var(--text-secondary)' }}>Loading notifications feed...</div>
       </div>
     );
   }
+
+  const getHeaderTitle = () => {
+    if (isSupplier) return 'Supplier Notifications Feed';
+    if (isAdmin) return 'Pharmacy Inventory Notifications (Admin)';
+    if (isStaff) return 'Pharmacy Inventory Notifications (Staff)';
+    return 'Notifications & Alerts Feed';
+  };
+
+  const getHeaderSubtitle = () => {
+    if (isSupplier) {
+      return 'Real-time alerts for low stock, near-expiry, and expired items in your supplied catalog.';
+    }
+    return 'Pharmacy-wide real-time alerts for low stock, out of stock, near-expiry, and expired medicines across all suppliers.';
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
       {/* Header Panel */}
-      <div className="card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+      <div className="card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
         <div style={{
           width: '56px',
           height: '56px',
@@ -152,23 +161,56 @@ const Notifications = () => {
         }}>
           <Bell size={28} />
         </div>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600, fontFamily: 'Outfit, sans-serif' }}>
-            Notifications & Alerts Feed
-          </h2>
+        <div style={{ flex: 1, minWidth: '240px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600, fontFamily: 'Outfit, sans-serif' }}>
+              {getHeaderTitle()}
+            </h2>
+            {unreadCount > 0 && (
+              <span style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: '12px'
+              }}>
+                {unreadCount} Unread
+              </span>
+            )}
+          </div>
           <p style={{ margin: '8px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Real-time alerts for low stock, near-expiry, and expired items in your supplied catalog.
+            {getHeaderSubtitle()}
           </p>
         </div>
-        <button 
-          className="btn-icon" 
-          onClick={fetchSupplierMedicines} 
-          title="Refresh Alerts"
-          style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--card-bg)' }}
-        >
-          <RotateCcw size={16} />
-        </button>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {unreadCount > 0 && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={markAllAsRead} 
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+            >
+              <CheckCheck size={16} />
+              <span>Mark All Read</span>
+            </button>
+          )}
+          <button 
+            className="btn-icon" 
+            onClick={fetchNotifications} 
+            title="Refresh Alerts"
+            style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--card-bg)' }}
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="card" style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#ef4444' }}>
+          {error}
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="search-filter-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -176,7 +218,7 @@ const Notifications = () => {
           <Search size={18} />
           <input
             type="text"
-            placeholder="Search alerts by formulation name, code or alert text..."
+            placeholder={isSupplier ? "Search alerts by formulation name, code or alert text..." : "Search alerts by medicine, code, supplier or alert text..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -240,7 +282,8 @@ const Notifications = () => {
                 background: alert.bg,
                 border: `1px solid ${alert.border}`,
                 gap: '16px',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                position: 'relative'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', flex: 1, minWidth: '240px' }}>
@@ -254,9 +297,24 @@ const Notifications = () => {
                   {alert.icon}
                 </div>
                 <div>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 650, color: 'white', fontFamily: 'Outfit' }}>
-                    {alert.title}
-                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 650, color: 'white', fontFamily: 'Outfit' }}>
+                      {alert.title}
+                    </h4>
+                    {!alert.isRead && (
+                      <span style={{
+                        background: '#ef4444',
+                        color: 'white',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        padding: '1px 6px',
+                        borderRadius: '6px',
+                        textTransform: 'uppercase'
+                      }}>
+                        Unread
+                      </span>
+                    )}
+                  </div>
                   <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: '1.4' }}>
                     {alert.message}
                   </p>
@@ -281,7 +339,7 @@ const Notifications = () => {
                   onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                   onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                 >
-                  <span>Verify Catalog</span>
+                  <span>{isSupplier ? "Verify Catalog" : "Verify Inventory"}</span>
                   <ArrowRight size={12} />
                 </button>
               </div>

@@ -39,7 +39,7 @@ public class Supplier {
     @OneToMany(mappedBy = "supplier")
     @JsonIgnore
     @Builder.Default
-    private List<Medicine> medicines = new ArrayList<>();
+    private List<SupplierMedicine> supplierMedicines = new ArrayList<>();
 
     @OneToMany(mappedBy = "supplier")
     @JsonIgnore
