@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import { purchaseOrderService } from '../../../services/api/purchaseOrderService';
 import { supplierService } from '../../../services/api/supplierService';
 import { inventoryService } from '../../../services/api/inventoryService';
+import { reportsApi } from '../services/api/reportsApi';
 import {
   FileText,
   Download,
@@ -59,8 +60,87 @@ export default function ReportsPage() {
     }).format(val || 0);
   };
 
-  const handleExportCSV = (reportName) => {
-    toast.success(`Exporting ${reportName} report to CSV file...`);
+  const handleExportCSV = async () => {
+    try {
+      if (activeTab === 'VALUATION') {
+        await reportsApi.downloadInventoryReport();
+
+        toast.success(
+          'Inventory report downloaded successfully'
+        );
+
+        return;
+      }
+
+      if (activeTab === 'EXPIRY') {
+        await reportsApi.downloadExpiryReport(dateRange);
+
+        toast.success(
+          'Expiry report downloaded successfully'
+        );
+
+        return;
+      }
+
+      const escapeCsv = (value) => {
+        const text = String(value ?? '')
+          .replace(/"/g, '""');
+
+        return `"${text}"`;
+      };
+
+      const rows = [
+        [
+          'Supplier Name',
+          'Procurement Share (%)',
+          'Category',
+        ],
+        ...supplierSummary.map((supplier) => [
+          supplier.name,
+          supplier.share,
+          supplier.category,
+        ]),
+      ];
+
+      const csvContent =
+        '\uFEFF' +
+        rows
+          .map((row) =>
+            row.map(escapeCsv).join(',')
+          )
+          .join('\r\n');
+
+      const blob = new Blob([csvContent], {
+        type: 'text/csv;charset=utf-8',
+      });
+
+      const downloadUrl =
+        window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      const today =
+        new Date().toISOString().slice(0, 10);
+
+      link.href = downloadUrl;
+      link.download =
+        `medistock-supplier-performance-${today}.csv`;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(downloadUrl);
+
+      toast.success(
+        'Supplier report downloaded successfully'
+      );
+    } catch (error) {
+      console.error('Report export failed:', error);
+
+      toast.error(
+        'Unable to download the report. Please try again.'
+      );
+    }
   };
 
   const handlePrint = () => {
@@ -157,18 +237,84 @@ export default function ReportsPage() {
     ],
   };
 
-  const expiryByMonth = inventoryItems.reduce((totals, item) => {
-    if (!item.expiryDate) return totals;
-    const month = item.expiryDate.slice(0, 7);
-    totals[month] = (totals[month] || 0) + 1;
-    return totals;
-  }, {});
+    const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const selectedExpiryDays =
+    Number(dateRange) || 30;
+
+  const getDaysUntilExpiry = (expiryDateValue) => {
+    if (!expiryDateValue) {
+      return null;
+    }
+
+    const expiryDate =
+      new Date(`${expiryDateValue}T00:00:00`);
+
+    return Math.round(
+      (expiryDate - today) / 86400000
+    );
+  };
+
+  const expiredItems = inventoryItems.filter((item) => {
+    const daysUntilExpiry =
+      getDaysUntilExpiry(item.expiryDate);
+
+    return (
+      item.expiryStatus === 'EXPIRED' ||
+      (
+        daysUntilExpiry !== null &&
+        daysUntilExpiry < 0
+      )
+    );
+  });
+
+  const expiringWithinSelectedRange =
+    inventoryItems.filter((item) => {
+      const daysUntilExpiry =
+        getDaysUntilExpiry(item.expiryDate);
+
+      return (
+        item.expiryStatus !== 'EXPIRED' &&
+        daysUntilExpiry !== null &&
+        daysUntilExpiry >= 0 &&
+        daysUntilExpiry <= selectedExpiryDays
+      );
+    });
+
+  const expiringWithinSixMonths =
+    inventoryItems.filter((item) => {
+      const daysUntilExpiry =
+        getDaysUntilExpiry(item.expiryDate);
+
+      return (
+        item.expiryStatus !== 'EXPIRED' &&
+        daysUntilExpiry !== null &&
+        daysUntilExpiry >= 0 &&
+        daysUntilExpiry <= 180
+      );
+    });
+
+  const expiryByMonth =
+    expiringWithinSixMonths.reduce((totals, item) => {
+      const month = item.expiryDate.slice(0, 7);
+
+      totals[month] = (totals[month] || 0) + 1;
+
+      return totals;
+    }, {});
+
+  const expiryMonths =
+    Object.keys(expiryByMonth).sort();
+
   const expiryTrendData = {
-    labels: Object.keys(expiryByMonth).sort(),
+    labels: expiryMonths,
     datasets: [
       {
         label: 'Expiring Items Count',
-        data: Object.keys(expiryByMonth).sort().map(month => expiryByMonth[month]),
+        data: expiryMonths.map(
+          (month) => expiryByMonth[month]
+        ),
         borderColor: '#ef4444',
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
         tension: 0.3,
@@ -176,19 +322,23 @@ export default function ReportsPage() {
       },
     ],
   };
-  const totalUnits = inventoryItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const totalValue = inventoryItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.medicine?.unitPrice || 0), 0);
-  const averageUnitValue = totalUnits > 0 ? totalValue / totalUnits : 0;
-  const expiringWithin90Days = inventoryItems.filter(item => {
-    if (!item.expiryDate) return false;
-    const days = (new Date(item.expiryDate) - new Date()) / 86400000;
-    return days <= 90;
-  });
-  const expiringWithinSixMonths = inventoryItems.filter(item => {
-    if (!item.expiryDate) return false;
-    const days = (new Date(item.expiryDate) - new Date()) / 86400000;
-    return days <= 180;
-  });
+
+  const totalUnits = inventoryItems.reduce(
+    (sum, item) =>
+      sum + Number(item.quantity || 0),
+    0
+  );
+
+  const totalValue = inventoryItems.reduce(
+    (sum, item) =>
+      sum +
+      Number(item.quantity || 0) *
+      Number(item.medicine?.unitPrice || 0),
+    0
+  );
+
+  const averageUnitValue =
+    totalUnits > 0 ? totalValue / totalUnits : 0;
 
   return (
     <div className="space-y-6 font-sans text-slate-900 pb-10">
@@ -211,7 +361,7 @@ export default function ReportsPage() {
             <Printer className="w-4 h-4" /> Print Report
           </button>
           <button
-            onClick={() => handleExportCSV(activeTab)}
+            onClick={handleExportCSV}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition flex items-center gap-1.5"
           >
             <Download className="w-4 h-4" /> Export CSV
@@ -265,39 +415,69 @@ export default function ReportsPage() {
             onChange={(e) => setDateRange(e.target.value)}
             className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="30">Last 30 Days</option>
-            <option value="90">Quarterly (90 Days)</option>
-            <option value="365">Annual (1 Year)</option>
+            <option value="30">Next 30 Days</option>
+            <option value="90">Next 90 Days</option>
+            <option value="365">Next 1 Year</option>
           </select>
         </div>
       </div>
-
       {/* Tab 1: Valuation Report */}
       {activeTab === 'VALUATION' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-              <span className="text-xs text-slate-500 font-medium">Total Stock Valuation</span>
-              <h3 className="text-2xl font-black text-slate-900 mt-1">{formatINR(totalValue)}</h3>
-              <p className="text-[11px] text-slate-500 font-semibold mt-1">Based on current inventory quantities</p>
+              <span className="text-xs text-slate-500 font-medium">
+                Total Stock Valuation
+              </span>
+              <h3 className="text-2xl font-black text-slate-900 mt-1">
+                {formatINR(totalValue)}
+              </h3>
+              <p className="text-[11px] text-slate-500 font-semibold mt-1">
+                Based on current inventory quantities
+              </p>
             </div>
+
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-              <span className="text-xs text-slate-500 font-medium">Total Units In Warehouse</span>
-              <h3 className="text-2xl font-black text-blue-600 mt-1">{totalUnits.toLocaleString('en-IN')} Units</h3>
-              <p className="text-[11px] text-slate-400 mt-1">Across {inventoryItems.length} inventory records</p>
+              <span className="text-xs text-slate-500 font-medium">
+                Total Units In Warehouse
+              </span>
+              <h3 className="text-2xl font-black text-blue-600 mt-1">
+                {totalUnits.toLocaleString('en-IN')} Units
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Across {inventoryItems.length} inventory records
+              </p>
             </div>
+
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-              <span className="text-xs text-slate-500 font-medium">Average Unit Valuation</span>
-              <h3 className="text-2xl font-black text-purple-600 mt-1">{formatINR(averageUnitValue)} / unit</h3>
-              <p className="text-[11px] text-slate-400 mt-1">Based on current catalog prices</p>
+              <span className="text-xs text-slate-500 font-medium">
+                Average Unit Valuation
+              </span>
+              <h3 className="text-2xl font-black text-purple-600 mt-1">
+                {formatINR(averageUnitValue)} / unit
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Based on current catalog prices
+              </p>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-            <h3 className="font-bold text-slate-900 text-sm mb-1">Stock Value by Category</h3>
-            <p className="text-xs text-slate-500 mb-4">Total capital allocation across pharmaceutical categories in INR</p>
+            <h3 className="font-bold text-slate-900 text-sm mb-1">
+              Stock Value by Category
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Total capital allocation across pharmaceutical
+              categories in INR
+            </p>
             <div className="h-72">
-              <Bar data={valuationData} options={{ responsive: true, maintainAspectRatio: false }} />
+              <Bar
+                data={valuationData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -307,28 +487,92 @@ export default function ReportsPage() {
       {activeTab === 'EXPIRY' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-rose-200 bg-rose-50/20 shadow-xs">
-              <span className="text-xs text-rose-700 font-semibold">Immediate Expiry Risk (&lt;90 Days)</span>
-              <h3 className="text-2xl font-black text-rose-700 mt-1">{expiringWithin90Days.length} Batches</h3>
-              <p className="text-[11px] text-rose-600 mt-1">Value at risk: {formatINR(expiringWithin90Days.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.medicine?.unitPrice || 0), 0))}</p>
+            <div className="bg-white p-5 rounded-2xl border border-red-200 bg-red-50/20 shadow-xs">
+              <span className="text-xs text-red-700 font-semibold">
+                Expired Batches
+              </span>
+
+              <h3 className="text-2xl font-black text-red-700 mt-1">
+                {expiredItems.length} Batches
+              </h3>
+
+              <p className="text-[11px] text-red-600 mt-1">
+                Expired stock value:{' '}
+                {formatINR(
+                  expiredItems.reduce(
+                    (sum, item) =>
+                      sum +
+                      Number(item.quantity || 0) *
+                        Number(item.medicine?.unitPrice || 0),
+                    0
+                  )
+                )}
+              </p>
             </div>
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-              <span className="text-xs text-slate-500 font-medium">Next 6 Months Forecast</span>
-              <h3 className="text-2xl font-black text-slate-900 mt-1">{expiringWithinSixMonths.length} Batches</h3>
-              <p className="text-[11px] text-slate-400 mt-1">Based on actual expiry dates</p>
+
+            <div className="bg-white p-5 rounded-2xl border border-orange-200 bg-orange-50/20 shadow-xs">
+              <span className="text-xs text-orange-700 font-semibold">
+                Expiring Within {selectedExpiryDays} Days
+              </span>
+
+              <h3 className="text-2xl font-black text-orange-700 mt-1">
+                {expiringWithinSelectedRange.length} Batches
+              </h3>
+
+              <p className="text-[11px] text-orange-600 mt-1">
+                Value at risk:{' '}
+                {formatINR(
+                  expiringWithinSelectedRange.reduce(
+                    (sum, item) =>
+                      sum +
+                      Number(item.quantity || 0) *
+                        Number(item.medicine?.unitPrice || 0),
+                    0
+                  )
+                )}
+              </p>
             </div>
+
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-              <span className="text-xs text-slate-500 font-medium">Waste Prevention Efficiency</span>
-              <h3 className="text-2xl font-black text-emerald-600 mt-1">{inventoryItems.length > 0 ? `${Math.round((inventoryItems.filter(item => !item.isExpired).length / inventoryItems.length) * 100)}%` : '0%'}</h3>
-              <p className="text-[11px] text-emerald-600 font-semibold mt-1">Non-expired inventory records</p>
+              <span className="text-xs text-slate-500 font-medium">
+                Non-Expired Inventory
+              </span>
+
+              <h3 className="text-2xl font-black text-emerald-600 mt-1">
+                {inventoryItems.length > 0
+                  ? `${Math.round(
+                      ((inventoryItems.length -
+                        expiredItems.length) /
+                        inventoryItems.length) *
+                        100
+                    )}%`
+                  : '0%'}
+              </h3>
+
+              <p className="text-[11px] text-emerald-600 font-semibold mt-1">
+                Inventory records safe from expiry
+              </p>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-            <h3 className="font-bold text-slate-900 text-sm mb-1">6-Month Expiration Forecast</h3>
-            <p className="text-xs text-slate-500 mb-4">Projected batch expiration dates over upcoming months</p>
+            <h3 className="font-bold text-slate-900 text-sm mb-1">
+              6-Month Expiration Forecast
+            </h3>
+
+            <p className="text-xs text-slate-500 mb-4">
+              Projected batch expiration dates over the upcoming
+              six months
+            </p>
+
             <div className="h-72">
-              <Line data={expiryTrendData} options={{ responsive: true, maintainAspectRatio: false }} />
+              <Line
+                data={expiryTrendData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -340,36 +584,66 @@ export default function ReportsPage() {
           {loadingSuppliers ? (
             <div className="bg-white p-12 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-              <p className="text-sm font-semibold text-slate-500">Loading supplier procurement data...</p>
+              <p className="text-sm font-semibold text-slate-500">
+                Loading supplier procurement data...
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center">
-                <h3 className="font-bold text-slate-900 text-sm mb-2 text-center">Supplier Procurement Market Share</h3>
+                <h3 className="font-bold text-slate-900 text-sm mb-2 text-center">
+                  Supplier Procurement Market Share
+                </h3>
+
                 <div className="w-60 h-60 my-2">
                   {supplierShareData ? (
-                    <Pie data={supplierShareData} options={{ responsive: true, maintainAspectRatio: false }} />
+                    <Pie
+                      data={supplierShareData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                      }}
+                    />
                   ) : (
-                    <p className="text-xs text-slate-400 text-center pt-20">No procurement data available</p>
+                    <p className="text-xs text-slate-400 text-center pt-20">
+                      No procurement data available
+                    </p>
                   )}
                 </div>
               </div>
 
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs lg:col-span-2">
-                <h3 className="font-bold text-slate-900 text-sm mb-4">Vendor Supply Chain Summary</h3>
+                <h3 className="font-bold text-slate-900 text-sm mb-4">
+                  Vendor Supply Chain Summary
+                </h3>
+
                 <div className="space-y-3 text-xs">
                   {supplierSummary.length === 0 ? (
-                    <p className="text-xs text-slate-400 py-4 text-center">No supplier data available</p>
+                    <p className="text-xs text-slate-400 py-4 text-center">
+                      No supplier data available
+                    </p>
                   ) : (
-                    supplierSummary.map((sup, idx) => (
-                      <div key={idx} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100">
+                    supplierSummary.map((supplier, index) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100"
+                      >
                         <div>
-                          <span className="font-bold text-slate-900">{sup.name}</span>
-                          <p className="text-slate-500 text-[11px]">{sup.category}</p>
+                          <span className="font-bold text-slate-900">
+                            {supplier.name}
+                          </span>
+                          <p className="text-slate-500 text-[11px]">
+                            {supplier.category}
+                          </p>
                         </div>
+
                         <div className="text-right">
-                          <span className="font-bold text-blue-600">{sup.share}% Orders</span>
-                          <span className="block text-[10px] text-emerald-600 font-semibold">Value share from actual purchase orders</span>
+                          <span className="font-bold text-blue-600">
+                            {supplier.share}% Orders
+                          </span>
+                          <span className="block text-[10px] text-emerald-600 font-semibold">
+                            Value share from actual purchase orders
+                          </span>
                         </div>
                       </div>
                     ))
@@ -380,6 +654,6 @@ export default function ReportsPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
   );
 }
