@@ -45,4 +45,29 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     boolean existsByBatchNumber(String batchNumber);
 
     boolean existsByBatchNumberAndIdNot(String batchNumber, Long id);
+
+
+
+
+    
+    @Query("SELECT COALESCE(SUM(i.quantity), 0) FROM Inventory i")
+    Long sumTotalQuantity();
+
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > i.minimumStock")
+    Long countNormalStockItems();
+
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > 0 AND i.quantity <= i.minimumStock")
+    Long countLowStockItemsExcludingOutOfStock();
+
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity = 0")
+    Long countOutOfStockItems();
+
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.expiryDate < CURRENT_DATE")
+    Long countExpiredItems();
+
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.expiryDate BETWEEN CURRENT_DATE AND :targetDate")
+    Long countExpiringItems(@Param("targetDate") LocalDate targetDate);
+
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.expiryDate > :targetDate")
+    Long countValidItemsAfter(@Param("targetDate") LocalDate targetDate);
 }

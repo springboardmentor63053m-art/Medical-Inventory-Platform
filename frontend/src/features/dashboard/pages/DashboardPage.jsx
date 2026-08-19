@@ -4,6 +4,7 @@ import { medicineService } from '../../../services/api/medicineService';
 import { categoryService } from '../../../services/api/categoryService';
 import { supplierService } from '../../../services/api/supplierService';
 import { inventoryService } from '../../../services/api/inventoryService';
+import { dashboardApi } from '../services/api/dashboardApi';
 import { purchaseOrderService } from '../../../services/api/purchaseOrderService';
 import { useAuth } from '../../../contexts/AuthContext';
 import StatisticCard from '../../../components/common/StatisticCard';
@@ -56,16 +57,18 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   // Statistics state calculated directly from backend datasets
-  const [stats, setStats] = useState({
+    const [stats, setStats] = useState({
     totalMedicines: 0,
     totalCategories: 0,
     totalSuppliers: 0,
     totalInventory: 0,
+    totalStockQuantity: 0,
     healthyCount: 0,
     lowStockCount: 0,
-    criticalCount: 0,
     outOfStockCount: 0,
+    validCount: 0,
     expiringCount: 0,
+    expiredCount: 0,
     totalPOs: 0,
     totalPOValue: 0,
   });
@@ -104,107 +107,219 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     setLoading(true);
+
     try {
       const [
+        analyticsRes,
         medicinesRes,
         categoriesRes,
         suppliersRes,
         inventoryRes,
-        poRes
+        poRes,
       ] = await Promise.allSettled([
+        dashboardApi.getInventoryAnalytics(),
         medicineService.getAllMedicines(0, 300),
         categoryService.getAllCategories(),
         supplierService.getAllSuppliers(),
         inventoryService.getAllInventory(),
-        purchaseOrderService.getAllPurchaseOrders()
+        purchaseOrderService.getAllPurchaseOrders(),
       ]);
 
-      const meds = medicinesRes.status === 'fulfilled' ? (medicinesRes.value?.content || medicinesRes.value || []) : [];
-      const cats = categoriesRes.status === 'fulfilled' ? (categoriesRes.value || []) : [];
-      const sups = suppliersRes.status === 'fulfilled' ? (suppliersRes.value || []) : [];
-      const invs = inventoryRes.status === 'fulfilled' ? (inventoryRes.value || []) : [];
-      const pos = poRes.status === 'fulfilled' ? (poRes.value || []) : [];
+      const analytics =
+        analyticsRes.status === 'fulfilled'
+          ? analyticsRes.value
+          : null;
+
+      const meds =
+        medicinesRes.status === 'fulfilled'
+          ? medicinesRes.value?.content || medicinesRes.value || []
+          : [];
+
+      const cats =
+        categoriesRes.status === 'fulfilled'
+          ? categoriesRes.value || []
+          : [];
+
+      const sups =
+        suppliersRes.status === 'fulfilled'
+          ? suppliersRes.value || []
+          : [];
+
+      const invs =
+        inventoryRes.status === 'fulfilled'
+          ? inventoryRes.value || []
+          : [];
+
+      const pos =
+        poRes.status === 'fulfilled'
+          ? poRes.value || []
+          : [];
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Calculate stock health breakdown dynamically from backend inventory dataset
-      let healthy = 0;
-      let low = 0;
-      let critical = 0;
+      let normalStock = 0;
+      let lowStock = 0;
       let outOfStock = 0;
-      let expiring = 0;
+      let valid = 0;
+      let expiringSoon = 0;
+      let expired = 0;
+      let totalQuantity = 0;
 
       const lowList = [];
       const expiringList = [];
 
       invs.forEach((item) => {
-        const qty = Number(item.quantity || 0);
-        const minStock = Number(item.minimumStock || 10);
-        
-        let daysUntilExpiry = 999;
+        const quantity = Number(item.quantity ?? 0);
+        const minimumStock = Number(item.minimumStock ?? 0);
+
+        totalQuantity += quantity;
+
+        const calculatedStockStatus =
+          quantity === 0
+            ? 'OUT_OF_STOCK'
+            : quantity <= minimumStock
+              ? 'LOW_STOCK'
+              : 'NORMAL';
+
+        const stockStatus =
+          item.stockStatus || calculatedStockStatus;
+
+        if (stockStatus === 'OUT_OF_STOCK') {
+          outOfStock += 1;
+          lowList.push({
+            ...item,
+            statusType: 'OUT_OF_STOCK',
+          });
+        } else if (stockStatus === 'LOW_STOCK') {
+          lowStock += 1;
+          lowList.push({
+            ...item,
+            statusType: 'LOW_STOCK',
+          });
+        } else {
+          normalStock += 1;
+        }
+
+        let daysUntilExpiry = null;
+
         if (item.expiryDate) {
-          const expDate = new Date(item.expiryDate);
-          expDate.setHours(0, 0, 0, 0);
-          daysUntilExpiry = Math.round((expDate - today) / (1000 * 60 * 60 * 24));
+          const expiryDate =
+            new Date(`${item.expiryDate}T00:00:00`);
+
+          daysUntilExpiry = Math.round(
+            (expiryDate - today) / (1000 * 60 * 60 * 24)
+          );
         }
 
-        const isOutOfStock = qty === 0;
-        const isCritical = qty > 0 && (qty <= 5 || qty <= Math.floor(minStock / 3));
-        const isLow = qty > 0 && !isCritical && qty <= minStock;
-        const isExpiringSoon = daysUntilExpiry <= 90 && daysUntilExpiry >= 0;
-        const isExpired = daysUntilExpiry < 0;
+        const calculatedExpiryStatus =
+          daysUntilExpiry !== null && daysUntilExpiry < 0
+            ? 'EXPIRED'
+            : daysUntilExpiry !== null && daysUntilExpiry <= 30
+              ? 'EXPIRING_SOON'
+              : 'VALID';
 
-        if (isOutOfStock) {
-          outOfStock++;
-          lowList.push({ ...item, statusType: 'OUT_OF_STOCK' });
-        } else if (isCritical) {
-          critical++;
-          lowList.push({ ...item, statusType: 'CRITICAL' });
-        } else if (isLow) {
-          low++;
-          lowList.push({ ...item, statusType: 'LOW_STOCK' });
-        }
+        const expiryStatus =
+          item.expiryStatus || calculatedExpiryStatus;
 
-        if (isExpiringSoon || isExpired) {
-          expiring++;
-          expiringList.push({ ...item, daysRemaining: daysUntilExpiry });
-        }
-
-        if (!isOutOfStock && !isCritical && !isLow && !isExpiringSoon && !isExpired) {
-          healthy++;
+        if (expiryStatus === 'EXPIRED') {
+          expired += 1;
+          expiringList.push({
+            ...item,
+            statusType: 'EXPIRED',
+            daysRemaining: daysUntilExpiry,
+          });
+        } else if (expiryStatus === 'EXPIRING_SOON') {
+          expiringSoon += 1;
+          expiringList.push({
+            ...item,
+            statusType: 'EXPIRING_SOON',
+            daysRemaining: daysUntilExpiry,
+          });
+        } else {
+          valid += 1;
         }
       });
 
-      // Sort expiring items by nearest expiry date first
-      expiringList.sort((a, b) => a.daysRemaining - b.daysRemaining);
+      expiringList.sort(
+        (a, b) => a.daysRemaining - b.daysRemaining
+      );
 
       const poList = Array.isArray(pos) ? pos : [];
-      const totalPoVal = poList.reduce((acc, curr) => acc + (Number(curr.totalAmount) || 0), 0);
+
+      const fallbackPoValue = poList.reduce(
+        (total, order) =>
+          total + (Number(order.totalAmount) || 0),
+        0
+      );
 
       setStats({
-        totalMedicines: Array.isArray(meds) ? meds.length : 0,
-        totalCategories: Array.isArray(cats) ? cats.length : 0,
-        totalSuppliers: Array.isArray(sups) ? sups.length : 0,
-        totalInventory: Array.isArray(invs) ? invs.length : 0,
-        healthyCount: healthy,
-        lowStockCount: low,
-        criticalCount: critical,
-        outOfStockCount: outOfStock,
-        expiringCount: expiring,
-        totalPOs: poList.length,
-        totalPOValue: totalPoVal,
+        totalMedicines:
+          analytics?.totalMedicines ??
+          (Array.isArray(meds) ? meds.length : 0),
+
+        totalCategories:
+          analytics?.totalCategories ??
+          (Array.isArray(cats) ? cats.length : 0),
+
+        totalSuppliers:
+          analytics?.totalSuppliers ??
+          (Array.isArray(sups) ? sups.length : 0),
+
+        totalInventory:
+          analytics?.totalInventoryRecords ??
+          (Array.isArray(invs) ? invs.length : 0),
+
+        totalStockQuantity:
+          analytics?.totalStockQuantity ?? totalQuantity,
+
+        healthyCount:
+          analytics?.normalStockCount ?? normalStock,
+
+        lowStockCount:
+          analytics?.lowStockCount ?? lowStock,
+
+        outOfStockCount:
+          analytics?.outOfStockCount ?? outOfStock,
+
+        validCount:
+          analytics?.validCount ?? valid,
+
+        expiringCount:
+          analytics?.expiringSoonCount ?? expiringSoon,
+
+        expiredCount:
+          analytics?.expiredCount ?? expired,
+
+        totalPOs:
+          analytics?.totalPurchaseOrders ?? poList.length,
+
+        totalPOValue:
+          analytics?.totalPurchaseOrderValue ??
+          fallbackPoValue,
       });
 
       setLowStockItems(lowList.slice(0, 5));
       setExpiringItems(expiringList);
-      setCategoriesData(Array.isArray(cats) ? cats.map(c => ({
-        ...c,
-        medicineCount: meds.filter(m => m.category?.id === c.id).length
-      })) : []);
+
+      setCategoriesData(
+        Array.isArray(cats)
+          ? cats.map((category) => ({
+              ...category,
+              medicineCount: meds.filter(
+                (medicine) =>
+                  medicine.category?.id === category.id
+              ).length,
+            }))
+          : []
+      );
+
       setPurchaseOrders(poList.slice(0, 4));
     } catch (error) {
-      console.error('Dashboard backend fetch error:', error);
+      console.error(
+        'Dashboard backend fetch error:',
+        error
+      );
     } finally {
       setLoading(false);
     }
@@ -216,16 +331,19 @@ export default function DashboardPage() {
 
   // Stock Health Doughnut Chart
   const stockChartData = {
-    labels: ['Healthy Stock', 'Low Stock', 'Critical Stock', 'Out of Stock'],
+    labels: ['Normal Stock', 'Low Stock', 'Out of Stock'],
     datasets: [
       {
         data: [
           stats.healthyCount,
           stats.lowStockCount,
-          stats.criticalCount,
           stats.outOfStockCount,
         ],
-        backgroundColor: ['#10b981', '#f59e0b', '#dc2626', '#991b1b'],
+        backgroundColor: [
+          '#10b981',
+          '#f59e0b',
+          '#dc2626',
+        ],
         borderWidth: 2,
         borderColor: '#ffffff',
       },
@@ -282,13 +400,22 @@ export default function DashboardPage() {
       </div>
 
       {/* Statistic Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {/* Statistic Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatisticCard
           title="Total Medicines"
           value={loading ? '...' : stats.totalMedicines}
           icon={Pill}
           iconBg="bg-blue-50 text-blue-600 border-blue-100"
           badge={{ label: 'Catalog', type: 'success' }}
+        />
+
+        <StatisticCard
+          title="Total Stock Quantity"
+          value={loading ? '...' : stats.totalStockQuantity}
+          icon={Package}
+          iconBg="bg-indigo-50 text-indigo-600 border-indigo-100"
+          badge={{ label: 'Available Units', type: 'purple' }}
         />
 
         <StatisticCard
@@ -300,7 +427,7 @@ export default function DashboardPage() {
         />
 
         <StatisticCard
-          title="Healthy Stock"
+          title="Normal Stock"
           value={loading ? '...' : stats.healthyCount}
           icon={CheckCircle2}
           iconBg="bg-emerald-50 text-emerald-600 border-emerald-100"
@@ -320,26 +447,44 @@ export default function DashboardPage() {
         />
 
         <StatisticCard
-          title="Critical & Out of Stock"
-          value={loading ? '...' : stats.criticalCount + stats.outOfStockCount}
+          title="Out of Stock"
+          value={loading ? '...' : stats.outOfStockCount}
           icon={AlertCircle}
           iconBg="bg-rose-50 text-rose-600 border-rose-200"
           badge={
-            (stats.criticalCount + stats.outOfStockCount) > 0
+            stats.outOfStockCount > 0
               ? { label: 'Urgent Action', type: 'danger' }
               : { label: 'In Stock', type: 'success' }
           }
         />
 
         <StatisticCard
-          title="Expiring Soon (<90 Days)"
+          title="Expiring Soon (30 Days)"
           value={loading ? '...' : stats.expiringCount}
           icon={Clock}
-          iconBg="bg-purple-50 text-purple-600 border-purple-200"
+          iconBg="bg-orange-50 text-orange-600 border-orange-200"
           badge={
             stats.expiringCount > 0
-              ? { label: `${stats.expiringCount} Batches`, type: 'danger' }
+              ? {
+                  label: `${stats.expiringCount} Batches`,
+                  type: 'warning',
+                }
               : { label: 'Zero Risk', type: 'success' }
+          }
+        />
+
+        <StatisticCard
+          title="Expired"
+          value={loading ? '...' : stats.expiredCount}
+          icon={AlertCircle}
+          iconBg="bg-red-50 text-red-700 border-red-200"
+          badge={
+            stats.expiredCount > 0
+              ? {
+                  label: `${stats.expiredCount} Batches`,
+                  type: 'danger',
+                }
+              : { label: 'None', type: 'success' }
           }
         />
       </div>
@@ -413,8 +558,7 @@ export default function DashboardPage() {
           <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4.5 h-4.5 text-amber-600" />
-              <h2 className="font-bold text-slate-900 text-sm">Low &amp; Critical Stock Alerts</h2>
-            </div>
+              <h2 className="font-bold text-slate-900 text-sm">Low &amp; Out-of-Stock Alerts</h2>            </div>
             <Link to="/inventory" className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
               View All <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -461,13 +605,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Expiring Soon Surveillance Widget (< 90 Days) */}
+        {/* Expiry Surveillance Widget (30 Days) */}
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col justify-between">
           <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
             <div className="flex items-center gap-2">
               <Clock className="w-4.5 h-4.5 text-purple-600" />
-              <h2 className="font-bold text-slate-900 text-sm">Expiring Soon Surveillance (&lt;90 Days)</h2>
-            </div>
+                <h2 className="font-bold text-slate-900 text-sm">Expiry Surveillance (30 Days)</h2>            </div>
             <Link to="/expiring" className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
               View All <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -482,7 +625,7 @@ export default function DashboardPage() {
                 <div>
                   <h3 className="font-bold text-slate-900 text-sm">Zero Expiration Risk</h3>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
-                    No medicines are expiring in the next 90 days.
+                    No expired or expiring medicines require attention.
                   </p>
                 </div>
               </div>
