@@ -9,6 +9,7 @@ import com.medistock.medistock_backend.exception.BadRequestException;
 import com.medistock.medistock_backend.exception.ResourceNotFoundException;
 import com.medistock.medistock_backend.repository.MedicineRepository;
 import com.medistock.medistock_backend.repository.PurchaseOrderRepository;
+import com.medistock.medistock_backend.repository.SupplierMedicineRepository;
 import com.medistock.medistock_backend.repository.SupplierRepository;
 import com.medistock.medistock_backend.repository.UserRepository;
 import com.medistock.medistock_backend.service.InventoryService;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +34,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     private final SupplierRepository supplierRepository;
     private final UserRepository userRepository;
     private final MedicineRepository medicineRepository;
+    private final SupplierMedicineRepository supplierMedicineRepository;
     private final InventoryService inventoryService;
 
     @Override
@@ -126,15 +129,15 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         BigDecimal grandTotal = BigDecimal.ZERO;
 
         for (PurchaseOrderItemRequest itemReq : request.getItems()) {
-            Medicine medicine = medicineRepository.findById(itemReq.getMedicineId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + itemReq.getMedicineId()));
+            SupplierMedicine supplierMedicine = supplierMedicineRepository.findById(itemReq.getSupplierMedicineId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Supplier medicine not found with id: " + itemReq.getSupplierMedicineId()));
 
             BigDecimal lineTotal = itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             grandTotal = grandTotal.add(lineTotal);
 
             PurchaseOrderItem item = PurchaseOrderItem.builder()
                     .purchaseOrder(order)
-                    .medicine(medicine)
+                    .supplierMedicine(supplierMedicine)
                     .quantity(itemReq.getQuantity())
                     .unitPrice(itemReq.getUnitPrice())
                     .totalPrice(lineTotal)
@@ -170,11 +173,47 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
         order.setStatus(status);
 
-        // If status changes to APPROVED or RECEIVED (and was not previously APPROVED or RECEIVED), update inventory stock
-        if ((status == OrderStatus.APPROVED || status == OrderStatus.RECEIVED)
-                && oldStatus != OrderStatus.APPROVED && oldStatus != OrderStatus.RECEIVED) {
+        // If status changes to RECEIVED, update inventory stock
+        if (status == OrderStatus.RECEIVED && oldStatus != OrderStatus.RECEIVED) {
             for (PurchaseOrderItem item : order.getItems()) {
-                inventoryService.updateStockQuantity(item.getMedicine().getId(), item.getQuantity());
+                SupplierMedicine supplierMed = item.getSupplierMedicine();
+                if (supplierMed != null) {
+                    // Case B: Match by code first
+                    Optional<Medicine> adminMedOpt = medicineRepository.findByCode(supplierMed.getCode());
+
+                    // Case B fallback: match by name + genericName + manufacturer (case-insensitive)
+                    if (!adminMedOpt.isPresent() && supplierMed.getName() != null) {
+                        List<Medicine> matches = medicineRepository
+                            .findByNameIgnoreCaseAndGenericNameIgnoreCaseAndManufacturerIgnoreCase(
+                                supplierMed.getName().trim(),
+                                supplierMed.getGenericName() != null ? supplierMed.getGenericName().trim() : "",
+                                supplierMed.getManufacturer() != null ? supplierMed.getManufacturer().trim() : ""
+                            );
+                        if (!matches.isEmpty()) {
+                            adminMedOpt = Optional.of(matches.get(0));
+                        }
+                    }
+
+                    Medicine adminMed;
+                    if (adminMedOpt.isPresent()) {
+                        // Case B: Medicine exists — just increase quantity
+                        adminMed = adminMedOpt.get();
+                    } else {
+                        // Case A: Medicine is new — create it in Admin
+                        adminMed = Medicine.builder()
+                                .name(supplierMed.getName())
+                                .code(supplierMed.getCode())
+                                .genericName(supplierMed.getGenericName())
+                                .manufacturer(supplierMed.getManufacturer())
+                                .price(supplierMed.getPrice())
+                                .expiryDate(supplierMed.getExpiryDate())
+                                .batchNumber(supplierMed.getBatchNumber())
+                                .category(supplierMed.getCategory())
+                                .build();
+                        adminMed = medicineRepository.save(adminMed);
+                    }
+                    inventoryService.updateStockQuantity(adminMed.getId(), item.getQuantity());
+                }
             }
         }
 
@@ -207,8 +246,8 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         List<PurchaseOrderResponse.ItemDto> itemDtos = order.getItems().stream()
                 .map(item -> PurchaseOrderResponse.ItemDto.builder()
                         .id(item.getId())
-                        .medicineId(item.getMedicine() != null ? item.getMedicine().getId() : null)
-                        .medicineName(item.getMedicine() != null ? item.getMedicine().getName() : null)
+                        .supplierMedicineId(item.getSupplierMedicine() != null ? item.getSupplierMedicine().getId() : null)
+                        .medicineName(item.getSupplierMedicine() != null ? item.getSupplierMedicine().getName() : null)
                         .quantity(item.getQuantity())
                         .unitPrice(item.getUnitPrice())
                         .totalPrice(item.getTotalPrice())

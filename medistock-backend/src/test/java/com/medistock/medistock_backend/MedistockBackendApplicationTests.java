@@ -15,7 +15,6 @@ class MedistockBackendApplicationTests {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         String rawPassword = "admin123";
         String seedHash = "$2a$10$gGe0HQlds7Iogjn2/baUWuIV7TJL.MHiHd37Cjt7f9GJimaFjhfNS";
-        
         assertTrue(encoder.matches(rawPassword, seedHash), "Admin seed password should match BCrypt hash");
     }
 

@@ -50,9 +50,6 @@ public class Medicine {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "medicines", "purchaseOrders"})
     private Supplier supplier;
 
-    @Column(name = "supplier_available_quantity")
-    private Integer supplierAvailableQuantity;
-
     @OneToOne(mappedBy = "medicine", cascade = CascadeType.ALL, orphanRemoval = true)
     private Inventory inventory;
 }

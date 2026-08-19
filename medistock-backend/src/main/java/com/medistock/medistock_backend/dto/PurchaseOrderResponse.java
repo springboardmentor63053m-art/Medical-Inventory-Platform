@@ -29,7 +29,7 @@ public class PurchaseOrderResponse {
     @Builder
     public static class ItemDto {
         private Long id;
-        private Long medicineId;
+        private Long supplierMedicineId;
         private String medicineName;
         private Integer quantity;
         private BigDecimal unitPrice;

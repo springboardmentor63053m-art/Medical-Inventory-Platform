@@ -12,6 +12,6 @@ import java.util.Optional;
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     Optional<Inventory> findByMedicineId(Long medicineId);
 
-    @Query("SELECT i FROM Inventory i WHERE i.quantity <= i.reorderLevel")
+    @Query("SELECT i FROM Inventory i WHERE i.quantity > 0 AND i.quantity <= i.reorderLevel")
     List<Inventory> findLowStockItems();
 }

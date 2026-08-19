@@ -58,68 +58,20 @@ public class MedicineServiceImpl implements MedicineService {
     @Transactional(readOnly = true)
     public Page<MedicineResponse> getAllMedicines(MedicineFilterRequest filter) {
         Long currentSupplierId = getCurrentSupplierId();
-        if (currentSupplierId != null) {
-            int pageNum = filter.getPage() != null ? filter.getPage() : 0;
-            int pageSize = filter.getSize() != null ? filter.getSize() : 10;
-
-            Sort sort = Sort.unsorted();
-            if (filter.getSortBy() != null) {
-                String sortByProperty = "medicine.name";
-                switch (filter.getSortBy()) {
-                    case NAME:
-                        sortByProperty = "medicine.name";
-                        break;
-                    case QUANTITY:
-                        sortByProperty = "medicine.inventory.quantity";
-                        break;
-                    case EXPIRY_DATE:
-                        sortByProperty = "medicine.expiryDate";
-                        break;
-                    case CATEGORY:
-                        sortByProperty = "medicine.category.name";
-                        break;
-                    case SUPPLIER:
-                        sortByProperty = "supplier.name";
-                        break;
-                }
-
-                Sort.Direction direction = Sort.Direction.ASC;
-                if (filter.getSortDirection() != null && filter.getSortDirection() == com.medistock.medistock_backend.entity.SortDirection.DESC) {
-                    direction = Sort.Direction.DESC;
-                }
-                sort = Sort.by(direction, sortByProperty);
-            }
-
-            Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
-            LocalDate today = LocalDate.now();
-            LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
-            String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
-
-            Page<SupplierMedicine> page = supplierMedicineRepository.filterSupplierMedicines(
-                currentSupplierId,
-                filter.getSearch(),
-                filter.getCategoryId(),
-                statusStr,
-                today,
-                nearExpiryDate,
-                pageable
-            );
-
-            return page.map(this::mapSupplierMedicineToResponse);
-        }
+        Long supplierId = currentSupplierId != null ? currentSupplierId : filter.getSupplierId();
 
         int pageNum = filter.getPage() != null ? filter.getPage() : 0;
         int pageSize = filter.getSize() != null ? filter.getSize() : 10;
 
         Sort sort = Sort.unsorted();
         if (filter.getSortBy() != null) {
-            String sortByProperty = "name"; // Default sort property
+            String sortByProperty = "name";
             switch (filter.getSortBy()) {
                 case NAME:
                     sortByProperty = "name";
                     break;
                 case QUANTITY:
-                    sortByProperty = "inventory.quantity";
+                    sortByProperty = "availableQuantity";
                     break;
                 case EXPIRY_DATE:
                     sortByProperty = "expiryDate";
@@ -144,129 +96,67 @@ public class MedicineServiceImpl implements MedicineService {
         LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
         String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
 
-        Page<Medicine> page = medicineRepository.filterMedicines(
+        Page<SupplierMedicine> page = supplierMedicineRepository.filterSupplierMedicines(
+            supplierId,
             filter.getSearch(),
             filter.getCategoryId(),
-            filter.getSupplierId(),
             statusStr,
             today,
             nearExpiryDate,
             pageable
         );
 
-        return page.map(this::mapToResponse);
+        return page.map(this::mapSupplierMedicineToResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<MedicineResponse> getAllMedicinesList(MedicineFilterRequest filter) {
         Long currentSupplierId = getCurrentSupplierId();
+        Long supplierId = currentSupplierId != null ? currentSupplierId : filter.getSupplierId();
         LocalDate today = LocalDate.now();
         LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
         String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
 
-        if (currentSupplierId != null && filter.getAll() != Boolean.TRUE) {
-            List<SupplierMedicine> list = supplierMedicineRepository.filterSupplierMedicinesList(
-                currentSupplierId,
-                filter.getSearch(),
-                filter.getCategoryId(),
-                statusStr,
-                today,
-                nearExpiryDate
-            );
-            return list.stream()
-                    .map(this::mapSupplierMedicineToResponse)
-                    .collect(Collectors.toList());
-        }
-
-        List<Medicine> list = medicineRepository.filterMedicinesList(
+        List<SupplierMedicine> list = supplierMedicineRepository.filterSupplierMedicinesList(
+            supplierId,
             filter.getSearch(),
             filter.getCategoryId(),
-            filter.getSupplierId(),
             statusStr,
             today,
             nearExpiryDate
         );
 
-        if (currentSupplierId != null) {
-            return list.stream()
-                    .map(medicine -> {
-                        CategoryDto categoryDto = medicine.getCategory() != null ?
-                                CategoryDto.builder()
-                                        .id(medicine.getCategory().getId())
-                                        .name(medicine.getCategory().getName())
-                                        .description(medicine.getCategory().getDescription())
-                                        .build() : null;
-
-                        Integer supplierQty = 0;
-                        Optional<SupplierMedicine> supMedOpt = supplierMedicineRepository
-                                .findBySupplierIdAndMedicineId(currentSupplierId, medicine.getId());
-                        if (supMedOpt.isPresent()) {
-                            supplierQty = supMedOpt.get().getAvailableQuantity();
-                        }
-
-                        SupplierDto supplierDto = supMedOpt.isPresent() ?
-                                SupplierDto.builder()
-                                        .id(supMedOpt.get().getSupplier().getId())
-                                        .name(supMedOpt.get().getSupplier().getName())
-                                        .contactPerson(supMedOpt.get().getSupplier().getContactPerson())
-                                        .email(supMedOpt.get().getSupplier().getEmail())
-                                        .phone(supMedOpt.get().getSupplier().getPhone())
-                                        .address(supMedOpt.get().getSupplier().getAddress())
-                                        .build() : null;
-
-                        Integer stock = medicine.getInventory() != null ? medicine.getInventory().getQuantity() : 0;
-                        Integer reorder = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
-
-                        return MedicineResponse.builder()
-                                .id(medicine.getId())
-                                .name(medicine.getName())
-                                .code(medicine.getCode())
-                                .genericName(medicine.getGenericName())
-                                .manufacturer(medicine.getManufacturer())
-                                .price(medicine.getPrice())
-                                .expiryDate(medicine.getExpiryDate())
-                                .batchNumber(medicine.getBatchNumber())
-                                .category(categoryDto)
-                                .supplier(supplierDto)
-                                .currentStock(stock)
-                                .reorderLevel(reorder)
-                                .supplierAvailableQuantity(supplierQty)
-                                .build();
-                    })
-                    .collect(Collectors.toList());
-        }
-
         return list.stream()
-                .map(this::mapToResponse)
+                .map(this::mapSupplierMedicineToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public MedicineResponse getMedicineById(Long id) {
-        Medicine medicine = medicineRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + id));
         Long currentSupplierId = getCurrentSupplierId();
         if (currentSupplierId != null) {
-            SupplierMedicine sm = supplierMedicineRepository.findBySupplierIdAndMedicineId(currentSupplierId, id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + id));
+            SupplierMedicine sm = supplierMedicineRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Supplier medicine not found with id: " + id));
             return mapSupplierMedicineToResponse(sm);
         }
+        Medicine medicine = medicineRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + id));
         return mapToResponse(medicine);
     }
 
     @Override
     @Transactional(readOnly = true)
     public MedicineResponse getMedicineByCode(String code) {
-        Medicine medicine = medicineRepository.findByCode(code)
-                .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with code: " + code));
         Long currentSupplierId = getCurrentSupplierId();
         if (currentSupplierId != null) {
-            SupplierMedicine sm = supplierMedicineRepository.findBySupplierIdAndMedicineId(currentSupplierId, medicine.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with code: " + code));
+            SupplierMedicine sm = supplierMedicineRepository.findBySupplierIdAndCode(currentSupplierId, code)
+                    .orElseThrow(() -> new ResourceNotFoundException("Supplier medicine not found with code: " + code));
             return mapSupplierMedicineToResponse(sm);
         }
+        Medicine medicine = medicineRepository.findByCode(code)
+                .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with code: " + code));
         return mapToResponse(medicine);
     }
 
@@ -277,9 +167,9 @@ public class MedicineServiceImpl implements MedicineService {
         if (currentSupplierId != null) {
             List<SupplierMedicine> list = supplierMedicineRepository.findBySupplierId(currentSupplierId);
             return list.stream()
-                    .filter(sm -> sm.getMedicine().getName().toLowerCase().contains(query.toLowerCase())
-                            || sm.getMedicine().getCode().toLowerCase().contains(query.toLowerCase())
-                            || (sm.getMedicine().getGenericName() != null && sm.getMedicine().getGenericName().toLowerCase().contains(query.toLowerCase())))
+                    .filter(sm -> sm.getName().toLowerCase().contains(query.toLowerCase())
+                            || sm.getCode().toLowerCase().contains(query.toLowerCase())
+                            || (sm.getGenericName() != null && sm.getGenericName().toLowerCase().contains(query.toLowerCase())))
                     .map(this::mapSupplierMedicineToResponse)
                     .collect(Collectors.toList());
         }
@@ -295,7 +185,7 @@ public class MedicineServiceImpl implements MedicineService {
         if (currentSupplierId != null) {
             List<SupplierMedicine> list = supplierMedicineRepository.findBySupplierId(currentSupplierId);
             return list.stream()
-                    .filter(sm -> sm.getMedicine().getCategory() != null && sm.getMedicine().getCategory().getId().equals(categoryId))
+                    .filter(sm -> sm.getCategory() != null && sm.getCategory().getId().equals(categoryId))
                     .map(this::mapSupplierMedicineToResponse)
                     .collect(Collectors.toList());
         }
@@ -404,7 +294,9 @@ public class MedicineServiceImpl implements MedicineService {
             if (expiryDate.isBefore(today)) {
                 statuses.add(StockStatus.EXPIRED);
             } else if (!expiryDate.isAfter(nearExpiryLimit)) {
-                statuses.add(StockStatus.NEAR_EXPIRY);
+                if (quantity != null && quantity > 0) {
+                    statuses.add(StockStatus.NEAR_EXPIRY);
+                }
             }
         }
         if (quantity == 0) {
@@ -444,12 +336,11 @@ public class MedicineServiceImpl implements MedicineService {
         Integer reorder = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
 
         Integer supplierQty = 0;
-        if (medicine.getSupplier() != null) {
-            Optional<SupplierMedicine> supMedOpt = supplierMedicineRepository
-                    .findBySupplierIdAndMedicineId(medicine.getSupplier().getId(), medicine.getId());
-            if (supMedOpt.isPresent()) {
-                supplierQty = supMedOpt.get().getAvailableQuantity();
-            }
+        if (medicine.getSupplier() != null && medicine.getCode() != null) {
+            supplierQty = supplierMedicineRepository
+                    .findBySupplierIdAndCode(medicine.getSupplier().getId(), medicine.getCode())
+                    .map(sm -> sm.getAvailableQuantity() != null ? sm.getAvailableQuantity() : 0)
+                    .orElse(0);
         }
 
         return MedicineResponse.builder()
@@ -470,10 +361,10 @@ public class MedicineServiceImpl implements MedicineService {
                 .build();
     }
 
-    private List<StockStatus> calculateSupplierStockStatus(Medicine medicine, Integer quantity) {
+    private List<StockStatus> calculateSupplierStockStatus(SupplierMedicine sm, Integer quantity) {
         List<StockStatus> statuses = new ArrayList<>();
-        Integer reorderLevel = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 30;
-        LocalDate expiryDate = medicine.getExpiryDate();
+        Integer reorderLevel = 10;
+        LocalDate expiryDate = sm.getExpiryDate();
         LocalDate today = LocalDate.now();
         LocalDate nearExpiryLimit = today.plusDays(nearExpiryDays);
 
@@ -481,7 +372,9 @@ public class MedicineServiceImpl implements MedicineService {
             if (expiryDate.isBefore(today)) {
                 statuses.add(StockStatus.EXPIRED);
             } else if (!expiryDate.isAfter(nearExpiryLimit)) {
-                statuses.add(StockStatus.NEAR_EXPIRY);
+                if (quantity != null && quantity > 0) {
+                    statuses.add(StockStatus.NEAR_EXPIRY);
+                }
             }
         }
         if (quantity == null || quantity == 0) {
@@ -500,12 +393,11 @@ public class MedicineServiceImpl implements MedicineService {
     }
 
     private MedicineResponse mapSupplierMedicineToResponse(SupplierMedicine sm) {
-        Medicine medicine = sm.getMedicine();
-        CategoryDto categoryDto = medicine.getCategory() != null ?
+        CategoryDto categoryDto = sm.getCategory() != null ?
                 CategoryDto.builder()
-                        .id(medicine.getCategory().getId())
-                        .name(medicine.getCategory().getName())
-                        .description(medicine.getCategory().getDescription())
+                        .id(sm.getCategory().getId())
+                        .name(sm.getCategory().getName())
+                        .description(sm.getCategory().getDescription())
                         .build() : null;
 
         SupplierDto supplierDto = sm.getSupplier() != null ?
@@ -518,25 +410,82 @@ public class MedicineServiceImpl implements MedicineService {
                         .address(sm.getSupplier().getAddress())
                         .build() : null;
 
-        Integer reorder = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
         Integer supplierQty = sm.getAvailableQuantity() != null ? sm.getAvailableQuantity() : 0;
 
+        Integer adminStock = 0;
+        Integer reorderLevel = 10;
+        if (sm.getCode() != null) {
+            Optional<Medicine> medOpt = medicineRepository.findByCode(sm.getCode());
+            if (!medOpt.isPresent() && sm.getName() != null) {
+                List<Medicine> matches = medicineRepository.findByNameIgnoreCaseAndGenericNameIgnoreCaseAndManufacturerIgnoreCase(
+                        sm.getName().trim(),
+                        sm.getGenericName() != null ? sm.getGenericName().trim() : "",
+                        sm.getManufacturer() != null ? sm.getManufacturer().trim() : ""
+                );
+                if (!matches.isEmpty()) {
+                    medOpt = Optional.of(matches.get(0));
+                }
+            }
+            if (medOpt.isPresent()) {
+                Medicine med = medOpt.get();
+                if (med.getInventory() != null) {
+                    adminStock = med.getInventory().getQuantity() != null ? med.getInventory().getQuantity() : 0;
+                    reorderLevel = med.getInventory().getReorderLevel() != null ? med.getInventory().getReorderLevel() : 10;
+                }
+                if (categoryDto == null && med.getCategory() != null) {
+                    categoryDto = CategoryDto.builder()
+                            .id(med.getCategory().getId())
+                            .name(med.getCategory().getName())
+                            .description(med.getCategory().getDescription())
+                            .build();
+                }
+            }
+        }
+
         return MedicineResponse.builder()
-                .id(medicine.getId())
-                .name(medicine.getName())
-                .code(medicine.getCode())
-                .genericName(medicine.getGenericName())
-                .manufacturer(medicine.getManufacturer())
-                .price(medicine.getPrice())
-                .expiryDate(medicine.getExpiryDate())
-                .batchNumber(medicine.getBatchNumber())
+                .id(sm.getId())
+                .name(sm.getName())
+                .code(sm.getCode())
+                .genericName(sm.getGenericName())
+                .manufacturer(sm.getManufacturer())
+                .price(sm.getPrice())
+                .expiryDate(sm.getExpiryDate())
+                .batchNumber(sm.getBatchNumber())
                 .category(categoryDto)
                 .supplier(supplierDto)
-                .currentStock(supplierQty)
-                .reorderLevel(reorder)
+                .currentStock(adminStock)
+                .reorderLevel(reorderLevel)
                 .supplierAvailableQuantity(supplierQty)
-                .stockStatus(calculateSupplierStockStatus(medicine, supplierQty))
+                .stockStatus(calculateStockStatusValues(adminStock, reorderLevel, sm.getExpiryDate()))
                 .build();
+    }
+
+    private List<StockStatus> calculateStockStatusValues(Integer quantity, Integer reorderLevel, LocalDate expiryDate) {
+        List<StockStatus> statuses = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        LocalDate nearExpiryLimit = today.plusDays(nearExpiryDays);
+
+        if (expiryDate != null) {
+            if (expiryDate.isBefore(today)) {
+                statuses.add(StockStatus.EXPIRED);
+            } else if (!expiryDate.isAfter(nearExpiryLimit)) {
+                if (quantity != null && quantity > 0) {
+                    statuses.add(StockStatus.NEAR_EXPIRY);
+                }
+            }
+        }
+        if (quantity == null || quantity == 0) {
+            statuses.add(StockStatus.OUT_OF_STOCK);
+        } else if (quantity <= reorderLevel) {
+            statuses.add(StockStatus.LOW_STOCK);
+        } else {
+            statuses.add(StockStatus.AVAILABLE);
+        }
+
+        if (statuses.isEmpty()) {
+            statuses.add(StockStatus.AVAILABLE);
+        }
+        return statuses;
     }
 
     private Long getCurrentSupplierId() {

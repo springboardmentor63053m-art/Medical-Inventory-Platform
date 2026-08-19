@@ -69,7 +69,7 @@ public class SupplierServiceImpl implements SupplierService {
     public void deleteSupplier(Long id) {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
-        if (supplier.getMedicines() != null && !supplier.getMedicines().isEmpty()) {
+        if (supplier.getSupplierMedicines() != null && !supplier.getSupplierMedicines().isEmpty()) {
             throw new BadRequestException("Cannot delete supplier because they have associated medicines.");
         }
         if (supplier.getPurchaseOrders() != null && !supplier.getPurchaseOrders().isEmpty()) {

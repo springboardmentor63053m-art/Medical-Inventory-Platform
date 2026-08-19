@@ -41,6 +41,10 @@ function App() {
                 <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
                 <Route path="/supplier/profile" element={<SupplierProfile />} />
                 <Route path="/profile" element={<Profile />} />
+              </Route>
+
+              {/* Notifications accessible by Admin, Pharmacist, Staff, and Supplier */}
+              <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF', 'ROLE_SUPPLIER']} />}>
                 <Route path="/notifications" element={<Notifications />} />
               </Route>
 

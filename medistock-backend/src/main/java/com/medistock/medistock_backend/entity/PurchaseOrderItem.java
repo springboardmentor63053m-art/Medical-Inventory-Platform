@@ -26,9 +26,9 @@ public class PurchaseOrderItem {
     private PurchaseOrder purchaseOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "medicine_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "inventory"})
-    private Medicine medicine;
+    @JoinColumn(name = "supplier_medicine_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private SupplierMedicine supplierMedicine;
 
     @Column(nullable = false)
     private Integer quantity;

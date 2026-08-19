@@ -23,7 +23,7 @@ const PurchaseOrders = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [medicines, setMedicines] = useState([]);
+  const [supplierMedicines, setSupplierMedicines] = useState([]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -41,7 +41,7 @@ const PurchaseOrders = () => {
   // Create PO form states
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
   const [lineItems, setLineItems] = useState([
-    { medicineId: '', quantity: 1, unitPrice: 0 }
+    { supplierMedicineId: '', quantity: 1, unitPrice: 0 }
   ]);
 
   const [formError, setFormError] = useState('');
@@ -59,15 +59,13 @@ const PurchaseOrders = () => {
         const orderRes = await api.get('/purchase-orders');
         if (orderRes.data.success) setOrders(orderRes.data.data);
       } else {
-        const [orderRes, supplierRes, medicineRes] = await Promise.all([
+        const [orderRes, supplierRes] = await Promise.all([
           api.get('/purchase-orders'),
-          api.get('/suppliers'),
-          api.get('/medicines')
+          api.get('/suppliers')
         ]);
 
         if (orderRes.data.success) setOrders(orderRes.data.data);
         if (supplierRes.data.success) setSuppliers(supplierRes.data.data);
-        if (medicineRes.data.success) setMedicines(medicineRes.data.data);
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Error loading purchase orders data');
@@ -80,18 +78,57 @@ const PurchaseOrders = () => {
     fetchData();
   }, []);
 
+  const loadSupplierMedicines = async (supplierId) => {
+    if (!supplierId) {
+      setSupplierMedicines([]);
+      return;
+    }
+    try {
+      const res = await api.get('/medicines', { params: { supplierId } });
+      if (res.data.success) {
+        const rawMedicines = res.data.data || [];
+        const uniqueMedicines = [];
+        const seenKeys = new Set();
+        for (const med of rawMedicines) {
+          const name = (med.name || '').trim().toLowerCase();
+          const genericName = (med.genericName || '').trim().toLowerCase();
+          const manufacturer = (med.manufacturer || '').trim().toLowerCase();
+          const key = `${name}|${genericName}|${manufacturer}`;
+          if (!seenKeys.has(key)) {
+            seenKeys.add(key);
+            uniqueMedicines.push(med);
+          }
+        }
+        setSupplierMedicines(uniqueMedicines);
+      }
+    } catch (err) {
+      console.error('Error loading supplier medicines', err);
+    }
+  };
+
+  // Load medicines dynamically when selectedSupplierId changes
+  useEffect(() => {
+    if (createModalOpen && selectedSupplierId) {
+      loadSupplierMedicines(selectedSupplierId);
+    }
+  }, [selectedSupplierId, createModalOpen]);
+
   const openCreateModal = () => {
-    setSelectedSupplierId(suppliers[0]?.id || '');
-    setLineItems([{ medicineId: medicines[0]?.id || '', quantity: 1, unitPrice: medicines[0]?.price || 0 }]);
+    const initialSupplierId = suppliers[0]?.id || '';
+    setSelectedSupplierId(initialSupplierId);
+    setLineItems([{ supplierMedicineId: '', quantity: 1, unitPrice: 0 }]);
     setFormError('');
     setCreateModalOpen(true);
+    if (initialSupplierId) {
+      loadSupplierMedicines(initialSupplierId);
+    }
   };
 
   const handleAddLineItem = () => {
-    const defaultMed = medicines[0];
+    const defaultMed = supplierMedicines[0];
     setLineItems(prev => [
       ...prev,
-      { medicineId: defaultMed?.id || '', quantity: 1, unitPrice: defaultMed?.price || 0 }
+      { supplierMedicineId: defaultMed?.id?.toString() || '', quantity: 1, unitPrice: defaultMed?.price || 0 }
     ]);
   };
 
@@ -106,8 +143,8 @@ const PurchaseOrders = () => {
       
       const updated = { ...item, [field]: value };
       
-      if (field === 'medicineId') {
-        const matchingMed = medicines.find(m => m.id.toString() === value.toString());
+      if (field === 'supplierMedicineId') {
+        const matchingMed = supplierMedicines.find(m => m.id.toString() === value.toString());
         if (matchingMed) {
           updated.unitPrice = matchingMed.price;
         }
@@ -123,7 +160,7 @@ const PurchaseOrders = () => {
       return;
     }
 
-    const invalidItem = lineItems.some(item => !item.medicineId || !item.quantity || item.quantity < 1 || !item.unitPrice);
+    const invalidItem = lineItems.some(item => !item.supplierMedicineId || !item.quantity || item.quantity < 1 || !item.unitPrice);
     if (invalidItem) {
       setFormError('Please verify all items have a valid medicine selection, positive quantity, and price.');
       return;
@@ -135,7 +172,7 @@ const PurchaseOrders = () => {
     const payload = {
       supplierId: parseInt(selectedSupplierId),
       items: lineItems.map(item => ({
-        medicineId: parseInt(item.medicineId),
+        supplierMedicineId: parseInt(item.supplierMedicineId),
         quantity: parseInt(item.quantity),
         unitPrice: parseFloat(item.unitPrice)
       }))
@@ -556,7 +593,7 @@ const PurchaseOrders = () => {
                 justifyContent: 'space-between', 
                 alignItems: 'center', 
                 background: 'rgba(59, 130, 246, 0.08)', 
-                border: '1px solid rgba(59, 130, 246, 0.2)', 
+                border: '1px solid rgba(59, 130, 246, 0.25)', 
                 padding: '12px 18px', 
                 borderRadius: '8px' 
               }}>
@@ -578,40 +615,6 @@ const PurchaseOrders = () => {
                         style={{ padding: '8px 20px', borderRadius: '8px', cursor: 'pointer' }}
                       >
                         {submitting ? 'Approving...' : 'Approve PO'}
-                      </button>
-                      <button 
-                        className="btn btn-danger"
-                        onClick={() => handleUpdateStatusDirect(selectedOrder.id, 'CANCELLED')}
-                        disabled={submitting}
-                        style={{ 
-                          padding: '8px 16px', 
-                          borderRadius: '8px', 
-                          cursor: 'pointer',
-                          background: 'none',
-                          border: '1px solid var(--danger)',
-                          color: 'var(--danger)'
-                        }}
-                      >
-                        Cancel PO
-                      </button>
-                    </>
-                  )}
-                  {selectedOrder.status === 'APPROVED' && (
-                    <>
-                      <button 
-                        className="btn btn-success"
-                        onClick={() => handleUpdateStatusDirect(selectedOrder.id, 'RECEIVED')}
-                        disabled={submitting}
-                        style={{ 
-                          padding: '8px 20px', 
-                          borderRadius: '8px', 
-                          cursor: 'pointer',
-                          background: 'var(--success)',
-                          border: '1px solid var(--success)',
-                          color: 'white'
-                        }}
-                      >
-                        {submitting ? 'Marking...' : 'Mark Received'}
                       </button>
                       <button 
                         className="btn btn-danger"
@@ -787,6 +790,7 @@ const PurchaseOrders = () => {
                   disabled={submitting}
                   required
                 >
+                  <option value="">Select Supplier</option>
                   {suppliers.map(s => (
                     <option key={s.id} value={s.id}>{s.name} ({s.contactPerson || 'No Rep'})</option>
                   ))}
@@ -804,15 +808,15 @@ const PurchaseOrders = () => {
                 {lineItems.map((item, idx) => (
                   <div key={idx} className="po-item-row">
                     <select
-                      value={item.medicineId}
-                      onChange={(e) => handleLineItemChange(idx, 'medicineId', e.target.value)}
+                      value={item.supplierMedicineId}
+                      onChange={(e) => handleLineItemChange(idx, 'supplierMedicineId', e.target.value)}
                       disabled={submitting}
                       required
                     >
                       <option value="">Select Medicine</option>
-                      {medicines.map(m => (
+                      {supplierMedicines.map(m => (
                         <option key={m.id} value={m.id}>
-                          {m.name} ({m.code}) {m.supplierAvailableQuantity !== undefined ? `- Avail: ${m.supplierAvailableQuantity} units` : ''}
+                          {m.name} {m.supplierAvailableQuantity !== undefined ? `— Avail: ${m.supplierAvailableQuantity} units` : ''}
                         </option>
                       ))}
                     </select>
@@ -938,7 +942,7 @@ const PurchaseOrders = () => {
               </table>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+            <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
               <span style={{ fontWeight: 600 }}>Grand Total:</span>
               <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--success)', fontFamily: 'Outfit' }}>
                 {formatCurrency(selectedOrder.totalAmount)}

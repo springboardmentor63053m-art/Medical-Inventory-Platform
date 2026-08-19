@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../api/api';
 import {
   LayoutDashboard,
   Pill,
@@ -20,6 +21,29 @@ import {
 const Layout = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get('/notifications');
+      if (res.data.success && Array.isArray(res.data.data)) {
+        const allAlerts = res.data.data;
+        const readStorageKey = `medistock_read_notifications_${user.id || user.username}`;
+        const readIds = JSON.parse(localStorage.getItem(readStorageKey) || '[]');
+        const unread = allAlerts.filter(a => !readIds.includes(a.id)).length;
+        setUnreadCount(unread);
+      }
+    } catch (err) {
+      console.error('Error fetching unread notification count:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 15000); // auto-refresh every 15s
+    return () => clearInterval(interval);
+  }, [user, location.pathname]);
 
   const menuItems = [
     {
@@ -70,7 +94,6 @@ const Layout = () => {
       icon: <Truck />,
       roles: ['ROLE_ADMIN']
     },
-
     {
       path: '/stock-movements',
       label: 'Stock Movements',
@@ -87,7 +110,7 @@ const Layout = () => {
       path: '/notifications',
       label: 'Notifications',
       icon: <Bell />,
-      roles: ['ROLE_SUPPLIER']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF', 'ROLE_SUPPLIER']
     },
     {
       path: '/profile',
@@ -134,15 +157,33 @@ const Layout = () => {
             const isActive = location.pathname === item.path;
             const isSupplier = user?.roles?.includes('ROLE_SUPPLIER');
             const label = isSupplier && item.path === '/purchase-orders' ? 'Orders From MediStock' : item.label;
+            const isNotificationItem = item.path === '/notifications';
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={`menu-item ${isActive ? 'active' : ''}`}
-                style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '8px' }}
+                style={{ display: 'flex', alignItems: 'center', width: '100%', gap: '8px', position: 'relative' }}
               >
                 {item.icon}
                 <span>{label}</span>
+
+                {isNotificationItem && unreadCount > 0 && (
+                  <span style={{
+                    marginLeft: 'auto',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    lineHeight: 1
+                  }}>
+                    {unreadCount}
+                  </span>
+                )}
+
                 {isSupplier && item.path === '/purchase-orders' && (
                   <span style={{
                     marginLeft: 'auto',
@@ -218,7 +259,8 @@ const Layout = () => {
                 background: 'rgba(255, 255, 255, 0.03)',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 transition: 'all 0.2s',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                position: 'relative'
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.color = 'var(--primary)';
@@ -232,6 +274,25 @@ const Layout = () => {
               }}
             >
               <Bell size={18} />
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  backgroundColor: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Link>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
               Server: <strong style={{ color: 'var(--success)' }}>Online</strong>
