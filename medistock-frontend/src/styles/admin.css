@@ -723,3 +723,191 @@ tbody tr:last-child td {
     padding: 10px 12px;
   }
 }
+/* =========================================================
+   ADMIN - PURCHASE ITEMS
+   ========================================================= */
+
+.purchase-items-page {
+  width: 100%;
+  padding: 28px 32px;
+  background: #f8fafc;
+}
+
+/* Page title */
+.purchase-items-page h1 {
+  margin-bottom: 6px;
+  font-size: 30px;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+/* Subtitle */
+.purchase-items-page p {
+  color: #64748b;
+}
+
+/* Main purchase items container */
+.purchase-items-page .purchase-items-card {
+  margin-top: 24px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+/* New Purchase Item button */
+.purchase-items-page .purchase-item-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.purchase-items-page .purchase-item-add:hover {
+  background: #1e40af;
+  box-shadow: 0 4px 10px rgba(29, 78, 216, 0.2);
+}
+
+/* Search section */
+.purchase-items-page .purchase-items-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  margin-bottom: 20px;
+}
+
+.purchase-items-page .purchase-items-search input {
+  width: 360px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+}
+
+.purchase-items-page .purchase-items-search input:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.08);
+  outline: none;
+}
+
+/* Search and refresh buttons */
+.purchase-items-page .purchase-items-search button {
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.purchase-items-page .purchase-items-search button:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Table */
+.purchase-items-page table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+/* Header */
+.purchase-items-page thead {
+  background: #f8fafc;
+}
+
+.purchase-items-page th {
+  padding: 14px 16px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* Cells */
+.purchase-items-page td {
+  padding: 15px 16px;
+  color: #334155;
+  font-size: 13px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+/* Row hover */
+.purchase-items-page tbody tr:hover {
+  background: #f8fbff;
+}
+
+/* Empty state */
+.purchase-items-page .purchase-items-empty {
+  padding: 55px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.purchase-items-page .purchase-items-empty strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.purchase-items-page .purchase-items-empty span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* Pagination */
+.purchase-items-page .purchase-items-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+  .purchase-items-page {
+    padding: 20px 16px;
+  }
+
+  .purchase-items-page .purchase-items-search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .purchase-items-page .purchase-items-search input {
+    width: 100%;
+  }
+
+  .purchase-items-page table {
+    min-width: 700px;
+  }
+
+  .purchase-items-page .purchase-items-card {
+    overflow-x: auto;
+  }
+}

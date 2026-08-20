@@ -1,0 +1,129 @@
+.pharmacist-activity-page {
+  width: 100%;
+}
+
+.activity-section {
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 14px;
+
+  padding: 25px;
+}
+
+.activity-header {
+  margin-bottom: 22px;
+}
+
+.activity-header h2 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 21px;
+}
+
+.activity-header p {
+  margin: 6px 0 0;
+
+  color: #64748b;
+
+  font-size: 14px;
+}
+
+
+/* LIST */
+
+.pharmacist-activity-list {
+  display: flex;
+
+  flex-direction: column;
+}
+
+
+/* ITEM */
+
+.pharmacist-activity-item {
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  padding: 17px 5px;
+
+  border-bottom: 1px solid #eef2f7;
+}
+
+.pharmacist-activity-item:last-child {
+  border-bottom: none;
+}
+
+
+/* ICON */
+
+.activity-icon-box {
+  width: 43px;
+
+  height: 43px;
+
+  border-radius: 10px;
+
+  background: #eff6ff;
+
+  color: #2563eb;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 18px;
+
+  flex-shrink: 0;
+}
+
+
+/* MESSAGE */
+
+.activity-message {
+  flex: 1;
+}
+
+.activity-message strong {
+  display: block;
+
+  color: #334155;
+
+  font-size: 14px;
+}
+
+.activity-message p {
+  margin: 4px 0 0;
+
+  color: #94a3b8;
+
+  font-size: 11px;
+}
+
+
+/* TIME */
+
+.activity-time {
+  color: #94a3b8;
+
+  font-size: 12px;
+
+  white-space: nowrap;
+}
+
+
+@media (max-width: 650px) {
+
+  .activity-time {
+    display: none;
+  }
+
+}

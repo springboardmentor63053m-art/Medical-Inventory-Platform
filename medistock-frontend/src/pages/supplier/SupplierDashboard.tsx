@@ -358,7 +358,8 @@ export default function SupplierDashboard() {
         navigate("/supplier/purchases");
         break;
       case "activity":
-        navigate("/supplier/activity");
+        // Open the dedicated Supply Activity page.
+        window.location.assign("/supplier/activity");
         break;
       case "profile":
         navigate("/supplier/profile");

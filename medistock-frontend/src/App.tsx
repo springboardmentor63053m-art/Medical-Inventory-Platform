@@ -46,12 +46,43 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminMedicines from "./pages/admin/Medicines";
 import Inventory from "./pages/admin/Inventory";
 import Purchases from "./pages/admin/Purchases";
+import { MedicineForm } from "./pages/medicines/MedicineForm";
+import { ExpiryTracking } from "@/pages/admin/ExpiryTracking";
+import AdminNotifications from "./pages/admin/AdminNotifications";
+import Reports from "./pages/admin/Reports";
+import StockActivity from "./pages/admin/StockActivity";
+import AdminUsers from "./pages/admin/Users";
+import Roles from "./pages/admin/Roles";
 
 // ============================================================
 // USER
 // ============================================================
 
 import UserDashboard from "./pages/user/UserDashboard";
+
+// ============================================================
+// STAFF
+// ============================================================
+
+import StaffDashboard from "./pages/staff/StaffDashboard";
+import StaffLayout from "./pages/staff/StaffLayout";
+import StaffSearchMedicine from "./pages/staff/StaffSearchMedicine";
+import StaffStock from "./pages/staff/StaffStock";
+import StaffActivity from "./pages/staff/StaffActivity";
+import StaffNotifications from "./pages/staff/StaffNotifications";
+
+// ============================================================
+// PHARMACIST
+// ============================================================
+
+import PharmacistLayout from "./pages/pharmacist/PharmacistLayout";
+import PharmacistDashboard from "./pages/pharmacist/PharmacistDashboard";
+import PharmacistMedicines from "./pages/pharmacist/PharmacistMedicines";
+import PharmacistOrders from "./pages/pharmacist/PharmacistOrders";
+import PharmacistPrescriptions from "./pages/pharmacist/PharmacistPrescriptions";
+import PharmacistNotifications from "./pages/pharmacist/PharmacistNotifications";
+import PharmacistActivity from "./pages/pharmacist/PharmacistActivity";
+import PharmacistDispensing from "./pages/pharmacist/PharmacistDispensing";
 
 // ============================================================
 // SUPPLIERS
@@ -68,6 +99,7 @@ import { ResourceManager } from "./pages/ResourceManager";
 import { resources } from "./pages/resources";
 import SupplierDashboard from "./pages/supplier/SupplierDashboard";
 import SupplierMedicines from "./pages/supplier/SupplierMedicines";
+
 import SupplierPurchaseOrders from "./pages/supplier/SupplierPurchaseOrders";
 import SupplierSupplyActivity from "./pages/supplier/SupplierSupplyActivity";
 import SupplierProfile from "./pages/supplier/SupplierProfile";
@@ -702,6 +734,7 @@ function App() {
         >
 
           {/* /admin -> /admin/dashboard */}
+
           <Route
             index
             element={
@@ -728,6 +761,15 @@ function App() {
           <Route
             path="medicines"
             element={<AdminMedicines />}
+          />
+          <Route
+            path="medicines/new"
+            element={<MedicineForm />}
+          />
+
+          <Route
+            path="medicines/:id/edit"
+            element={<MedicineForm />}
           />
 
           {/* ==================================================
@@ -786,11 +828,7 @@ function App() {
 
           <Route
             path="reports"
-            element={
-              <ResourceManager
-                config={resources.reports}
-              />
-            }
+            element={<Reports />}
           />
 
           {/* ==================================================
@@ -799,10 +837,14 @@ function App() {
 
           <Route
             path="expiries"
-            element={
-              <ResourceManager
-                config={resources.expiries}
-              />
+            element={<ExpiryTracking />}
+          />
+
+          <Route
+            path="/admin/expiry-tracking"
+            element={<ExpiryTracking/>
+             
+                
             }
           />
 
@@ -812,11 +854,12 @@ function App() {
 
           <Route
             path="stock-logs"
-            element={
-              <ResourceManager
-                config={resources.stockLogs}
-              />
-            }
+            element={<StockActivity />}
+          />
+
+          <Route
+            path="stock-activity"
+            element={<StockActivity />}
           />
 
           {/* ==================================================
@@ -825,11 +868,7 @@ function App() {
 
           <Route
             path="notifications"
-            element={
-              <ResourceManager
-                config={resources.notifications}
-              />
-            }
+            element={<AdminNotifications />}
           />
 
           {/* ==================================================
@@ -838,9 +877,8 @@ function App() {
 
           <Route
             path="users"
-            element={
-              <ResourceManager
-                config={resources.users}
+            element={<AdminUsers
+              
               />
             }
           />
@@ -851,47 +889,44 @@ function App() {
 
           <Route
             path="roles"
-            element={
-              <ResourceManager
-                config={resources.roles}
-              />
-            }
+            element={<Roles />}
           />
 
         </Route>
-          {/* ==================================================
-              SUPPLIER PORTAL
-          ================================================== */}
 
-          <Route
-            path="/supplier/dashboard"
-            element={<SupplierDashboard />}
-          />
+        {/* ==================================================
+            SUPPLIER PORTAL
+        ================================================== */}
 
-          <Route
-            path="/supplier/medicines"
-            element={<SupplierMedicines />}
-          />
+        <Route
+          path="/supplier/dashboard"
+          element={<SupplierDashboard />}
+        />
 
-          <Route
-            path="/supplier/purchases"
-            element={<SupplierPurchaseOrders />}
-          />
+        <Route
+          path="/supplier/medicines"
+          element={<SupplierMedicines />}
+        />
 
-          <Route
-            path="/supplier/activity"
-            element={<SupplierSupplyActivity />}
-          />
+        <Route
+          path="/supplier/purchases"
+          element={<SupplierPurchaseOrders />}
+        />
 
-          <Route
-            path="/supplier/profile"
-            element={<SupplierProfile />}
-          />
+        <Route
+          path="/supplier/activity"
+          element={<SupplierSupplyActivity />}
+        />
 
-          <Route
-            path="/supplier/notifications"
-            element={<SupplierNotifications />}
-          />
+        <Route
+          path="/supplier/profile"
+          element={<SupplierProfile />}
+        />
+
+        <Route
+          path="/supplier/notifications"
+          element={<SupplierNotifications />}
+        />
 
         {/* ==================================================
             USER
@@ -901,6 +936,135 @@ function App() {
           path="/user/dashboard"
           element={<UserDashboard />}
         />
+
+        {/* ==================================================
+            STAFF
+        ================================================== */}
+
+        <Route
+          path="/staff"
+          element={<StaffLayout />}
+        >
+
+          <Route
+            index
+            element={
+              <Navigate
+                to="/staff/dashboard"
+                replace
+              />
+            }
+          />
+
+          <Route
+            path="dashboard"
+            element={<StaffDashboard />}
+          />
+
+          <Route
+            path="search"
+            element={<StaffSearchMedicine />}
+          />
+
+          <Route
+            path="stock"
+            element={<StaffStock />}
+          />
+
+          <Route
+            path="activity"
+            element={<StaffActivity />}
+          />
+
+          <Route
+            path="notifications"
+            element={<StaffNotifications />}
+          />
+
+        </Route>
+
+
+        {/* ==================================================
+            PHARMACIST
+        ================================================== */}
+
+        <Route
+          path="/pharmacist"
+          element={<PharmacistLayout />}
+        >
+
+          {/* /pharmacist -> /pharmacist/dashboard */}
+
+          <Route
+            index
+            element={
+              <Navigate
+                to="/pharmacist/dashboard"
+                replace
+              />
+            }
+          />
+
+          {/* ==================================================
+              PHARMACIST DASHBOARD
+          ================================================== */}
+
+          <Route
+            path="dashboard"
+            element={<PharmacistDashboard />}
+          />
+
+          {/* ==================================================
+              PHARMACIST MEDICINES
+          ================================================== */}
+
+          <Route
+            path="medicines"
+            element={<PharmacistMedicines />}
+          />
+
+          {/* ==================================================
+              CUSTOMER ORDERS
+          ================================================== */}
+
+          <Route
+            path="orders"
+            element={<PharmacistOrders />}
+          />
+
+          <Route
+            path="prescriptions"
+            element={<PharmacistPrescriptions />}
+          />
+
+          {/* ==================================================
+              NOTIFICATIONS
+          ================================================== */}
+
+          <Route
+            path="notifications"
+            element={<PharmacistNotifications />}
+          />
+
+          {/* ==================================================
+              ACTIVITY
+          ================================================== */}
+
+          <Route
+            path="activity"
+            element={<PharmacistActivity />}
+          />
+
+          {/* ==================================================
+              PROFILE
+          ================================================== */}
+
+          <Route
+            path="dispensing"
+            element={<PharmacistDispensing />}
+          />
+
+        </Route>
 
         {/* ==================================================
             FALLBACK

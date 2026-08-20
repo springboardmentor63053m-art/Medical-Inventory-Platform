@@ -77,7 +77,7 @@ const getUser = () => {
   }
 };
 
-export default function SupplierSupplyActivity()  {
+export default function SupplierSupplyActivity() {
   const navigate = useNavigate();
   const user = getUser();
 
@@ -91,7 +91,10 @@ export default function SupplierSupplyActivity()  {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
   const [activities] = useState<Activity[]>(demoActivities);
+
   const [search, setSearch] = useState("");
+  const [actionFilter, setActionFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const initials =
     supplierName
@@ -101,21 +104,70 @@ export default function SupplierSupplyActivity()  {
       .map((part: string) => part[0]?.toUpperCase())
       .join("") || "R";
 
+  /*
+   * ============================================================
+   * FILTER ACTIVITIES
+   * ============================================================
+   */
+
   const filteredActivities = useMemo(() => {
     const value = search.trim().toLowerCase();
 
-    if (!value) {
-      return activities;
-    }
-
-    return activities.filter(
-      (activity) =>
+    return activities.filter((activity) => {
+      const matchesSearch =
+        !value ||
         activity.action.toLowerCase().includes(value) ||
         activity.medicine.toLowerCase().includes(value) ||
         activity.batchNumber.toLowerCase().includes(value) ||
-        activity.status.toLowerCase().includes(value)
-    );
-  }, [activities, search]);
+        activity.status.toLowerCase().includes(value);
+
+      const matchesAction =
+        actionFilter === "ALL" ||
+        activity.action === actionFilter;
+
+      const matchesStatus =
+        statusFilter === "ALL" ||
+        activity.status === statusFilter;
+
+      return matchesSearch && matchesAction && matchesStatus;
+    });
+  }, [activities, search, actionFilter, statusFilter]);
+
+  /*
+   * ============================================================
+   * SUMMARY COUNTS
+   * ============================================================
+   */
+
+  const completedCount = activities.filter(
+    (item) => item.status === "Completed"
+  ).length;
+
+  const transitCount = activities.filter(
+    (item) => item.status === "In Transit"
+  ).length;
+
+  const processingCount = activities.filter(
+    (item) => item.status === "Processing"
+  ).length;
+
+  /*
+   * ============================================================
+   * CLEAR FILTERS
+   * ============================================================
+   */
+
+  const clearFilters = () => {
+    setSearch("");
+    setActionFilter("ALL");
+    setStatusFilter("ALL");
+  };
+
+  /*
+   * ============================================================
+   * LOGOUT
+   * ============================================================
+   */
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -126,7 +178,9 @@ export default function SupplierSupplyActivity()  {
   return (
     <div className="supplier-app">
 
-      {/* ================= SIDEBAR ================= */}
+      {/* ======================================================
+          SIDEBAR
+          ====================================================== */}
 
       <aside className="supplier-sidebar">
 
@@ -139,6 +193,7 @@ export default function SupplierSupplyActivity()  {
             <h2>
               Medi<span>Stock</span>
             </h2>
+
             <p>MEDICAL INVENTORY</p>
           </div>
         </div>
@@ -187,7 +242,8 @@ export default function SupplierSupplyActivity()  {
             <strong>Purchase Orders</strong>
           </button>
 
-          {/* ACTIVE ACTIVITY */}
+          {/* ACTIVE SUPPLY ACTIVITY */}
+
           <button
             type="button"
             className="supplier-nav-item active"
@@ -231,11 +287,15 @@ export default function SupplierSupplyActivity()  {
 
       </aside>
 
-      {/* ================= MAIN ================= */}
+      {/* ======================================================
+          MAIN
+          ====================================================== */}
 
       <main className="supplier-main">
 
-        {/* TOP HEADER */}
+        {/* ====================================================
+            TOP HEADER
+            ==================================================== */}
 
         <header className="supplier-topbar">
 
@@ -282,9 +342,15 @@ export default function SupplierSupplyActivity()  {
 
         </header>
 
-        {/* ================= CONTENT ================= */}
+        {/* ====================================================
+            CONTENT
+            ==================================================== */}
 
         <div className="supplier-content">
+
+          {/* ==================================================
+              PAGE HEADING
+              ================================================== */}
 
           <section className="supplier-page-heading">
 
@@ -311,74 +377,349 @@ export default function SupplierSupplyActivity()  {
 
           </section>
 
-          {/* ACTIVITY SUMMARY */}
+          {/* ==================================================
+              SUMMARY CARDS
+              ================================================== */}
 
-          <section className="supplier-activity-summary">
+          <section
+            className="supplier-activity-summary"
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(4, minmax(0, 1fr))",
+              gap: "18px",
+              width: "100%",
+              margin: "24px 0 26px",
+            }}
+          >
 
-            <div className="supplier-activity-summary-card">
-              <span>Total Activities</span>
-              <strong>{activities.length}</strong>
-              <small>Recent supply records</small>
+            {/* TOTAL */}
+
+            <div
+              className="supplier-activity-summary-card"
+              style={{
+                minHeight: "125px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                padding: "22px 24px",
+                background: "#ffffff",
+                border: "1px solid #e1e8f2",
+                borderTop: "4px solid #2864e8",
+                borderRadius: "18px",
+                boxShadow:
+                  "0 8px 25px rgba(30,55,95,0.05)",
+                boxSizing: "border-box",
+              }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  marginBottom: "7px",
+                  color: "#7890ad",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  letterSpacing: "1px",
+                  textTransform: "uppercase",
+                }}
+              >
+                Total Activities
+              </span>
+
+              <strong
+                style={{
+                  display: "block",
+                  color: "#17233d",
+                  fontSize: "30px",
+                  lineHeight: "1.1",
+                  fontWeight: 800,
+                }}
+              >
+                {activities.length}
+              </strong>
+
+              <small
+                style={{
+                  display: "block",
+                  marginTop: "6px",
+                  color: "#91a2b9",
+                  fontSize: "12px",
+                }}
+              >
+                Recent supply records
+              </small>
             </div>
 
-            <div className="supplier-activity-summary-card completed">
-              <span>Completed</span>
-              <strong>
-                {
-                  activities.filter(
-                    (item) => item.status === "Completed"
-                  ).length
-                }
+            {/* COMPLETED */}
+
+            <div
+              className="supplier-activity-summary-card completed"
+              style={{
+                minHeight: "125px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                padding: "22px 24px",
+                background: "#ffffff",
+                border: "1px solid #e1e8f2",
+                borderTop: "4px solid #16a878",
+                borderRadius: "18px",
+                boxShadow:
+                  "0 8px 25px rgba(30,55,95,0.05)",
+                boxSizing: "border-box",
+              }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  marginBottom: "7px",
+                  color: "#7890ad",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  letterSpacing: "1px",
+                  textTransform: "uppercase",
+                }}
+              >
+                Completed
+              </span>
+
+              <strong
+                style={{
+                  display: "block",
+                  color: "#17233d",
+                  fontSize: "30px",
+                  lineHeight: "1.1",
+                  fontWeight: 800,
+                }}
+              >
+                {completedCount}
               </strong>
-              <small>Successfully delivered</small>
+
+              <small
+                style={{
+                  display: "block",
+                  marginTop: "6px",
+                  color: "#91a2b9",
+                  fontSize: "12px",
+                }}
+              >
+                Successfully delivered
+              </small>
             </div>
 
-            <div className="supplier-activity-summary-card transit">
-              <span>In Transit</span>
-              <strong>
-                {
-                  activities.filter(
-                    (item) => item.status === "In Transit"
-                  ).length
-                }
+            {/* IN TRANSIT */}
+
+            <div
+              className="supplier-activity-summary-card transit"
+              style={{
+                minHeight: "125px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                padding: "22px 24px",
+                background: "#ffffff",
+                border: "1px solid #e1e8f2",
+                borderTop: "4px solid #2864e8",
+                borderRadius: "18px",
+                boxShadow:
+                  "0 8px 25px rgba(30,55,95,0.05)",
+                boxSizing: "border-box",
+              }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  marginBottom: "7px",
+                  color: "#7890ad",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  letterSpacing: "1px",
+                  textTransform: "uppercase",
+                }}
+              >
+                In Transit
+              </span>
+
+              <strong
+                style={{
+                  display: "block",
+                  color: "#17233d",
+                  fontSize: "30px",
+                  lineHeight: "1.1",
+                  fontWeight: 800,
+                }}
+              >
+                {transitCount}
               </strong>
-              <small>Currently dispatched</small>
+
+              <small
+                style={{
+                  display: "block",
+                  marginTop: "6px",
+                  color: "#91a2b9",
+                  fontSize: "12px",
+                }}
+              >
+                Currently dispatched
+              </small>
             </div>
 
-            <div className="supplier-activity-summary-card processing">
-              <span>Processing</span>
-              <strong>
-                {
-                  activities.filter(
-                    (item) => item.status === "Processing"
-                  ).length
-                }
+            {/* PROCESSING */}
+
+            <div
+              className="supplier-activity-summary-card processing"
+              style={{
+                minHeight: "125px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                padding: "22px 24px",
+                background: "#ffffff",
+                border: "1px solid #e1e8f2",
+                borderTop: "4px solid #e58a12",
+                borderRadius: "18px",
+                boxShadow:
+                  "0 8px 25px rgba(30,55,95,0.05)",
+                boxSizing: "border-box",
+              }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  marginBottom: "7px",
+                  color: "#7890ad",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  letterSpacing: "1px",
+                  textTransform: "uppercase",
+                }}
+              >
+                Processing
+              </span>
+
+              <strong
+                style={{
+                  display: "block",
+                  color: "#17233d",
+                  fontSize: "30px",
+                  lineHeight: "1.1",
+                  fontWeight: 800,
+                }}
+              >
+                {processingCount}
               </strong>
-              <small>Being processed</small>
+
+              <small
+                style={{
+                  display: "block",
+                  marginTop: "6px",
+                  color: "#91a2b9",
+                  fontSize: "12px",
+                }}
+              >
+                Being processed
+              </small>
             </div>
 
           </section>
 
-          {/* ACTIVITY TABLE */}
+          {/* ==================================================
+              ACTIVITY TABLE CARD
+              ================================================== */}
 
-          <section className="supplier-card supplier-activity-card">
+          <section
+            className="supplier-card supplier-activity-card"
+            style={{
+              overflow: "hidden",
+            }}
+          >
+
+            {/* CARD HEADER */}
 
             <div className="supplier-activity-header">
 
               <div>
                 <h2>Supply Activity</h2>
+
                 <p>
-                  Recent activity associated with your supplier account.
+                  Recent activity associated with your supplier
+                  account.
                 </p>
               </div>
 
-              <div className="supplier-activity-header-right">
+            </div>
 
-                <span className="supplier-record-count">
-                  {filteredActivities.length} records
+            {/* =================================================
+                FILTER BAR
+                ================================================= */}
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "18px",
+                padding: "18px 24px",
+                background: "#f8fafd",
+                borderTop: "1px solid #edf1f6",
+                borderBottom: "1px solid #e6ebf2",
+                flexWrap: "wrap",
+              }}
+            >
+
+              {/* RECORD COUNT */}
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "5px",
+                  minWidth: "90px",
+                }}
+              >
+                <strong
+                  style={{
+                    color: "#17233d",
+                    fontSize: "20px",
+                    fontWeight: 800,
+                  }}
+                >
+                  {filteredActivities.length}
+                </strong>
+
+                <span
+                  style={{
+                    color: "#879ab3",
+                    fontSize: "13px",
+                  }}
+                >
+                  records
                 </span>
+              </div>
 
-                <div className="supplier-activity-search">
+              {/* FILTERS */}
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  flex: 1,
+                  justifyContent: "flex-end",
+                  flexWrap: "wrap",
+                }}
+              >
+
+                {/* SEARCH */}
+
+                <div
+                  className="supplier-activity-search"
+                  style={{
+                    position: "relative",
+                    width: "300px",
+                    maxWidth: "100%",
+                  }}
+                >
                   <span>⌕</span>
 
                   <input
@@ -387,28 +728,141 @@ export default function SupplierSupplyActivity()  {
                     onChange={(event) =>
                       setSearch(event.target.value)
                     }
-                    placeholder="Search activity..."
+                    placeholder="Search medicine or batch..."
                   />
 
                   {search && (
                     <button
                       type="button"
                       onClick={() => setSearch("")}
+                      aria-label="Clear search"
                     >
                       ×
                     </button>
                   )}
                 </div>
 
+                {/* ACTION FILTER */}
+
+                <select
+                  value={actionFilter}
+                  onChange={(event) =>
+                    setActionFilter(event.target.value)
+                  }
+                  aria-label="Filter by action"
+                  style={{
+                    height: "46px",
+                    minWidth: "145px",
+                    padding: "0 34px 0 14px",
+                    border: "1px solid #dbe4ef",
+                    borderRadius: "10px",
+                    background: "#ffffff",
+                    color: "#273b58",
+                    fontFamily: "inherit",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="ALL">
+                    All Actions
+                  </option>
+
+                  <option value="Delivered">
+                    Delivered
+                  </option>
+
+                  <option value="Dispatched">
+                    Dispatched
+                  </option>
+
+                  <option value="Updated">
+                    Updated
+                  </option>
+                </select>
+
+                {/* STATUS FILTER */}
+
+                <select
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value)
+                  }
+                  aria-label="Filter by status"
+                  style={{
+                    height: "46px",
+                    minWidth: "145px",
+                    padding: "0 34px 0 14px",
+                    border: "1px solid #dbe4ef",
+                    borderRadius: "10px",
+                    background: "#ffffff",
+                    color: "#273b58",
+                    fontFamily: "inherit",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    outline: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="ALL">
+                    All Status
+                  </option>
+
+                  <option value="Completed">
+                    Completed
+                  </option>
+
+                  <option value="In Transit">
+                    In Transit
+                  </option>
+
+                  <option value="Processing">
+                    Processing
+                  </option>
+                </select>
+
+                {/* CLEAR */}
+
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  style={{
+                    height: "46px",
+                    padding: "0 16px",
+                    border: "1px solid #dbe4ef",
+                    borderRadius: "10px",
+                    background:
+                      search ||
+                      actionFilter !== "ALL" ||
+                      statusFilter !== "ALL"
+                        ? "#edf4ff"
+                        : "#ffffff",
+                    color: "#2864e8",
+                    fontFamily: "inherit",
+                    fontSize: "13px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Clear Filters
+                </button>
+
               </div>
 
             </div>
+
+            {/* =================================================
+                TABLE
+                ================================================= */}
 
             <div className="supplier-table-wrapper">
 
               <table className="supplier-activity-table">
 
                 <thead>
+
                   <tr>
                     <th>ACTION</th>
                     <th>MEDICINE</th>
@@ -417,6 +871,7 @@ export default function SupplierSupplyActivity()  {
                     <th>DATE</th>
                     <th>STATUS</th>
                   </tr>
+
                 </thead>
 
                 <tbody>
@@ -425,7 +880,10 @@ export default function SupplierSupplyActivity()  {
 
                     <tr key={activity.id}>
 
+                      {/* ACTION */}
+
                       <td>
+
                         <span
                           className={`supplier-activity-action ${
                             activity.action === "Delivered"
@@ -437,7 +895,10 @@ export default function SupplierSupplyActivity()  {
                         >
                           {activity.action}
                         </span>
+
                       </td>
+
+                      {/* MEDICINE */}
 
                       <td>
                         <strong>
@@ -445,11 +906,15 @@ export default function SupplierSupplyActivity()  {
                         </strong>
                       </td>
 
+                      {/* BATCH */}
+
                       <td>
                         <span className="supplier-batch">
                           {activity.batchNumber}
                         </span>
                       </td>
+
+                      {/* QUANTITY */}
 
                       <td>
                         <strong>
@@ -457,11 +922,15 @@ export default function SupplierSupplyActivity()  {
                         </strong>
                       </td>
 
+                      {/* DATE */}
+
                       <td>
                         <span className="supplier-activity-date">
                           {activity.date}
                         </span>
                       </td>
+
+                      {/* STATUS */}
 
                       <td>
 
@@ -484,15 +953,74 @@ export default function SupplierSupplyActivity()  {
 
                   ))}
 
+                  {/* EMPTY STATE */}
+
                   {filteredActivities.length === 0 && (
+
                     <tr>
+
                       <td
                         colSpan={6}
                         className="supplier-empty-state"
                       >
-                        No supply activity found.
+                        <div
+                          style={{
+                            padding: "50px 20px",
+                            textAlign: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "32px",
+                              marginBottom: "10px",
+                              opacity: 0.55,
+                            }}
+                          >
+                            ⌕
+                          </div>
+
+                          <strong
+                            style={{
+                              display: "block",
+                              color: "#344b69",
+                              fontSize: "16px",
+                            }}
+                          >
+                            No supply activity found
+                          </strong>
+
+                          <span
+                            style={{
+                              display: "block",
+                              marginTop: "6px",
+                              color: "#92a2b8",
+                              fontSize: "13px",
+                            }}
+                          >
+                            Try changing your search or filters.
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={clearFilters}
+                            style={{
+                              marginTop: "16px",
+                              padding: "9px 16px",
+                              border: "1px solid #dbe4ef",
+                              borderRadius: "9px",
+                              background: "#edf4ff",
+                              color: "#2864e8",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Reset Filters
+                          </button>
+                        </div>
                       </td>
+
                     </tr>
+
                   )}
 
                 </tbody>

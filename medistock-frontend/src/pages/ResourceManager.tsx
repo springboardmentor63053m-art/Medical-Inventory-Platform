@@ -141,8 +141,16 @@ const displayValue = (
     );
   }
 
-  if (field.key === "price") {
-    return `$${Number(value).toFixed(2)}`;
+  if (
+    field.key === "price" ||
+    field.key === "unitPrice" ||
+    field.key === "amount" ||
+    field.key === "total"
+  ) {
+    return `₹${Number(value).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   }
 
   return String(value);
@@ -180,6 +188,240 @@ const asRows = (
   }
 
   return [];
+};
+
+/* =========================================================
+   PURCHASE ITEM DEMO DATA
+   ---------------------------------------------------------
+   The backend can remain empty while the Purchase Order Items
+   page still shows realistic sample records. As soon as the
+   API returns real records, those records are displayed instead.
+========================================================= */
+
+const PURCHASE_ITEM_TEMPLATES = [
+  {
+    order: "PO-1001",
+    supplier: "HealthCare Pvt Ltd",
+    medicine: "Paracetamol 500mg",
+    quantity: 100,
+    price: 25,
+  },
+  {
+    order: "PO-1001",
+    supplier: "HealthCare Pvt Ltd",
+    medicine: "Amoxicillin 500mg",
+    quantity: 50,
+    price: 100,
+  },
+  {
+    order: "PO-1001",
+    supplier: "HealthCare Pvt Ltd",
+    medicine: "Azithromycin 250mg",
+    quantity: 40,
+    price: 120,
+  },
+  {
+    order: "PO-1001",
+    supplier: "HealthCare Pvt Ltd",
+    medicine: "Cetirizine 10mg",
+    quantity: 100,
+    price: 20,
+  },
+  {
+    order: "PO-1002",
+    supplier: "MedPlus Distributors",
+    medicine: "Metformin 500mg",
+    quantity: 120,
+    price: 50,
+  },
+  {
+    order: "PO-1002",
+    supplier: "MedPlus Distributors",
+    medicine: "Pantoprazole 40mg",
+    quantity: 80,
+    price: 60,
+  },
+  {
+    order: "PO-1002",
+    supplier: "MedPlus Distributors",
+    medicine: "Ibuprofen 400mg",
+    quantity: 60,
+    price: 60,
+  },
+  {
+    order: "PO-1002",
+    supplier: "MedPlus Distributors",
+    medicine: "Dolo 650mg",
+    quantity: 100,
+    price: 35,
+  },
+  {
+    order: "PO-1002",
+    supplier: "MedPlus Distributors",
+    medicine: "Vitamin B12",
+    quantity: 50,
+    price: 60,
+  },
+  {
+    order: "PO-1003",
+    supplier: "LifeLine Suppliers",
+    medicine: "Insulin",
+    quantity: 30,
+    price: 250,
+  },
+  {
+    order: "PO-1003",
+    supplier: "LifeLine Suppliers",
+    medicine: "Losartan 50mg",
+    quantity: 80,
+    price: 60,
+  },
+  {
+    order: "PO-1003",
+    supplier: "LifeLine Suppliers",
+    medicine: "Atorvastatin 20mg",
+    quantity: 60,
+    price: 60,
+  },
+  {
+    order: "PO-1004",
+    supplier: "CareWell Pharma",
+    medicine: "Cefixime 200mg",
+    quantity: 50,
+    price: 100,
+  },
+  {
+    order: "PO-1004",
+    supplier: "CareWell Pharma",
+    medicine: "ORS Sachets",
+    quantity: 100,
+    price: 25,
+  },
+  {
+    order: "PO-1005",
+    supplier: "Apollo MedSupply",
+    medicine: "Omeprazole 20mg",
+    quantity: 75,
+    price: 55,
+  },
+] as const;
+
+const buildPurchaseItemDemoRows = (
+  fields: Field[]
+): Record<string, unknown>[] => {
+  return PURCHASE_ITEM_TEMPLATES.map((item, index) => {
+    const row: Record<string, unknown> = {
+      id: `demo-purchase-item-${index + 1}`,
+      __demo: true,
+    };
+
+    fields.forEach((field) => {
+      const key = field.key.toLowerCase();
+      const label = field.label.toLowerCase();
+      const name = `${key} ${label}`;
+
+      if (
+        name.includes("medicine") ||
+        name.includes("drug") ||
+        name.includes("medication")
+      ) {
+        row[field.key] = field.reference
+          ? {
+              id: index + 1,
+              name: item.medicine,
+            }
+          : item.medicine;
+        return;
+      }
+
+      if (
+        name.includes("purchaseorder") ||
+        name.includes("purchase order") ||
+        name.includes("order")
+      ) {
+        row[field.key] = field.reference
+          ? {
+              id: Number(item.order.replace("PO-", "")),
+              name: item.order,
+            }
+          : item.order;
+        return;
+      }
+
+      if (
+        name.includes("supplier") ||
+        name.includes("vendor")
+      ) {
+        row[field.key] = field.reference
+          ? {
+              id: index + 1,
+              name: item.supplier,
+            }
+          : item.supplier;
+        return;
+      }
+
+      if (
+        key === "quantity" ||
+        key === "qty" ||
+        name.includes("quantity")
+      ) {
+        row[field.key] = item.quantity;
+        return;
+      }
+
+      if (
+        key === "price" ||
+        key === "unitprice" ||
+        name.includes("unit price") ||
+        name.includes("cost per")
+      ) {
+        row[field.key] = item.price;
+        return;
+      }
+
+      if (
+        name.includes("total") ||
+        name.includes("amount") ||
+        name.includes("value")
+      ) {
+        row[field.key] = item.quantity * item.price;
+        return;
+      }
+
+      if (
+        field.type === "date" ||
+        name.includes("date")
+      ) {
+        row[field.key] = "2026-08-15";
+        return;
+      }
+
+      if (
+        name.includes("description")
+      ) {
+        row[field.key] =
+          `Medicine supplied under ${item.order}`;
+        return;
+      }
+
+      if (
+        name.includes("status")
+      ) {
+        row[field.key] = "Completed";
+        return;
+      }
+
+      if (field.type === "boolean") {
+        row[field.key] = true;
+        return;
+      }
+
+      row[field.key] = "";
+    });
+
+    return row;
+  });
 };
 
 /* =========================================================
@@ -235,6 +477,18 @@ function ConfiguredResourceManager({
 }: {
   config: ResourceConfig;
 }) {
+  const isPurchaseItems =
+    window.location.pathname === "/admin/purchase-items" ||
+    window.location.pathname.startsWith("/admin/purchase-items/");
+
+  const demoPurchaseItems = useMemo(
+    () =>
+      isPurchaseItems
+        ? buildPurchaseItemDemoRows(config.fields)
+        : [],
+    [config.fields, isPurchaseItems]
+  );
+
   const service = useMemo(
     () =>
       new CrudService<Record<string, unknown>>(
@@ -340,7 +594,13 @@ function ConfiguredResourceManager({
 
       const data = asRows(response);
 
-      setRows(data);
+      setRows(
+        data.length > 0
+          ? data
+          : isPurchaseItems
+          ? demoPurchaseItems
+          : []
+      );
 
       /*
        * Do not clear search/filter values during
@@ -382,6 +642,10 @@ function ConfiguredResourceManager({
         setDynamicOptions(dynamic);
       }
     } catch (err) {
+      if (isPurchaseItems) {
+        setRows(demoPurchaseItems);
+      }
+
       toast.error(
         extractError(
           err,
@@ -394,6 +658,8 @@ function ConfiguredResourceManager({
   }, [
     config,
     service,
+    isPurchaseItems,
+    demoPurchaseItems,
   ]);
 
   useEffect(() => {
@@ -599,10 +865,26 @@ function ConfiguredResourceManager({
         modal === "edit" &&
         editing?.id
       ) {
-        await service.update(
-          String(editing.id),
-          payload()
-        );
+        if (editing.__demo) {
+          const updatedPayload = payload();
+
+          setRows((previous) =>
+            previous.map((item) =>
+              String(item.id) ===
+              String(editing.id)
+                ? {
+                    ...item,
+                    ...updatedPayload,
+                  }
+                : item
+            )
+          );
+        } else {
+          await service.update(
+            String(editing.id),
+            payload()
+          );
+        }
       } else {
         await service.create(
           payload()
@@ -656,6 +938,21 @@ function ConfiguredResourceManager({
     }
 
     try {
+      if (row.__demo) {
+        setRows((previous) =>
+          previous.filter(
+            (item) =>
+              String(item.id) !==
+              String(row.id)
+          )
+        );
+
+        toast.success(
+          `${config.singular} removed from sample data`
+        );
+        return;
+      }
+
       await service.delete(
         String(row.id)
       );
@@ -721,8 +1018,16 @@ function ConfiguredResourceManager({
             }
           );
 
+        const filteredData = asRows(
+          response.data
+        );
+
         setRows(
-          asRows(response.data)
+          filteredData.length > 0
+            ? filteredData
+            : isPurchaseItems
+            ? demoPurchaseItems
+            : []
         );
 
         return;
@@ -742,8 +1047,16 @@ function ConfiguredResourceManager({
             }
           );
 
+        const searchedData = asRows(
+          response.data
+        );
+
         setRows(
-          asRows(response.data)
+          searchedData.length > 0
+            ? searchedData
+            : isPurchaseItems
+            ? demoPurchaseItems
+            : []
         );
 
         return;
@@ -752,8 +1065,20 @@ function ConfiguredResourceManager({
       const response =
         await service.getAll();
 
-      setRows(asRows(response));
+      const allData = asRows(response);
+
+      setRows(
+        allData.length > 0
+          ? allData
+          : isPurchaseItems
+          ? demoPurchaseItems
+          : []
+      );
     } catch (err) {
+      if (isPurchaseItems) {
+        setRows(demoPurchaseItems);
+      }
+
       toast.error(
         extractError(
           err,
@@ -939,49 +1264,358 @@ function ConfiguredResourceManager({
     );
 
   /* =====================================================
+     PURCHASE ITEMS SUMMARY
+  ===================================================== */
+
+  const purchaseTotalItems = safeRows.length;
+
+  const purchaseTotalQuantity = safeRows.reduce((sum, row) => {
+    const quantity = Number(row.quantity ?? row.qty ?? 0);
+    return sum + (Number.isFinite(quantity) ? quantity : 0);
+  }, 0);
+
+  const purchaseTotalValue = safeRows.reduce((sum, row) => {
+    const quantity = Number(row.quantity ?? row.qty ?? 0);
+    const price = Number(row.price ?? 0);
+    const value = quantity * price;
+    return sum + (Number.isFinite(value) ? value : 0);
+  }, 0);
+
+  const purchaseMedicineCount = new Set(
+    safeRows.map((row) => {
+      const medicine = row.medicine;
+      if (medicine && typeof medicine === "object") {
+        const item = medicine as Record<string, unknown>;
+        return String(item.name ?? item.id ?? "");
+      }
+      return String(medicine ?? row.medicineId ?? "");
+    }).filter(Boolean)
+  ).size;
+
+  /* =====================================================
      RENDER
   ===================================================== */
 
   return (
-    <div className="space-y-6">
+    <>
+      {isPurchaseItems && (
+        <style>{`
+          .purchase-items-page {
+            width: 100% !important;
+            min-height: calc(100vh - 68px) !important;
+            padding: 30px 34px 50px !important;
+            box-sizing: border-box !important;
+            background: linear-gradient(180deg, #eef5ff 0%, #f8fbff 42%, #f8fafc 100%) !important;
+            color: #10244a !important;
+          }
+
+          .purchase-items-page .purchase-blue-hero {
+            position: relative;
+            overflow: hidden;
+            padding: 28px 30px !important;
+            border-radius: 22px !important;
+            background: linear-gradient(135deg, #155eef 0%, #2563eb 55%, #3b82f6 100%) !important;
+            color: white !important;
+            box-shadow: 0 18px 40px rgba(37, 99, 235, .22) !important;
+          }
+
+          .purchase-items-page .purchase-blue-hero::after {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            right: -70px;
+            top: -110px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.10);
+          }
+
+          .purchase-items-page .purchase-blue-hero h2 {
+            margin: 5px 0 0 !important;
+            color: white !important;
+            font-size: 32px !important;
+            font-weight: 800 !important;
+          }
+
+          .purchase-items-page .purchase-blue-hero p {
+            color: rgba(255,255,255,.82) !important;
+          }
+
+          .purchase-items-page .purchase-blue-hero .eyebrow {
+            color: #dbeafe !important;
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            letter-spacing: 1.6px !important;
+            text-transform: uppercase !important;
+          }
+
+          .purchase-items-page .purchase-blue-hero button {
+            position: relative;
+            z-index: 2;
+            min-height: 44px !important;
+            padding: 0 20px !important;
+            border: 1px solid rgba(255,255,255,.25) !important;
+            border-radius: 11px !important;
+            background: white !important;
+            color: #1d4ed8 !important;
+            font-weight: 800 !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,.12) !important;
+          }
+
+          .purchase-items-page .purchase-blue-hero button:hover {
+            background: #eff6ff !important;
+          }
+
+          .purchase-items-page .purchase-summary-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 16px !important;
+            margin: 22px 0 !important;
+          }
+
+          .purchase-items-page .purchase-summary-card {
+            min-height: 112px !important;
+            padding: 20px !important;
+            border: 1px solid #dbeafe !important;
+            border-radius: 17px !important;
+            background: white !important;
+            box-shadow: 0 8px 24px rgba(30,64,175,.07) !important;
+          }
+
+          .purchase-items-page .purchase-summary-label {
+            color: #64748b !important;
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            letter-spacing: .7px !important;
+            text-transform: uppercase !important;
+          }
+
+          .purchase-items-page .purchase-summary-value {
+            display: block !important;
+            margin-top: 8px !important;
+            color: #12346b !important;
+            font-size: 28px !important;
+            font-weight: 800 !important;
+          }
+
+          .purchase-items-page .purchase-summary-note {
+            margin-top: 4px !important;
+            color: #94a3b8 !important;
+            font-size: 11px !important;
+          }
+
+          .purchase-items-page .purchase-main-card {
+            overflow: hidden !important;
+            border: 1px solid #dbe7f7 !important;
+            border-radius: 20px !important;
+            background: white !important;
+            box-shadow: 0 10px 30px rgba(30,64,175,.07) !important;
+          }
+
+          .purchase-items-page .purchase-toolbar {
+            padding: 20px !important;
+            background: #ffffff !important;
+            border-bottom: 1px solid #e6eef9 !important;
+          }
+
+          .purchase-items-page input {
+            height: 44px !important;
+            border: 1px solid #cddbf0 !important;
+            border-radius: 10px !important;
+            background: #fafdff !important;
+            color: #10244a !important;
+          }
+
+          .purchase-items-page input:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.12) !important;
+            outline: none !important;
+          }
+
+          .purchase-items-page .purchase-search-button {
+            height: 44px !important;
+            border-radius: 10px !important;
+            background: #2563eb !important;
+            color: white !important;
+            border-color: #2563eb !important;
+          }
+
+          .purchase-items-page .purchase-refresh-button {
+            height: 44px !important;
+            width: 44px !important;
+            border: 1px solid #cddbf0 !important;
+            border-radius: 10px !important;
+            background: #eff6ff !important;
+            color: #2563eb !important;
+          }
+
+          .purchase-items-page .purchase-table-title {
+            padding: 18px 22px 12px !important;
+            color: #163a70 !important;
+            font-size: 17px !important;
+            font-weight: 800 !important;
+          }
+
+          .purchase-items-page table {
+            width: 100% !important;
+            min-width: 760px !important;
+            border-collapse: collapse !important;
+            background: white !important;
+          }
+
+          .purchase-items-page thead {
+            background: #eff6ff !important;
+          }
+
+          .purchase-items-page th {
+            padding: 14px 18px !important;
+            background: #eff6ff !important;
+            color: #315b9e !important;
+            border-bottom: 1px solid #dbeafe !important;
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            letter-spacing: .7px !important;
+            text-align: left !important;
+            text-transform: uppercase !important;
+          }
+
+          .purchase-items-page td {
+            padding: 17px 18px !important;
+            color: #334b70 !important;
+            border-bottom: 1px solid #edf3fb !important;
+            font-size: 13px !important;
+            vertical-align: middle !important;
+          }
+
+          .purchase-items-page tbody tr:hover {
+            background: #f5f9ff !important;
+          }
+
+          .purchase-items-page td[colspan] {
+            padding: 62px 20px !important;
+            text-align: center !important;
+            color: #64748b !important;
+          }
+
+          .purchase-items-page .purchase-empty-title {
+            margin-top: 10px !important;
+            color: #294b7a !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+          }
+
+          .purchase-items-page .purchase-empty-text {
+            margin-top: 5px !important;
+            color: #94a3b8 !important;
+            font-size: 12px !important;
+          }
+
+          .purchase-items-page .purchase-footer {
+            padding: 14px 20px !important;
+            background: #f8fbff !important;
+            border-top: 1px solid #e5edf8 !important;
+            color: #64748b !important;
+          }
+
+          @media (max-width: 1050px) {
+            .purchase-items-page .purchase-summary-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+          }
+
+          @media (max-width: 700px) {
+            .purchase-items-page {
+              padding: 20px 14px 35px !important;
+            }
+            .purchase-items-page .purchase-summary-grid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
+      )}
+      <div
+      className={
+        isPurchaseItems
+          ? "purchase-items-page space-y-6"
+          : "space-y-6"
+      }
+    >
 
       {/* PAGE HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      {isPurchaseItems ? (
+        <>
+          <div className="purchase-blue-hero flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="eyebrow">MediStock • Purchase Management</p>
+              <h2>Purchase Order Items</h2>
+              <p className="mt-2 max-w-2xl">
+                Track every medicine, quantity, supplier and purchase cost linked to your purchase orders.
+              </p>
+            </div>
+            <Button onClick={() => open("create")}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Purchase Item
+            </Button>
+          </div>
 
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-cyan-700">
-            Management center
-          </p>
-
-          <h2 className="text-3xl font-bold tracking-tight text-slate-950">
-            {config.title}
-          </h2>
-
-          <p className="mt-1 text-slate-500">
-            Create, update and keep your{" "}
-            {config.title.toLowerCase()}{" "}
-            accurate.
-          </p>
+          <div className="purchase-summary-grid">
+            <div className="purchase-summary-card">
+              <span className="purchase-summary-label">Purchase Items</span>
+              <strong className="purchase-summary-value">{purchaseTotalItems}</strong>
+              <p className="purchase-summary-note">Total records</p>
+            </div>
+            <div className="purchase-summary-card">
+              <span className="purchase-summary-label">Total Quantity</span>
+              <strong className="purchase-summary-value">{purchaseTotalQuantity}</strong>
+              <p className="purchase-summary-note">Units across purchases</p>
+            </div>
+            <div className="purchase-summary-card">
+              <span className="purchase-summary-label">Purchase Value</span>
+              <strong className="purchase-summary-value">
+  ₹{purchaseTotalValue.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}
+</strong>
+              <p className="purchase-summary-note">Calculated from quantity × price</p>
+            </div>
+            <div className="purchase-summary-card">
+              <span className="purchase-summary-label">Medicines</span>
+              <strong className="purchase-summary-value">{purchaseMedicineCount}</strong>
+              <p className="purchase-summary-note">Unique medicines listed</p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-cyan-700">
+              Management center
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+              {config.title}
+            </h2>
+            <p className="mt-1 text-slate-500">
+              Create, update and keep your {config.title.toLowerCase()} accurate.
+            </p>
+          </div>
+          <Button
+            onClick={() => open("create")}
+            className="rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New {config.singular}
+          </Button>
         </div>
-
-        <Button
-          onClick={() =>
-            open("create")
-          }
-          className="rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20 hover:bg-blue-700"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          New {config.singular}
-        </Button>
-      </div>
+      )}
 
       {/* MAIN CARD */}
-      <Card className="overflow-hidden border-slate-200/80 shadow-sm">
+      <Card className={isPurchaseItems ? "purchase-main-card" : "overflow-hidden border-slate-200/80 shadow-sm"}>
 
         <CardContent className="p-0">
 
           {/* SEARCH */}
-          <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row">
+          <div className={isPurchaseItems ? "purchase-toolbar flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row" : "flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row"}>
 
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -1187,6 +1821,19 @@ function ConfiguredResourceManager({
           )}
 
           {/* TABLE */}
+          {isPurchaseItems && (
+            <div className="purchase-table-title flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div>Purchase Item Records</div>
+                <span className="text-xs font-normal text-slate-400">
+                  Individual medicines linked to purchase orders
+                </span>
+              </div>
+              <span className="inline-flex w-fit rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                {filtered.length} items
+              </span>
+            </div>
+          )}
           <div className="overflow-x-auto">
 
             <table className="w-full text-left text-sm">
@@ -1253,17 +1900,14 @@ function ConfiguredResourceManager({
 
                           <DatabaseZap className="h-10 w-10 opacity-40" />
 
-                          <p className="text-sm font-medium">
-                            No{" "}
-                            {config.title.toLowerCase()}{" "}
-                            found.
+                          <p className={isPurchaseItems ? "purchase-empty-title" : "text-sm font-medium"}>
+                            No {config.title.toLowerCase()} found.
                           </p>
 
-                          <p className="text-xs">
-                            Add one using the
-                            button above, or
-                            check that the
-                            backend is running.
+                          <p className={isPurchaseItems ? "purchase-empty-text" : "text-xs"}>
+                            {isPurchaseItems
+                              ? "Start by adding your first purchase item using the button above."
+                              : "Add one using the button above, or check that the backend is running."}
                           </p>
 
                         </div>
@@ -1288,7 +1932,17 @@ function ConfiguredResourceManager({
                               key={
                                 field.key
                               }
-                              className="max-w-52 truncate px-5 py-4 text-slate-700"
+                              className={`max-w-52 truncate px-5 py-4 ${
+                                field.key.toLowerCase().includes("order")
+                                  ? "font-bold text-blue-700"
+                                  : field.key.toLowerCase().includes("medicine")
+                                  ? "font-semibold text-slate-900"
+                                  : field.key.toLowerCase().includes("price") ||
+                                    field.key.toLowerCase().includes("amount") ||
+                                    field.key.toLowerCase().includes("total")
+                                  ? "font-bold text-slate-900"
+                                  : "text-slate-700"
+                              }`}
                             >
                               {displayValue(
                                 row[
@@ -1358,7 +2012,7 @@ function ConfiguredResourceManager({
           </div>
 
           {/* FOOTER */}
-          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
+          <div className={isPurchaseItems ? "purchase-footer flex items-center justify-between" : "flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500"}>
 
             <span>
               {filtered.length}{" "}
@@ -1648,5 +2302,6 @@ function ConfiguredResourceManager({
       )}
 
     </div>
+    </>
   );
 }

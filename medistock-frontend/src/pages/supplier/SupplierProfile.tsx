@@ -1,18 +1,44 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "../../styles/supplier-dashboard.css";
 import "../../styles/supplier-profile.css";
 
 const SupplierProfile: React.FC = () => {
+  const navigate = useNavigate();
+
   const [editing, setEditing] = useState(false);
 
+  const getUser = () => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  };
+
+  const user = getUser();
+
+  const loggedInName = String(
+    user?.username ||
+      user?.name ||
+      user?.fullName ||
+      "Rahul"
+  )
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
   const [profile, setProfile] = useState({
-    name: "Rahul",
-    supplierId: "SUP-0001",
-    email: "rahul@medistock.com",
-    phone: "+91 XXXXX XXXXX",
-    company: "Rahul Medical Supplies",
-    address: "Supplier Address",
-    city: "Chittoor",
-    state: "Andhra Pradesh",
+    name: loggedInName,
+    supplierId: user?.supplierId || "SUP-0002",
+    email: user?.email || "rahul@medistock.com",
+    phone: user?.phone || "+91 XXXXX XXXXX",
+    company:
+      user?.company ||
+      user?.companyName ||
+      "Rahul Medical Supplies",
+    address: user?.address || "Supplier Address",
+    city: user?.city || "Chittoor",
+    state: user?.state || "Andhra Pradesh",
     status: "Active",
   });
 
@@ -27,236 +53,616 @@ const SupplierProfile: React.FC = () => {
     }));
   };
 
+  const initials =
+    profile.name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "R";
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/";
+  };
+
   return (
-    <div className="supplier-profile-page">
+    <div className="supplier-app">
 
-      {/* HEADER */}
+      {/* =====================================================
+          SIDEBAR
+          ===================================================== */}
 
-      <div className="supplier-profile-header">
-        <div>
-          <div className="supplier-profile-eyebrow">
-            SUPPLIER PORTAL
+      <aside className="supplier-sidebar">
+
+        {/* BRAND */}
+
+        <div className="supplier-brand">
+
+          <div className="supplier-brand-logo">
+            <span>⌁</span>
           </div>
 
-          <h1>My Profile</h1>
-
-          <p>
-            View and manage your supplier account information.
-          </p>
-        </div>
-
-        <button
-          className="supplier-profile-edit"
-          onClick={() => setEditing(!editing)}
-        >
-          {editing ? "Cancel" : "✎ Edit Profile"}
-        </button>
-      </div>
-
-      {/* PROFILE HERO */}
-
-      <div className="supplier-profile-card">
-
-        <div className="supplier-profile-avatar">
-          R
-        </div>
-
-        <div className="supplier-profile-main">
-          <div className="supplier-profile-name-row">
-            <h2>{profile.name}</h2>
-
-            <span className="supplier-profile-active">
-              <i />
-              {profile.status}
-            </span>
-          </div>
-
-          <p>
-            Registered Supplier
-          </p>
-
-          <span className="supplier-profile-id">
-            Supplier ID: {profile.supplierId}
-          </span>
-        </div>
-
-      </div>
-
-      {/* INFORMATION */}
-
-      <div className="supplier-profile-section">
-
-        <div className="supplier-profile-section-header">
           <div>
-            <h2>Personal Information</h2>
-            <p>Your supplier account details.</p>
-          </div>
-        </div>
+            <h2>
+              Medi<span>Stock</span>
+            </h2>
 
-        <div className="supplier-profile-grid">
-
-          <div className="supplier-profile-field">
-            <label>FULL NAME</label>
-
-            {editing ? (
-              <input
-                name="name"
-                value={profile.name}
-                onChange={handleChange}
-              />
-            ) : (
-              <strong>{profile.name}</strong>
-            )}
-          </div>
-
-          <div className="supplier-profile-field">
-            <label>SUPPLIER ID</label>
-            <strong>{profile.supplierId}</strong>
-          </div>
-
-          <div className="supplier-profile-field">
-            <label>EMAIL ADDRESS</label>
-
-            {editing ? (
-              <input
-                name="email"
-                value={profile.email}
-                onChange={handleChange}
-              />
-            ) : (
-              <strong>{profile.email}</strong>
-            )}
-          </div>
-
-          <div className="supplier-profile-field">
-            <label>CONTACT NUMBER</label>
-
-            {editing ? (
-              <input
-                name="phone"
-                value={profile.phone}
-                onChange={handleChange}
-              />
-            ) : (
-              <strong>{profile.phone}</strong>
-            )}
+            <p>
+              MEDICAL INVENTORY
+            </p>
           </div>
 
         </div>
 
-      </div>
+        {/* SUPPLIER ROLE */}
 
-      {/* COMPANY */}
+        <div className="supplier-role">
 
-      <div className="supplier-profile-section">
+          <div className="supplier-role-icon">
+            ✓
+          </div>
 
-        <div className="supplier-profile-section-header">
           <div>
-            <h2>Supplier Information</h2>
-            <p>Information related to your supply account.</p>
-          </div>
-        </div>
-
-        <div className="supplier-profile-grid">
-
-          <div className="supplier-profile-field">
-            <label>SUPPLIER / COMPANY NAME</label>
-
-            {editing ? (
-              <input
-                name="company"
-                value={profile.company}
-                onChange={handleChange}
-              />
-            ) : (
-              <strong>{profile.company}</strong>
-            )}
-          </div>
-
-          <div className="supplier-profile-field">
-            <label>STATUS</label>
-
-            <span className="supplier-profile-status">
-              <i />
-              {profile.status}
-            </span>
-          </div>
-
-          <div className="supplier-profile-field supplier-profile-wide">
-            <label>ADDRESS</label>
-
-            {editing ? (
-              <input
-                name="address"
-                value={profile.address}
-                onChange={handleChange}
-              />
-            ) : (
-              <strong>{profile.address}</strong>
-            )}
-          </div>
-
-          <div className="supplier-profile-field">
-            <label>CITY</label>
-
-            {editing ? (
-              <input
-                name="city"
-                value={profile.city}
-                onChange={handleChange}
-              />
-            ) : (
-              <strong>{profile.city}</strong>
-            )}
-          </div>
-
-          <div className="supplier-profile-field">
-            <label>STATE</label>
-
-            {editing ? (
-              <input
-                name="state"
-                value={profile.state}
-                onChange={handleChange}
-              />
-            ) : (
-              <strong>{profile.state}</strong>
-            )}
+            <strong>Supplier</strong>
+            <span>Supplier Portal</span>
           </div>
 
         </div>
 
-        {editing && (
-          <div className="supplier-profile-save-row">
+        <div className="supplier-menu-title">
+          MAIN MENU
+        </div>
+
+        {/* =================================================
+            SUPPLIER NAVIGATION
+            ================================================= */}
+
+        <nav className="supplier-navigation">
+
+          {/* DASHBOARD */}
+
+          <button
+            type="button"
+            className="supplier-nav-item"
+            onClick={() =>
+              navigate("/supplier/dashboard")
+            }
+          >
+            <span>▦</span>
+            <strong>Dashboard</strong>
+          </button>
+
+          {/* MY MEDICINES */}
+
+          <button
+            type="button"
+            className="supplier-nav-item"
+            onClick={() =>
+              navigate("/supplier/medicines")
+            }
+          >
+            <span>💊</span>
+            <strong>My Medicines</strong>
+          </button>
+
+          {/* PURCHASE ORDERS */}
+
+          <button
+            type="button"
+            className="supplier-nav-item"
+            onClick={() =>
+              navigate("/supplier/purchases")
+            }
+          >
+            <span>🛒</span>
+            <strong>Purchase Orders</strong>
+          </button>
+
+          {/* SUPPLY ACTIVITY */}
+
+          <button
+            type="button"
+            className="supplier-nav-item"
+            onClick={() =>
+              navigate("/supplier/activity")
+            }
+          >
+            <span>◷</span>
+            <strong>Supply Activity</strong>
+          </button>
+
+          {/* MY PROFILE */}
+
+          <button
+            type="button"
+            className="supplier-nav-item active"
+            onClick={() =>
+              navigate("/supplier/profile")
+            }
+          >
+            <span>♙</span>
+            <strong>My Profile</strong>
+          </button>
+
+          {/* NOTIFICATIONS */}
+
+          <button
+            type="button"
+            className="supplier-nav-item"
+            onClick={() =>
+              navigate("/supplier/notifications")
+            }
+          >
+            <span>♧</span>
+            <strong>Notifications</strong>
+            <em>3</em>
+          </button>
+
+        </nav>
+
+        {/* LOGOUT */}
+
+        <div className="supplier-sidebar-bottom">
+
+          <button
+            type="button"
+            className="supplier-logout"
+            onClick={logout}
+          >
+            <span>↪</span>
+            <strong>Logout</strong>
+          </button>
+
+        </div>
+
+      </aside>
+
+      {/* =====================================================
+          MAIN CONTENT
+          ===================================================== */}
+
+      <main className="supplier-main">
+
+        {/* =================================================
+            TOP HEADER
+            ================================================= */}
+
+        <header className="supplier-topbar">
+
+          <div className="supplier-topbar-title">
+
+            <h1>
+              My Profile
+            </h1>
+
+            <p>
+              MediStock Medical Inventory Platform
+            </p>
+
+          </div>
+
+          <div className="supplier-topbar-right">
+
+            {/* Notification */}
+
             <button
-              className="supplier-profile-save"
-              onClick={() => setEditing(false)}
+              type="button"
+              className="supplier-notification-button"
+              onClick={() =>
+                navigate("/supplier/notifications")
+              }
             >
-              ✓ Save Changes
+              ♧
+              <span />
             </button>
+
+            {/* User */}
+
+            <div className="supplier-user">
+
+              <div className="supplier-user-avatar">
+                {initials}
+              </div>
+
+              <div>
+
+                <strong>
+                  {profile.name}
+                </strong>
+
+                <span>
+                  Supplier
+                </span>
+
+              </div>
+
+            </div>
+
+            {/* Logout */}
+
+            <button
+              type="button"
+              className="supplier-top-logout"
+              onClick={logout}
+            >
+              ↪ Logout
+            </button>
+
           </div>
-        )}
 
-      </div>
+        </header>
 
-      {/* ACCOUNT STATUS */}
+        {/* =================================================
+            PROFILE CONTENT
+            ================================================= */}
 
-      <div className="supplier-profile-security">
+        <div className="supplier-content">
 
-        <div className="supplier-profile-security-icon">
-          ✓
+          {/* PAGE HEADING */}
+
+          <section className="supplier-page-heading">
+
+            <div>
+
+              <div className="supplier-eyebrow">
+                SUPPLIER PORTAL
+              </div>
+
+              <h1>
+                My Profile
+              </h1>
+
+              <p>
+                View and manage your supplier account
+                information.
+              </p>
+
+            </div>
+
+            <button
+              type="button"
+              className="supplier-profile-edit"
+              onClick={() =>
+                setEditing(!editing)
+              }
+            >
+              {editing
+                ? "Cancel"
+                : "✎ Edit Profile"}
+            </button>
+
+          </section>
+
+          {/* =================================================
+              PROFILE HERO
+              ================================================= */}
+
+          <section className="supplier-profile-card">
+
+            <div className="supplier-profile-avatar">
+              {initials}
+            </div>
+
+            <div className="supplier-profile-main">
+
+              <div className="supplier-profile-name-row">
+
+                <h2>
+                  {profile.name}
+                </h2>
+
+                <span className="supplier-profile-active">
+                  <i />
+                  {profile.status}
+                </span>
+
+              </div>
+
+              <p>
+                Registered Supplier
+              </p>
+
+              <span className="supplier-profile-id">
+                Supplier ID:{" "}
+                {profile.supplierId}
+              </span>
+
+            </div>
+
+          </section>
+
+          {/* =================================================
+              PERSONAL INFORMATION
+              ================================================= */}
+
+          <section className="supplier-profile-section">
+
+            <div className="supplier-profile-section-header">
+
+              <div>
+
+                <h2>
+                  Personal Information
+                </h2>
+
+                <p>
+                  Your supplier account details.
+                </p>
+
+              </div>
+
+            </div>
+
+            <div className="supplier-profile-grid">
+
+              {/* FULL NAME */}
+
+              <div className="supplier-profile-field">
+
+                <label>
+                  FULL NAME
+                </label>
+
+                {editing ? (
+                  <input
+                    name="name"
+                    value={profile.name}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <strong>
+                    {profile.name}
+                  </strong>
+                )}
+
+              </div>
+
+              {/* SUPPLIER ID */}
+
+              <div className="supplier-profile-field">
+
+                <label>
+                  SUPPLIER ID
+                </label>
+
+                <strong>
+                  {profile.supplierId}
+                </strong>
+
+              </div>
+
+              {/* EMAIL */}
+
+              <div className="supplier-profile-field">
+
+                <label>
+                  EMAIL ADDRESS
+                </label>
+
+                {editing ? (
+                  <input
+                    name="email"
+                    value={profile.email}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <strong>
+                    {profile.email}
+                  </strong>
+                )}
+
+              </div>
+
+              {/* PHONE */}
+
+              <div className="supplier-profile-field">
+
+                <label>
+                  CONTACT NUMBER
+                </label>
+
+                {editing ? (
+                  <input
+                    name="phone"
+                    value={profile.phone}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <strong>
+                    {profile.phone}
+                  </strong>
+                )}
+
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* =================================================
+              SUPPLIER INFORMATION
+              ================================================= */}
+
+          <section className="supplier-profile-section">
+
+            <div className="supplier-profile-section-header">
+
+              <div>
+
+                <h2>
+                  Supplier Information
+                </h2>
+
+                <p>
+                  Information related to your
+                  supply account.
+                </p>
+
+              </div>
+
+            </div>
+
+            <div className="supplier-profile-grid">
+
+              {/* COMPANY */}
+
+              <div className="supplier-profile-field">
+
+                <label>
+                  SUPPLIER / COMPANY NAME
+                </label>
+
+                {editing ? (
+                  <input
+                    name="company"
+                    value={profile.company}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <strong>
+                    {profile.company}
+                  </strong>
+                )}
+
+              </div>
+
+              {/* STATUS */}
+
+              <div className="supplier-profile-field">
+
+                <label>
+                  STATUS
+                </label>
+
+                <span className="supplier-profile-status">
+                  <i />
+                  {profile.status}
+                </span>
+
+              </div>
+
+              {/* ADDRESS */}
+
+              <div className="supplier-profile-field supplier-profile-wide">
+
+                <label>
+                  ADDRESS
+                </label>
+
+                {editing ? (
+                  <input
+                    name="address"
+                    value={profile.address}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <strong>
+                    {profile.address}
+                  </strong>
+                )}
+
+              </div>
+
+              {/* CITY */}
+
+              <div className="supplier-profile-field">
+
+                <label>
+                  CITY
+                </label>
+
+                {editing ? (
+                  <input
+                    name="city"
+                    value={profile.city}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <strong>
+                    {profile.city}
+                  </strong>
+                )}
+
+              </div>
+
+              {/* STATE */}
+
+              <div className="supplier-profile-field">
+
+                <label>
+                  STATE
+                </label>
+
+                {editing ? (
+                  <input
+                    name="state"
+                    value={profile.state}
+                    onChange={handleChange}
+                  />
+                ) : (
+                  <strong>
+                    {profile.state}
+                  </strong>
+                )}
+
+              </div>
+
+            </div>
+
+            {/* SAVE */}
+
+            {editing && (
+
+              <div className="supplier-profile-save-row">
+
+                <button
+                  type="button"
+                  className="supplier-profile-save"
+                  onClick={() =>
+                    setEditing(false)
+                  }
+                >
+                  ✓ Save Changes
+                </button>
+
+              </div>
+
+            )}
+
+          </section>
+
+          {/* =================================================
+              ACCOUNT STATUS
+              ================================================= */}
+
+          <section className="supplier-profile-security">
+
+            <div className="supplier-profile-security-icon">
+              ✓
+            </div>
+
+            <div>
+
+              <h3>
+                Supplier Account Active
+              </h3>
+
+              <p>
+                Your MediStock supplier account
+                is active and available for
+                managing medicines and purchase
+                orders.
+              </p>
+
+            </div>
+
+          </section>
+
         </div>
 
-        <div>
-          <h3>Supplier Account Active</h3>
-
-          <p>
-            Your MediStock supplier account is active and
-            available for managing medicines and purchase orders.
-          </p>
-        </div>
-
-      </div>
+      </main>
 
     </div>
   );
