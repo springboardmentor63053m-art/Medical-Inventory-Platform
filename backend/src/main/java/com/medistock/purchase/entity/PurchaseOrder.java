@@ -41,6 +41,45 @@ public class PurchaseOrder {
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
+        @Column(name = "created_by", length = 150)
+    private String createdBy;
+
+    @Column(name = "approved_by", length = 150)
+    private String approvedBy;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @Column(name = "processed_by", length = 150)
+    private String processedBy;
+
+    @Column(name = "processed_at")
+    private LocalDateTime processedAt;
+
+    @Column(name = "shipped_by", length = 150)
+    private String shippedBy;
+
+    @Column(name = "shipped_at")
+    private LocalDateTime shippedAt;
+
+    @Column(name = "received_by", length = 150)
+    private String receivedBy;
+
+    @Column(name = "received_at")
+    private LocalDateTime receivedAt;
+
+    @Column(name = "cancelled_by", length = 150)
+    private String cancelledBy;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name = "status_updated_by", length = 150)
+    private String statusUpdatedBy;
+
+    @Column(name = "status_updated_at")
+    private LocalDateTime statusUpdatedAt;
+    
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default
     private List<PurchaseOrderItem> items = new ArrayList<>();

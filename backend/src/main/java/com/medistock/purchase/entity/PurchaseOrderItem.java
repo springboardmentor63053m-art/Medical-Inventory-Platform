@@ -5,6 +5,7 @@ import com.medistock.medicine.entity.Medicine;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "purchase_order_items")
@@ -36,6 +37,18 @@ public class PurchaseOrderItem {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;
+
+        @Column(name = "received_quantity")
+    private Integer receivedQuantity;
+
+    @Column(name = "received_batch_number", length = 50)
+    private String receivedBatchNumber;
+
+    @Column(name = "received_expiry_date")
+    private LocalDate receivedExpiryDate;
+
+    @Column(name = "received_storage_location", length = 100)
+    private String receivedStorageLocation;
 
     @PrePersist
     @PreUpdate

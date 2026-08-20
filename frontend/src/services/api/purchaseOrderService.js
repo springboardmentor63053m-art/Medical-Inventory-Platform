@@ -24,5 +24,13 @@ export const purchaseOrderService = {
   deletePurchaseOrder: async (id) => {
     const response = await apiClient.delete(`/purchase-orders/${id}`);
     return response.data;
-  }
+  },
+
+  receivePurchaseOrder: async (id, receiptData) => {
+  const response = await apiClient.post(
+    `/purchase-orders/${id}/receive`,
+    receiptData
+  );
+  return response.data;
+},
 };

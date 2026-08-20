@@ -9,7 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import com.medistock.purchase.dto.request.PurchaseOrderReceiptRequest;
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +45,28 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(purchaseOrderService.updatePurchaseOrderStatus(id, status));
     }
 
+
+    @PostMapping("/{id}/receive")
+    @PreAuthorize(
+        "hasAnyAuthority(" +
+        "'ROLE_ADMIN', 'ADMIN', " +
+        "'ROLE_PHARMACIST', 'PHARMACIST'" +
+        ")"
+    )
+    public ResponseEntity<PurchaseOrderResponse>
+            receivePurchaseOrder(
+                    @PathVariable Long id,
+                    @Valid
+                    @RequestBody
+                    PurchaseOrderReceiptRequest request
+            ) {
+        return ResponseEntity.ok(
+                purchaseOrderService.receivePurchaseOrder(
+                        id,
+                        request
+                )
+        );
+    }
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, String>> deletePurchaseOrder(@PathVariable Long id) {

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -18,4 +19,8 @@ public class PurchaseOrderItemResponse {
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;
+    private Integer receivedQuantity;
+    private String receivedBatchNumber;
+    private LocalDate receivedExpiryDate;
+    private String receivedStorageLocation;
 }

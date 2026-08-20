@@ -2,7 +2,7 @@ package com.medistock.purchase.service;
 
 import com.medistock.purchase.dto.request.PurchaseOrderRequest;
 import com.medistock.purchase.dto.response.PurchaseOrderResponse;
-
+import com.medistock.purchase.dto.request.PurchaseOrderReceiptRequest;
 import java.util.List;
 
 public interface PurchaseOrderService {
@@ -11,4 +11,8 @@ public interface PurchaseOrderService {
     PurchaseOrderResponse getPurchaseOrderById(Long id);
     PurchaseOrderResponse updatePurchaseOrderStatus(Long id, String status);
     void deletePurchaseOrder(Long id);
+        PurchaseOrderResponse receivePurchaseOrder(
+            Long id,
+            PurchaseOrderReceiptRequest request
+    );
 }

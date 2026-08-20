@@ -107,7 +107,104 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
+
+    public InventoryResponse receivePurchaseOrderStock(
+            Long medicineId,
+            Integer quantity,
+            Integer minimumStock,
+            String batchNumber,
+            LocalDate expiryDate,
+            String storageLocation,
+            String purchaseOrderNumber
+    ) {
+        Medicine medicine = medicineRepository
+                .findById(medicineId)
+                .orElseThrow(
+                        () -> new ResourceNotFoundException(
+                                "Medicine not found with id: " +
+                                medicineId
+                        )
+                );
+
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException(
+                    "Received quantity must be greater than zero"
+            );
+        }
+
+        if (batchNumber == null ||
+                batchNumber.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Received batch number is required"
+            );
+        }
+
+        if (expiryDate == null ||
+                !expiryDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException(
+                    "Received expiry date must be in the future"
+            );
+        }
+
+        String finalBatchNumber = batchNumber.trim();
+
+        if (inventoryRepository.existsByBatchNumber(
+                finalBatchNumber
+        )) {
+            throw new IllegalArgumentException(
+                    "Inventory batch already exists: " +
+                    finalBatchNumber
+            );
+        }
+
+        int finalMinimumStock =
+                minimumStock != null
+                        ? minimumStock
+                        : medicine.getReorderLevel() != null
+                            ? medicine.getReorderLevel()
+                            : 10;
+
+        Long currentTotal =
+                inventoryRepository.sumQuantityByMedicineId(
+                        medicineId
+                );
+
+        int previousQuantity =
+                currentTotal == null
+                        ? 0
+                        : currentTotal.intValue();
+
+        int newQuantity =
+                previousQuantity + quantity;
+
+        Inventory inventory = Inventory.builder()
+                .medicine(medicine)
+                .quantity(quantity)
+                .minimumStock(finalMinimumStock)
+                .batchNumber(finalBatchNumber)
+                .expiryDate(expiryDate)
+                .storageLocation(storageLocation)
+                .build();
+
+        Inventory saved =
+                inventoryRepository.save(inventory);
+
+        stockMovementService.recordMovement(
+                medicine,
+                finalBatchNumber,
+                "RESTOCK",
+                quantity,
+                previousQuantity,
+                newQuantity,
+                null,
+                "Purchase Order " +
+                purchaseOrderNumber +
+                " Received"
+        );
+
+        return mapToResponse(saved);
+    }
     public List<InventoryResponse> getAllInventory() {
         return inventoryRepository.findAll().stream()
                 .map(this::mapToResponse)

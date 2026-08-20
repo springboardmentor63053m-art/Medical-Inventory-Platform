@@ -22,6 +22,27 @@ public class PurchaseOrderResponse {
     private LocalDate expectedDelivery;
     private String status;
     private BigDecimal totalAmount;
+    
+    private String createdBy;
+
+    private String approvedBy;
+    private LocalDateTime approvedAt;
+
+    private String processedBy;
+    private LocalDateTime processedAt;
+
+    private String shippedBy;
+    private LocalDateTime shippedAt;
+
+    private String receivedBy;
+    private LocalDateTime receivedAt;
+
+    private String cancelledBy;
+    private LocalDateTime cancelledAt;
+
+    private String statusUpdatedBy;
+    private LocalDateTime statusUpdatedAt;
+
     private List<PurchaseOrderItemResponse> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
