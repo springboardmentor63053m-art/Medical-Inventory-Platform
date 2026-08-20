@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     Optional<Inventory> findByMedicineId(Long medicineId);
+
     void deleteByMedicineId(Long medicineId);
 
     /** Find all inventory records where quantity <= minQuantity (low stock) */
@@ -35,4 +36,16 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     /** Count medicines expiring within N days */
     @Query("SELECT COUNT(i) FROM Inventory i WHERE i.expiryDate IS NOT NULL AND i.expiryDate <= :expiryBefore AND i.quantity > 0")
     Long countExpiringBefore(@Param("expiryBefore") LocalDate expiryBefore);
+
+    /** Total quantity of all medicines currently in stock */
+    @Query("SELECT COALESCE(SUM(i.quantity), 0) FROM Inventory i")
+    Long calculateTotalStockQuantity();
+
+    /** Count medicines that are completely out of stock */
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity = 0")
+    Long countOutOfStockItems();
+
+    /** Count medicines that have already expired */
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.expiryDate IS NOT NULL AND i.expiryDate < :today")
+    Long countExpired(@Param("today") LocalDate today);
 }

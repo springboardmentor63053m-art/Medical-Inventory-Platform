@@ -14,84 +14,157 @@ import java.util.stream.Collectors;
 @Service
 public class DashboardService {
 
-    private final MedicineRepository     medicineRepository;
-    private final InventoryRepository    inventoryRepository;
-    private final PurchaseRepository     purchaseRepository;
-    private final SaleRepository         saleRepository;
-    private final AlertRepository        alertRepository;
-    private final SupplierRepository     supplierRepository;
+    private final MedicineRepository medicineRepository;
+    private final InventoryRepository inventoryRepository;
+    private final PurchaseRepository purchaseRepository;
+    private final SaleRepository saleRepository;
+    private final AlertRepository alertRepository;
+    private final SupplierRepository supplierRepository;
     private final PrescriptionRepository prescriptionRepository;
-    private final PatientRepository      patientRepository;
-    private final DoctorRepository       doctorRepository;
+    private final PatientRepository patientRepository;
+    private final DoctorRepository doctorRepository;
 
-    public DashboardService(MedicineRepository medicineRepository,
-                            InventoryRepository inventoryRepository,
-                            PurchaseRepository purchaseRepository,
-                            SaleRepository saleRepository,
-                            AlertRepository alertRepository,
-                            SupplierRepository supplierRepository,
-                            PrescriptionRepository prescriptionRepository,
-                            PatientRepository patientRepository,
-                            DoctorRepository doctorRepository) {
-        this.medicineRepository     = medicineRepository;
-        this.inventoryRepository    = inventoryRepository;
-        this.purchaseRepository     = purchaseRepository;
-        this.saleRepository         = saleRepository;
-        this.alertRepository        = alertRepository;
-        this.supplierRepository     = supplierRepository;
+    public DashboardService(
+            MedicineRepository medicineRepository,
+            InventoryRepository inventoryRepository,
+            PurchaseRepository purchaseRepository,
+            SaleRepository saleRepository,
+            AlertRepository alertRepository,
+            SupplierRepository supplierRepository,
+            PrescriptionRepository prescriptionRepository,
+            PatientRepository patientRepository,
+            DoctorRepository doctorRepository) {
+
+        this.medicineRepository = medicineRepository;
+        this.inventoryRepository = inventoryRepository;
+        this.purchaseRepository = purchaseRepository;
+        this.saleRepository = saleRepository;
+        this.alertRepository = alertRepository;
+        this.supplierRepository = supplierRepository;
         this.prescriptionRepository = prescriptionRepository;
-        this.patientRepository      = patientRepository;
-        this.doctorRepository       = doctorRepository;
+        this.patientRepository = patientRepository;
+        this.doctorRepository = doctorRepository;
     }
 
     public Map<String, Object> getDashboardStats() {
+
         Map<String, Object> stats = new HashMap<>();
 
-        long totalMedicines   = medicineRepository.countByStatus(Medicine.MedicineStatus.ACTIVE);
-        BigDecimal invValue   = inventoryRepository.calculateTotalInventoryValue();
-        long lowStockCount    = inventoryRepository.countLowStockItems();
-        long expiringIn30     = inventoryRepository.countExpiringBefore(LocalDate.now().plusDays(30));
-        long expiringIn7      = inventoryRepository.countExpiringBefore(LocalDate.now().plusDays(7));
-        long activeAlerts     = alertRepository.countByStatus(Alert.AlertStatus.ACTIVE);
-        long totalSuppliers   = supplierRepository.countByIsActive(true);
+        // Basic inventory statistics
+        long totalMedicines =
+                medicineRepository.countByStatus(Medicine.MedicineStatus.ACTIVE);
 
-        long totalPrescriptions     = prescriptionRepository.count();
-        long pendingPrescriptions   = prescriptionRepository.countByStatus(Prescription.PrescriptionStatus.PENDING);
-        long approvedPrescriptions  = prescriptionRepository.countByStatus(Prescription.PrescriptionStatus.APPROVED);
-        long dispensedPrescriptions = prescriptionRepository.countByStatus(Prescription.PrescriptionStatus.DISPENSED);
-        long todayPrescriptions     = prescriptionRepository.countToday(LocalDate.now());
-        long totalPatients          = patientRepository.count();
-        long totalDoctors           = doctorRepository.count();
+        BigDecimal inventoryValue =
+                inventoryRepository.calculateTotalInventoryValue();
 
-        stats.put("totalMedicines",          totalMedicines);
-        stats.put("totalInventoryValue",     invValue);
-        stats.put("lowStockCount",           lowStockCount);
-        stats.put("expiringIn30Days",        expiringIn30);
-        stats.put("expiringIn7Days",         expiringIn7);
-        stats.put("activeAlerts",            activeAlerts);
-        stats.put("totalSuppliers",          totalSuppliers);
+        long lowStockCount =
+                inventoryRepository.countLowStockItems();
 
-        stats.put("totalPrescriptions",      totalPrescriptions);
-        stats.put("pendingPrescriptions",    pendingPrescriptions);
-        stats.put("approvedPrescriptions",   approvedPrescriptions);
-        stats.put("dispensedPrescriptions",  dispensedPrescriptions);
-        stats.put("todayPrescriptions",      todayPrescriptions);
-        stats.put("totalPatients",           totalPatients);
-        stats.put("totalDoctors",            totalDoctors);
-        stats.put("aiStockRiskCount",        lowStockCount + 1);
-        stats.put("anomaliesCount",          3);
+        long outOfStockCount =
+                inventoryRepository.countOutOfStockItems();
 
-        stats.put("recentPurchases", purchaseRepository.findTop10ByOrderByCreatedAtDesc());
-        stats.put("recentSales",     saleRepository.findTop10ByOrderByCreatedAtDesc());
+        long totalStockQuantity =
+                inventoryRepository.calculateTotalStockQuantity();
 
-        int year = LocalDate.now().getYear();
-        List<Object[]> monthlySales = saleRepository.monthlySalesRevenue(year);
+        // Expiry statistics
+        LocalDate today = LocalDate.now();
+
+        long expiringIn30Days =
+                inventoryRepository.countExpiringBefore(today.plusDays(30));
+
+        long expiringIn7Days =
+                inventoryRepository.countExpiringBefore(today.plusDays(7));
+
+        long expiredCount =
+                inventoryRepository.countExpired(today);
+
+        // Alerts and suppliers
+        long activeAlerts =
+                alertRepository.countByStatus(Alert.AlertStatus.ACTIVE);
+
+        long totalSuppliers =
+                supplierRepository.countByIsActive(true);
+
+        // Prescription statistics
+        long totalPrescriptions = prescriptionRepository.count();
+
+        long pendingPrescriptions =
+                prescriptionRepository.countByStatus(
+                        Prescription.PrescriptionStatus.PENDING);
+
+        long approvedPrescriptions =
+                prescriptionRepository.countByStatus(
+                        Prescription.PrescriptionStatus.APPROVED);
+
+        long dispensedPrescriptions =
+                prescriptionRepository.countByStatus(
+                        Prescription.PrescriptionStatus.DISPENSED);
+
+        long todayPrescriptions =
+                prescriptionRepository.countToday(today);
+
+        // Patient and doctor statistics
+        long totalPatients = patientRepository.count();
+        long totalDoctors = doctorRepository.count();
+
+        // Main inventory analytics
+        stats.put("totalMedicines", totalMedicines);
+        stats.put("totalInventoryValue", inventoryValue);
+        stats.put("totalStockQuantity", totalStockQuantity);
+        stats.put("lowStockCount", lowStockCount);
+        stats.put("outOfStockCount", outOfStockCount);
+        stats.put("expiringIn30Days", expiringIn30Days);
+        stats.put("expiringIn7Days", expiringIn7Days);
+        stats.put("expiredCount", expiredCount);
+        stats.put("activeAlerts", activeAlerts);
+        stats.put("totalSuppliers", totalSuppliers);
+
+        // Prescription analytics
+        stats.put("totalPrescriptions", totalPrescriptions);
+        stats.put("pendingPrescriptions", pendingPrescriptions);
+        stats.put("approvedPrescriptions", approvedPrescriptions);
+        stats.put("dispensedPrescriptions", dispensedPrescriptions);
+        stats.put("todayPrescriptions", todayPrescriptions);
+
+        // Patient and doctor analytics
+        stats.put("totalPatients", totalPatients);
+        stats.put("totalDoctors", totalDoctors);
+
+        // Existing AI/system dashboard values
+        stats.put("aiStockRiskCount", lowStockCount + 1);
+        stats.put("anomaliesCount", 3);
+
+        // Recent purchases and sales
+        stats.put(
+                "recentPurchases",
+                purchaseRepository.findTop10ByOrderByCreatedAtDesc()
+        );
+
+        stats.put(
+                "recentSales",
+                saleRepository.findTop10ByOrderByCreatedAtDesc()
+        );
+
+        // Monthly sales analytics
+        int year = today.getYear();
+
+        List<Object[]> monthlySales =
+                saleRepository.monthlySalesRevenue(year);
+
         if (monthlySales.isEmpty()) {
-            monthlySales = saleRepository.allMonthlySalesRevenue();
+            monthlySales =
+                    saleRepository.allMonthlySalesRevenue();
         }
-        stats.put("monthlySalesTrend", monthlySales.stream()
-                .map(row -> Map.of("month", row[0], "revenue", row[1]))
-                .collect(Collectors.toList()));
+
+        stats.put(
+                "monthlySalesTrend",
+                monthlySales.stream()
+                        .map(row -> Map.of(
+                                "month", row[0],
+                                "revenue", row[1]
+                        ))
+                        .collect(Collectors.toList())
+        );
 
         return stats;
     }
