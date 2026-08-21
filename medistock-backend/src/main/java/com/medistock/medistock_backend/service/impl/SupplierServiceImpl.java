@@ -5,6 +5,8 @@ import com.medistock.medistock_backend.entity.Supplier;
 import com.medistock.medistock_backend.exception.BadRequestException;
 import com.medistock.medistock_backend.exception.ResourceNotFoundException;
 import com.medistock.medistock_backend.repository.SupplierRepository;
+import com.medistock.medistock_backend.repository.MedicineRepository;
+import com.medistock.medistock_backend.repository.SupplierMedicineRepository;
 import com.medistock.medistock_backend.service.SupplierService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
 public class SupplierServiceImpl implements SupplierService {
 
     private final SupplierRepository supplierRepository;
+    private final MedicineRepository medicineRepository;
+    private final SupplierMedicineRepository supplierMedicineRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -69,11 +73,14 @@ public class SupplierServiceImpl implements SupplierService {
     public void deleteSupplier(Long id) {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
-        if (supplier.getSupplierMedicines() != null && !supplier.getSupplierMedicines().isEmpty()) {
+        if (!medicineRepository.findBySupplierId(id).isEmpty()) {
             throw new BadRequestException("Cannot delete supplier because they have associated medicines.");
         }
         if (supplier.getPurchaseOrders() != null && !supplier.getPurchaseOrders().isEmpty()) {
             throw new BadRequestException("Cannot delete supplier because they have associated purchase orders.");
+        }
+        if (supplier.getSupplierMedicines() != null && !supplier.getSupplierMedicines().isEmpty()) {
+            supplierMedicineRepository.deleteAll(supplier.getSupplierMedicines());
         }
         supplierRepository.delete(supplier);
     }

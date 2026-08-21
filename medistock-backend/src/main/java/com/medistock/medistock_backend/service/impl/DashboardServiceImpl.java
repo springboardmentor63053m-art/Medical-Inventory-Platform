@@ -38,17 +38,17 @@ public class DashboardServiceImpl implements DashboardService {
     @Transactional(readOnly = true)
     public DashboardSummaryDto getDashboardSummary() {
         long totalUsers = userRepository.countNormalUsers();
-        long totalMedicines = supplierMedicineRepository.count();
+        long totalMedicines = medicineRepository.count();
         long totalSuppliers = supplierRepository.count();
         long totalOrders = purchaseOrderRepository.count();
 
         LocalDate today = LocalDate.now();
         LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
 
-        long availableCount = supplierMedicineRepository.countAvailableSupplierMedicines();
-        long lowStockMedicinesCount = supplierMedicineRepository.countLowStockSupplierMedicines();
-        long outOfStockCount = supplierMedicineRepository.countOutOfStockSupplierMedicines();
-        long nearExpiryCount = supplierMedicineRepository.countNearExpirySupplierMedicines(today, nearExpiryDate);
+        long availableCount = medicineRepository.countAvailableMedicines();
+        long lowStockMedicinesCount = medicineRepository.countLowStockMedicines();
+        long outOfStockCount = medicineRepository.countOutOfStockMedicines();
+        long nearExpiryCount = medicineRepository.countNearExpiryMedicines(today, nearExpiryDate);
         long expiredCount = medicineRepository.countExpiredMedicines(today);
 
         List<InventoryResponse> lowStockItems = inventoryService.getLowStockInventory();
