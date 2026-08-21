@@ -10,6 +10,8 @@ import com.medistock.medistock_backend.entity.Category;
 import com.medistock.medistock_backend.entity.Inventory;
 import com.medistock.medistock_backend.entity.Medicine;
 import com.medistock.medistock_backend.entity.Supplier;
+import com.medistock.medistock_backend.entity.Batch;
+import com.medistock.medistock_backend.entity.StockMovement;
 import com.medistock.medistock_backend.entity.StockStatus;
 import com.medistock.medistock_backend.exception.BadRequestException;
 import com.medistock.medistock_backend.exception.ResourceNotFoundException;
@@ -23,6 +25,8 @@ import com.medistock.medistock_backend.repository.SupplierMedicineRepository;
 import com.medistock.medistock_backend.repository.UserRepository;
 import com.medistock.medistock_backend.service.StockMovementService;
 import com.medistock.medistock_backend.entity.MovementType;
+import com.medistock.medistock_backend.repository.BatchRepository;
+import com.medistock.medistock_backend.repository.StockMovementRepository;
 import com.medistock.medistock_backend.repository.SupplierRepository;
 import com.medistock.medistock_backend.service.MedicineService;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +54,8 @@ public class MedicineServiceImpl implements MedicineService {
     private final StockMovementService stockMovementService;
     private final UserRepository userRepository;
     private final SupplierMedicineRepository supplierMedicineRepository;
+    private final BatchRepository batchRepository;
+    private final StockMovementRepository stockMovementRepository;
 
     @Value("${inventory.near-expiry-days:30}")
     private int nearExpiryDays;
@@ -71,7 +77,7 @@ public class MedicineServiceImpl implements MedicineService {
                     sortByProperty = "name";
                     break;
                 case QUANTITY:
-                    sortByProperty = "availableQuantity";
+                    sortByProperty = (currentSupplierId != null) ? "availableQuantity" : "inventory.quantity";
                     break;
                 case EXPIRY_DATE:
                     sortByProperty = "expiryDate";
@@ -96,17 +102,29 @@ public class MedicineServiceImpl implements MedicineService {
         LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
         String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
 
-        Page<SupplierMedicine> page = supplierMedicineRepository.filterSupplierMedicines(
-            supplierId,
-            filter.getSearch(),
-            filter.getCategoryId(),
-            statusStr,
-            today,
-            nearExpiryDate,
-            pageable
-        );
-
-        return page.map(this::mapSupplierMedicineToResponse);
+        if (currentSupplierId != null) {
+            Page<SupplierMedicine> page = supplierMedicineRepository.filterSupplierMedicines(
+                currentSupplierId,
+                filter.getSearch(),
+                filter.getCategoryId(),
+                statusStr,
+                today,
+                nearExpiryDate,
+                pageable
+            );
+            return page.map(this::mapSupplierMedicineToResponse);
+        } else {
+            Page<Medicine> page = medicineRepository.filterMedicines(
+                filter.getSearch(),
+                filter.getCategoryId(),
+                supplierId,
+                statusStr,
+                today,
+                nearExpiryDate,
+                pageable
+            );
+            return page.map(this::mapToResponse);
+        }
     }
 
     @Override
@@ -118,18 +136,31 @@ public class MedicineServiceImpl implements MedicineService {
         LocalDate nearExpiryDate = today.plusDays(nearExpiryDays);
         String statusStr = filter.getStockStatus() != null ? filter.getStockStatus().name() : "ALL";
 
-        List<SupplierMedicine> list = supplierMedicineRepository.filterSupplierMedicinesList(
-            supplierId,
-            filter.getSearch(),
-            filter.getCategoryId(),
-            statusStr,
-            today,
-            nearExpiryDate
-        );
-
-        return list.stream()
-                .map(this::mapSupplierMedicineToResponse)
-                .collect(Collectors.toList());
+        if (currentSupplierId != null) {
+            List<SupplierMedicine> list = supplierMedicineRepository.filterSupplierMedicinesList(
+                currentSupplierId,
+                filter.getSearch(),
+                filter.getCategoryId(),
+                statusStr,
+                today,
+                nearExpiryDate
+            );
+            return list.stream()
+                    .map(this::mapSupplierMedicineToResponse)
+                    .collect(Collectors.toList());
+        } else {
+            List<Medicine> list = medicineRepository.filterMedicinesList(
+                filter.getSearch(),
+                filter.getCategoryId(),
+                supplierId,
+                statusStr,
+                today,
+                nearExpiryDate
+            );
+            return list.stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+        }
     }
 
     @Override
@@ -279,6 +310,16 @@ public class MedicineServiceImpl implements MedicineService {
         if (!medicineRepository.existsById(id)) {
             throw new ResourceNotFoundException("Medicine not found with id: " + id);
         }
+
+        // Clean up FK-dependent records: stock_movements → batches → medicine
+        // (inventory is auto-cascaded via CascadeType.ALL on Medicine entity)
+        List<Batch> batches = batchRepository.findByMedicineId(id);
+        for (Batch batch : batches) {
+            List<StockMovement> movements = stockMovementRepository.findByBatchMedicineIdOrderByDateDesc(id);
+            stockMovementRepository.deleteAll(movements);
+        }
+        batchRepository.deleteAll(batches);
+
         medicineRepository.deleteById(id);
     }
 
@@ -412,6 +453,7 @@ public class MedicineServiceImpl implements MedicineService {
 
         Integer supplierQty = sm.getAvailableQuantity() != null ? sm.getAvailableQuantity() : 0;
 
+        Long medicineId = sm.getId(); // default to supplier_medicine ID
         Integer adminStock = 0;
         Integer reorderLevel = 10;
         if (sm.getCode() != null) {
@@ -428,6 +470,7 @@ public class MedicineServiceImpl implements MedicineService {
             }
             if (medOpt.isPresent()) {
                 Medicine med = medOpt.get();
+                medicineId = med.getId();
                 if (med.getInventory() != null) {
                     adminStock = med.getInventory().getQuantity() != null ? med.getInventory().getQuantity() : 0;
                     reorderLevel = med.getInventory().getReorderLevel() != null ? med.getInventory().getReorderLevel() : 10;

@@ -22,7 +22,7 @@ public class StockMovement {
     private Batch batch;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "ENUM('IN','OUT')")
+    @Column(nullable = false)
     private MovementType type;
 
     @Column(nullable = false)
