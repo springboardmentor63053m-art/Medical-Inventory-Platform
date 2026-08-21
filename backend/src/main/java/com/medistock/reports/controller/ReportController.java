@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.medistock.reports.dto.response.ExpirySummaryResponse;
+import com.medistock.reports.dto.response.InventoryValuationSummaryResponse;
+import com.medistock.reports.dto.response.SupplierPerformanceSummaryResponse;
 
 import java.time.LocalDate;
 
@@ -25,6 +28,63 @@ public class ReportController {
             );
 
     private final ReportService reportService;
+
+        @GetMapping("/valuation-summary")
+    @PreAuthorize(
+            "hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')"
+    )
+    public ResponseEntity<InventoryValuationSummaryResponse>
+            getInventoryValuationSummary() {
+        return ResponseEntity.ok(
+                reportService
+                        .getInventoryValuationSummary()
+        );
+    }
+
+    @GetMapping("/expiry-summary")
+    @PreAuthorize(
+            "hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')"
+    )
+    public ResponseEntity<ExpirySummaryResponse>
+            getExpirySummary(
+                    @RequestParam(defaultValue = "30")
+                    int days
+            ) {
+        int safeDays = Math.max(
+                1,
+                Math.min(days, 365)
+        );
+
+        return ResponseEntity.ok(
+                reportService.getExpirySummary(safeDays)
+        );
+    }
+
+    @GetMapping("/supplier-performance")
+    @PreAuthorize(
+            "hasAnyRole(" +
+            "'ADMIN', 'PHARMACIST', 'STAFF', 'SUPPLIER'" +
+            ")"
+    )
+    public ResponseEntity<
+            SupplierPerformanceSummaryResponse>
+            getSupplierPerformance(
+                    @RequestParam(defaultValue = "30")
+                    int days
+            ) {
+        int safeDays = Math.max(
+                1,
+                Math.min(days, 365)
+        );
+
+        return ResponseEntity.ok(
+                reportService
+                        .getSupplierPerformanceSummary(
+                                safeDays
+                        )
+        );
+    }
+
 
     @GetMapping(
             value = "/inventory.csv",

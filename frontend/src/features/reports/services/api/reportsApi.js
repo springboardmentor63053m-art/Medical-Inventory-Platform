@@ -1,6 +1,9 @@
 import apiClient from '../../../../services/api/apiClient';
 
-const triggerDownload = (response, fallbackFilename) => {
+const triggerDownload = (
+  response,
+  fallbackFilename
+) => {
   const contentDisposition =
     response.headers['content-disposition'];
 
@@ -15,7 +18,9 @@ const triggerDownload = (response, fallbackFilename) => {
     type: 'text/csv;charset=utf-8',
   });
 
-  const downloadUrl = window.URL.createObjectURL(blob);
+  const downloadUrl =
+    window.URL.createObjectURL(blob);
+
   const link = document.createElement('a');
 
   link.href = downloadUrl;
@@ -29,6 +34,46 @@ const triggerDownload = (response, fallbackFilename) => {
 };
 
 export const reportsApi = {
+  getInventoryValuationSummary: async () => {
+    const response = await apiClient.get(
+      '/reports/valuation-summary'
+    );
+
+    return response.data;
+  },
+
+  getExpirySummary: async (days = 30) => {
+    const safeDays = Math.min(
+      365,
+      Math.max(1, Number(days) || 30)
+    );
+
+    const response = await apiClient.get(
+      '/reports/expiry-summary',
+      {
+        params: { days: safeDays },
+      }
+    );
+
+    return response.data;
+  },
+
+  getSupplierPerformance: async (days = 30) => {
+    const safeDays = Math.min(
+      365,
+      Math.max(1, Number(days) || 30)
+    );
+
+    const response = await apiClient.get(
+      '/reports/supplier-performance',
+      {
+        params: { days: safeDays },
+      }
+    );
+
+    return response.data;
+  },
+
   downloadInventoryReport: async () => {
     const response = await apiClient.get(
       '/reports/inventory.csv',
@@ -37,7 +82,8 @@ export const reportsApi = {
       }
     );
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today =
+      new Date().toISOString().slice(0, 10);
 
     triggerDownload(
       response,
@@ -59,7 +105,8 @@ export const reportsApi = {
       }
     );
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today =
+      new Date().toISOString().slice(0, 10);
 
     triggerDownload(
       response,
