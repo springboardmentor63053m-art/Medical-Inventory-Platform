@@ -20,6 +20,9 @@ import SupplierDashboard from './pages/supplier/SupplierDashboard';
 import SupplierProfile from './pages/supplier/SupplierProfile';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
+import Messages from './pages/Messages';
+import Expiry from './pages/Expiry';
+import Reports from './pages/Reports';
 
 function App() {
   return (
@@ -35,6 +38,9 @@ function App() {
             <Route element={<Layout />}>
               {/* Dashboard accessible by all roles */}
               <Route path="/" element={<Dashboard />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/expiry" element={<Expiry />} />
+              <Route path="/reports" element={<Reports />} />
 
               {/* Supplier Dashboard accessible by Supplier */}
               <Route element={<ProtectedRoute allowedRoles={['ROLE_SUPPLIER']} />}>

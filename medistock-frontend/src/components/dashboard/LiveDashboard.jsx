@@ -202,28 +202,28 @@ export const LiveDashboard = ({ roleTitle = 'Administrator' }) => {
           const Icon = card.icon;
           return (
             <div key={idx} style={{
-              backgroundColor: 'var(--color-bg-secondary)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--border-radius-lg)',
               padding: '20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              boxShadow: 'var(--shadow-sm)',
-              transition: 'var(--transition-fast)'
+              boxShadow: 'var(--card-shadow)',
+              transition: 'all 0.2s ease'
             }}>
               <div>
-                <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
                   {card.title}
                 </span>
-                <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '6px', color: 'var(--color-text-primary)' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '6px', color: 'var(--text-main)' }}>
                   {card.value}
                 </div>
               </div>
               <div style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: 'var(--radius-md)',
+                width: '48px',
+                height: '48px',
+                borderRadius: 'var(--border-radius-md)',
                 backgroundColor: card.bg,
                 color: card.color,
                 display: 'flex',
@@ -231,7 +231,7 @@ export const LiveDashboard = ({ roleTitle = 'Administrator' }) => {
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                <Icon size={26} />
+                <Icon size={24} />
               </div>
             </div>
           );
@@ -245,33 +245,20 @@ export const LiveDashboard = ({ roleTitle = 'Administrator' }) => {
         gap: '24px'
       }}>
         {/* Low Stock Items Card */}
-        <div style={{
-          backgroundColor: 'var(--color-bg-secondary)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '24px',
-          boxShadow: 'var(--shadow-sm)'
-        }}>
+        <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingDown size={20} style={{ color: 'var(--color-warning)' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <TrendingDown size={20} style={{ color: 'var(--warning)' }} />
               Low Stock Inventory
             </h3>
-            <span style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              backgroundColor: 'var(--color-warning-light)',
-              color: 'var(--color-warning)',
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-sm)'
-            }}>
+            <span className="badge badge-warning">
               {lowStockItems.length} Items
             </span>
           </div>
 
           {lowStockItems.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-              <PackageCheck size={36} style={{ margin: '0 auto 8px', color: 'var(--color-accent)' }} />
+            <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              <PackageCheck size={36} style={{ margin: '0 auto 8px', color: 'var(--primary)' }} />
               All inventory levels are above reorder thresholds.
             </div>
           ) : (
@@ -279,24 +266,24 @@ export const LiveDashboard = ({ roleTitle = 'Administrator' }) => {
               {lowStockItems.map((item, i) => (
                 <div key={i} style={{
                   padding: '12px 16px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.4)',
-                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  borderRadius: 'var(--border-radius-md)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  borderLeft: '4px solid var(--color-warning)'
+                  borderLeft: '4px solid var(--warning)'
                 }}>
                   <div>
-                    <strong style={{ fontSize: '0.95rem' }}>{item.medicineName || `Medicine #${item.medicineId}`}</strong>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                    <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{item.medicineName || `Medicine #${item.medicineId}`}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       Rack: {item.locationRack || 'N/A'}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: 'var(--color-warning)', fontWeight: 700, fontSize: '0.95rem' }}>
+                    <div style={{ color: 'var(--warning)', fontWeight: 700, fontSize: '0.95rem' }}>
                       {item.quantity} units remaining
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       Reorder level: {item.reorderLevel}
                     </div>
                   </div>
@@ -307,33 +294,20 @@ export const LiveDashboard = ({ roleTitle = 'Administrator' }) => {
         </div>
 
         {/* Expiring Medicines Card */}
-        <div style={{
-          backgroundColor: 'var(--color-bg-secondary)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '24px',
-          boxShadow: 'var(--shadow-sm)'
-        }}>
+        <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Calendar size={20} style={{ color: 'var(--color-danger)' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Calendar size={20} style={{ color: 'var(--danger)' }} />
               Expiring Medicines Tracking
             </h3>
-            <span style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              backgroundColor: 'var(--color-danger-light)',
-              color: 'var(--color-danger)',
-              padding: '4px 10px',
-              borderRadius: 'var(--radius-sm)'
-            }}>
+            <span className="badge badge-danger">
               {expiringMedicines.length} Expiring
             </span>
           </div>
 
           {expiringMedicines.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-              <ShieldCheck size={36} style={{ margin: '0 auto 8px', color: 'var(--color-accent)' }} />
+            <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              <ShieldCheck size={36} style={{ margin: '0 auto 8px', color: 'var(--success)' }} />
               No medicines expiring within 180 days.
             </div>
           ) : (
@@ -341,24 +315,24 @@ export const LiveDashboard = ({ roleTitle = 'Administrator' }) => {
               {expiringMedicines.map((med, i) => (
                 <div key={i} style={{
                   padding: '12px 16px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.4)',
-                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  borderRadius: 'var(--border-radius-md)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  borderLeft: '4px solid var(--color-danger)'
+                  borderLeft: '4px solid var(--danger)'
                 }}>
                   <div>
-                    <strong style={{ fontSize: '0.95rem' }}>{med.name}</strong>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                    <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>{med.name}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       Batch: {med.batchNumber || 'N/A'} | Code: {med.code}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: 'var(--color-danger)', fontWeight: 700, fontSize: '0.9rem' }}>
+                    <div style={{ color: 'var(--danger)', fontWeight: 700, fontSize: '0.9rem' }}>
                       Exp: {med.expiryDate}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       Stock: {med.currentStock ?? 'N/A'}
                     </div>
                   </div>

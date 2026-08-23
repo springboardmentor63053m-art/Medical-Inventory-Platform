@@ -3,39 +3,52 @@
    VANILLA CSS CORE SYSTEM (PREMIUM DARK)
    ========================================== */
 
-:root {
-  /* Color Palette - Cyberpunk Medical (Sleek Dark Theme) */
-  --bg-main: #0a0d16;
-  --bg-sidebar: #0f1322;
-  --bg-card: rgba(22, 28, 45, 0.7);
-  --bg-card-hover: rgba(28, 36, 58, 0.8);
+:root, [data-theme="dark"] {
+  /* Color Palette - Cyberpunk / Modern Medical Dark SaaS */
+  --bg-main: #0b0f19;
+  --bg-sidebar: #0f1523;
+  --bg-header: rgba(15, 21, 35, 0.85);
+  --bg-card: #131b2e;
+  --bg-card-hover: #182239;
+  --bg-subtle: rgba(255, 255, 255, 0.04);
   --border-color: rgba(255, 255, 255, 0.08);
   --border-focus: #3b82f6;
 
-  --text-main: #f3f4f6;
+  --text-main: #f9fafb;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
 
   --primary: #3b82f6;
-  --primary-glow: rgba(59, 130, 246, 0.2);
+  --primary-glow: rgba(59, 130, 246, 0.25);
   --primary-hover: #2563eb;
+  --primary-subtle: rgba(59, 130, 246, 0.12);
 
   --success: #10b981;
-  --success-glow: rgba(16, 185, 129, 0.15);
+  --success-glow: rgba(16, 185, 129, 0.2);
   --success-hover: #059669;
+  --success-subtle: rgba(16, 185, 129, 0.12);
 
   --warning: #f59e0b;
-  --warning-glow: rgba(245, 158, 11, 0.15);
+  --warning-glow: rgba(245, 158, 11, 0.2);
+  --warning-subtle: rgba(245, 158, 11, 0.12);
 
   --danger: #ef4444;
-  --danger-glow: rgba(239, 68, 68, 0.15);
+  --danger-glow: rgba(239, 68, 68, 0.2);
   --danger-hover: #dc2626;
+  --danger-subtle: rgba(239, 68, 68, 0.12);
+
+  --info: #6366f1;
+  --info-subtle: rgba(99, 102, 241, 0.12);
+
+  --table-th-bg: #0f172a;
+  --table-td-bg: transparent;
+  --table-tr-hover: rgba(255, 255, 255, 0.025);
 
   /* Typography */
-  --font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  --font-family: 'Inter', 'Outfit', system-ui, -apple-system, sans-serif;
 
-  /* Shadows & Glassmorphism */
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  /* Shadows & Radius */
+  --card-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.35);
   --glow-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
   --border-radius-lg: 16px;
   --border-radius-md: 10px;
@@ -44,6 +57,49 @@
   /* Layout Dimensions */
   --sidebar-width: 260px;
   --header-height: 70px;
+}
+
+[data-theme="light"] {
+  --bg-main: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.88);
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-subtle: #f1f5f9;
+  --border-color: #e2e8f0;
+  --border-focus: #2563eb;
+
+  --text-main: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+
+  --primary: #2563eb;
+  --primary-glow: rgba(37, 99, 235, 0.15);
+  --primary-hover: #1d4ed8;
+  --primary-subtle: #eff6ff;
+
+  --success: #059669;
+  --success-glow: rgba(5, 150, 105, 0.15);
+  --success-hover: #047857;
+  --success-subtle: #ecfdf5;
+
+  --warning: #d97706;
+  --warning-glow: rgba(217, 119, 6, 0.15);
+  --warning-subtle: #fef3c7;
+
+  --danger: #dc2626;
+  --danger-glow: rgba(220, 38, 38, 0.15);
+  --danger-hover: #b91c1c;
+  --danger-subtle: #fef2f2;
+
+  --info: #4f46e5;
+  --info-subtle: #e0e7ff;
+
+  --table-th-bg: #f8fafc;
+  --table-td-bg: #ffffff;
+  --table-tr-hover: #f1f5f9;
+
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
 }
 
 /* ==========================================
@@ -238,8 +294,8 @@ body {
 /* Header Navbar */
 .top-header {
   height: var(--header-height);
-  background-color: rgba(15, 19, 34, 0.4);
-  backdrop-filter: blur(10px);
+  background-color: var(--bg-header);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
   padding: 0 28px;
   display: flex;
@@ -362,7 +418,7 @@ body {
 .stat-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-main);
   font-family: 'Outfit', sans-serif;
 }
 
@@ -482,10 +538,10 @@ select,
 textarea {
   width: 100%;
   padding: 10px 14px;
-  background-color: rgba(15, 19, 34, 0.6);
+  background-color: var(--bg-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-md);
-  color: white;
+  color: var(--text-main);
   font-size: 0.925rem;
   outline: none;
   transition: all 0.2s ease;
@@ -495,12 +551,12 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 select option {
   background-color: var(--bg-sidebar);
-  color: white;
+  color: var(--text-main);
 }
 
 /* Checkbox and radio custom containers */
@@ -541,7 +597,7 @@ table {
 }
 
 th {
-  background-color: rgba(15, 19, 34, 0.8);
+  background-color: var(--table-th-bg);
   padding: 16px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -552,7 +608,7 @@ td {
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-main);
-  background-color: rgba(22, 28, 45, 0.2);
+  background-color: var(--table-td-bg);
 }
 
 tr:last-child td {
@@ -560,7 +616,7 @@ tr:last-child td {
 }
 
 tr:hover td {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--table-tr-hover);
 }
 
 /* Status badges */

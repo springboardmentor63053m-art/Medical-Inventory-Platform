@@ -167,11 +167,14 @@ const Users = () => {
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (u.fullName && u.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredUsers = users
+    .slice()
+    .sort((a, b) => a.id - b.id)
+    .filter(u => 
+      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.fullName && u.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
   if (loading) {
     return <div style={{ color: 'var(--text-secondary)' }}>Loading user directory...</div>;
@@ -222,7 +225,7 @@ const Users = () => {
                 {filteredUsers.map((item) => (
                   <tr key={item.id}>
                     <td>#{item.id}</td>
-                    <td><strong style={{ color: 'white' }}>{item.username}</strong></td>
+                    <td><strong style={{ color: 'var(--text-main)' }}>{item.username}</strong></td>
                     <td style={{ color: 'var(--text-main)' }}>{item.fullName || 'N/A'}</td>
                     <td>{item.email}</td>
                     <td>
