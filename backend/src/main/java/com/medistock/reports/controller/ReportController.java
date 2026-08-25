@@ -30,7 +30,7 @@ public class ReportController {
     private final ReportService reportService;
 
         @GetMapping("/valuation-summary")
-    @PreAuthorize(
+        @PreAuthorize(
             "hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')"
     )
     public ResponseEntity<InventoryValuationSummaryResponse>
@@ -62,9 +62,7 @@ public class ReportController {
 
     @GetMapping("/supplier-performance")
     @PreAuthorize(
-            "hasAnyRole(" +
-            "'ADMIN', 'PHARMACIST', 'STAFF', 'SUPPLIER'" +
-            ")"
+        "hasAnyRole('ADMIN', 'SUPPLIER')"
     )
     public ResponseEntity<
             SupplierPerformanceSummaryResponse>

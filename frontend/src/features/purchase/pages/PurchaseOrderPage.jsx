@@ -61,6 +61,12 @@ export default function PurchaseOrderPage() {
   const [lineItems, setLineItems] = useState([
     { medicineId: '', quantity: 100, unitPrice: 150.0 },
   ]);
+  const todayDate = new Date(
+  Date.now() -
+    new Date().getTimezoneOffset() * 60000
+  )
+  .toISOString()
+  .split('T')[0];
 
   const formatINR = (val) => {
     return new Intl.NumberFormat('en-IN', {
@@ -178,7 +184,12 @@ export default function PurchaseOrderPage() {
       toast.error('Please fill in required fields: Supplier, Expected Date, and Medicine line items.');
       return;
     }
-
+    if (expectedDate < todayDate) {
+      toast.error(
+        'Expected delivery date cannot be in the past.'
+      );
+      return;
+    }
     try {
       const payload = {
         supplierId: Number(selectedSupplierId),
@@ -966,8 +977,11 @@ export default function PurchaseOrderPage() {
                   <input
                     type="date"
                     required
+                    min={todayDate}
                     value={expectedDate}
-                    onChange={(e) => setExpectedDate(e.target.value)}
+                    onChange={(e) =>
+                      setExpectedDate(e.target.value)
+                    }
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>

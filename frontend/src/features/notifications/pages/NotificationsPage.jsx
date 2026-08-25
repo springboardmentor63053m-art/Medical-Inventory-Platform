@@ -2,6 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { notificationsApi } from '../services/api/notificationsApi';
 import {
+  READ_STORAGE_KEY,
+  DISMISSED_STORAGE_KEY,
+  NOTIFICATIONS_UPDATED_EVENT,
+  getStoredNotificationIds,
+  saveStoredNotificationIds,
+  prepareNotifications,
+  publishNotifications,
+} from '../utils/notificationSync';
+import {
   Bell,
   AlertTriangle,
   Clock,
@@ -13,28 +22,7 @@ import {
   Loader2,
 } from 'lucide-react';
 
-const READ_STORAGE_KEY = 'medistock-read-notification-ids';
-const DISMISSED_STORAGE_KEY =
-  'medistock-dismissed-notification-ids';
 
-const getStoredIds = (key) => {
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem(key) || '[]'
-    );
-
-    return Array.isArray(stored) ? stored : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveStoredIds = (key, ids) => {
-  localStorage.setItem(
-    key,
-    JSON.stringify([...new Set(ids)])
-  );
-};
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
@@ -52,26 +40,11 @@ export default function NotificationsPage() {
         const activeNotifications =
           Array.isArray(response) ? response : [];
 
-        const readIds = new Set(
-          getStoredIds(READ_STORAGE_KEY)
-        );
-
-        const dismissedIds = new Set(
-          getStoredIds(DISMISSED_STORAGE_KEY)
-        );
-
         const preparedNotifications =
-          activeNotifications
-            .filter(
-              (notification) =>
-                !dismissedIds.has(notification.id)
-            )
-            .map((notification) => ({
-              ...notification,
-              read: readIds.has(notification.id),
-            }));
+        prepareNotifications(activeNotifications);
 
         setNotifications(preparedNotifications);
+        publishNotifications(preparedNotifications);
       } catch (error) {
         console.error(
           'Failed to load notifications from API:',
@@ -86,6 +59,29 @@ export default function NotificationsPage() {
     fetchAlerts();
   }, []);
 
+  useEffect(() => {
+  const handleNotificationsUpdated = (event) => {
+    const updatedNotifications =
+      Array.isArray(event.detail)
+        ? event.detail
+        : [];
+
+    setNotifications(updatedNotifications);
+  };
+
+  window.addEventListener(
+    NOTIFICATIONS_UPDATED_EVENT,
+    handleNotificationsUpdated
+  );
+
+  return () => {
+    window.removeEventListener(
+      NOTIFICATIONS_UPDATED_EVENT,
+      handleNotificationsUpdated
+    );
+  };
+}, []);
+
   const handleMarkAsRead = (id) => {
     setNotifications((currentNotifications) => {
       const updatedNotifications =
@@ -95,13 +91,13 @@ export default function NotificationsPage() {
             : notification
         );
 
-      saveStoredIds(
+      saveStoredNotificationIds(
         READ_STORAGE_KEY,
         updatedNotifications
           .filter((notification) => notification.read)
           .map((notification) => notification.id)
       );
-
+        publishNotifications(updatedNotifications);
       return updatedNotifications;
     });
 
@@ -116,12 +112,13 @@ export default function NotificationsPage() {
           read: true,
         }));
 
-      saveStoredIds(
+      saveStoredNotificationIds(
         READ_STORAGE_KEY,
         updatedNotifications.map(
           (notification) => notification.id
         )
       );
+      publishNotifications(updatedNotifications);
 
       return updatedNotifications;
     });
@@ -130,20 +127,26 @@ export default function NotificationsPage() {
   };
 
   const handleDelete = (id) => {
-    const dismissedIds = getStoredIds(
+    const dismissedIds = getStoredNotificationIds(
       DISMISSED_STORAGE_KEY
     );
 
-    saveStoredIds(
+    saveStoredNotificationIds(
       DISMISSED_STORAGE_KEY,
       [...dismissedIds, id]
     );
 
-    setNotifications((currentNotifications) =>
-      currentNotifications.filter(
-        (notification) => notification.id !== id
-      )
-    );
+    setNotifications((currentNotifications) => {
+      const updatedNotifications =
+        currentNotifications.filter(
+          (notification) =>
+            notification.id !== id
+        );
+
+      publishNotifications(updatedNotifications);
+
+      return updatedNotifications;
+    });
 
     toast.info('Notification dismissed');
   };

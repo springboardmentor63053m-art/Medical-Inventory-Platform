@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { inventoryService } from '../../services/api/inventoryService';
-import { 
+import { notificationsApi } from '../../features/notifications/services/api/notificationsApi';
+
+import {
+  NOTIFICATIONS_UPDATED_EVENT,
+  prepareNotifications,
+  publishNotifications,
+} from '../../features/notifications/utils/notificationSync';import { 
   Bell, 
   User, 
   LogOut, 
@@ -16,7 +21,16 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function Header({ toggleSidebar, sidebarOpen }) {
-  const { user, logout, isAdmin, isPharmacist, isSupplier, isUser } = useAuth();
+  const {
+    user,
+    logout,
+    isAdmin,
+    isPharmacist,
+    isStaff,
+    isSupplier,
+    isUser,
+  } = useAuth();
+  const canViewNotifications = isAdmin || isPharmacist || isStaff;
   const { theme, toggleTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -24,53 +38,112 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAlerts = async () => {
-      // Do not fetch inventory alerts for normal USER role or unauthenticated users
-      if (!user || isUser) return;
-      try {
-        const [lowStockRes, expiringRes] = await Promise.allSettled([
-          inventoryService.getLowStockInventory(),
-          inventoryService.getExpiringInventory(30)
-        ]);
+  if (!user || !canViewNotifications) {
+    setAlerts([]);
+    return;
+  }
 
-        let items = [];
-        if (lowStockRes.status === 'fulfilled' && Array.isArray(lowStockRes.value)) {
-          items.push(...lowStockRes.value.map(i => ({
-            id: `ls-${i.id}`,
-            type: 'low-stock',
-            title: `Low Stock: ${i.medicine?.name || 'Medicine'}`,
-            message: `Current Qty: ${i.quantity} (Min: ${i.minimumStock})`,
-            time: 'Immediate action required',
-          })));
-        }
-        if (expiringRes.status === 'fulfilled' && Array.isArray(expiringRes.value)) {
-          items.push(...expiringRes.value.map(i => ({
-            id: `exp-${i.id}`,
-            type: 'expiring',
-            title: `Expiring Soon: ${i.medicine?.name || 'Medicine'}`,
-            message: `Batch ${i.batchNumber} expires on ${i.expiryDate}`,
-            time: 'Review inventory',
-          })));
-        }
-        setAlerts(items.slice(0, 5));
-      } catch (err) {
-        // Fallback silently if unauthenticated or network error
+  let active = true;
+
+  const fetchAlerts = async () => {
+    try {
+      const response =
+        await notificationsApi.getActiveNotifications();
+
+      if (!active) {
+        return;
       }
-    };
 
-    fetchAlerts();
-  }, [user, isUser]);
+      const preparedNotifications =
+        prepareNotifications(response);
+
+      setAlerts(preparedNotifications);
+      publishNotifications(
+        preparedNotifications
+      );
+    } catch (error) {
+      console.error(
+        'Failed to load header notifications:',
+        error
+      );
+    }
+  };
+
+  const handleNotificationsUpdated = (event) => {
+    if (!active) {
+      return;
+    }
+
+    setAlerts(
+      Array.isArray(event.detail)
+        ? event.detail
+        : []
+    );
+  };
+
+  fetchAlerts();
+
+  window.addEventListener(
+    NOTIFICATIONS_UPDATED_EVENT,
+    handleNotificationsUpdated
+  );
+
+  window.addEventListener(
+    'focus',
+    fetchAlerts
+  );
+
+  const refreshInterval = window.setInterval(
+    fetchAlerts,
+    30000
+  );
+
+  return () => {
+    active = false;
+
+    window.removeEventListener(
+      NOTIFICATIONS_UPDATED_EVENT,
+      handleNotificationsUpdated
+    );
+
+    window.removeEventListener(
+      'focus',
+      fetchAlerts
+    );
+
+    window.clearInterval(refreshInterval);
+  };
+}, [user, canViewNotifications]);
+
+    const unreadAlerts = alerts.filter(
+      (notification) => !notification.read
+    );
+
+    const unreadCount = unreadAlerts.length;
+
+    const visibleAlerts =
+      unreadAlerts.slice(0, 5);
 
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
   };
 
-  const roleLabel = isAdmin ? 'Admin' : isPharmacist ? 'Pharmacist' : isSupplier ? 'Supplier' : 'User';
-  const roleBadgeColor = isAdmin 
-    ? 'bg-purple-100 text-purple-700 border-purple-200' 
-    : isPharmacist 
+  const roleLabel = isAdmin
+    ? 'Admin'
+    : isPharmacist
+    ? 'Pharmacist'
+    : isStaff
+    ? 'Staff'
+    : isSupplier
+    ? 'Supplier'
+    : 'User';
+    const roleBadgeColor = isAdmin
+    ? 'bg-purple-100 text-purple-700 border-purple-200'
+    : isPharmacist
     ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    : isStaff
+    ? 'bg-blue-100 text-blue-700 border-blue-200'
     : isSupplier
     ? 'bg-amber-100 text-amber-700 border-amber-200'
     : 'bg-slate-100 text-slate-700 border-slate-200';
@@ -105,7 +178,8 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
         </button>
 
         {/* Notifications Dropdown */}
-        <div className="relative">
+        {canViewNotifications && (
+          <div className="relative">
           <button
             onClick={() => {
               setNotifOpen(!notifOpen);
@@ -115,7 +189,7 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
             title="Notifications"
           >
             <Bell className="w-5 h-5 text-slate-600" />
-            {alerts.length > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
             )}
           </button>
@@ -127,23 +201,27 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
                   <Bell className="w-4 h-4 text-blue-600" /> Notifications
                 </span>
                 <span className="text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                  {alerts.length} New
+                  {unreadCount} New
                 </span>
               </div>
               <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
-                {alerts.length === 0 ? (
+                {visibleAlerts.length === 0 ? (
                   <div className="p-6 text-center text-xs text-slate-500">
-                    No active stock alerts
+                    No unread notifications
                   </div>
                 ) : (
-                  alerts.map((item) => (
+                  visibleAlerts.map((item) => (
                     <div key={item.id} className="p-3 hover:bg-slate-50 transition text-xs">
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
                         <div>
                           <p className="font-semibold text-slate-800">{item.title}</p>
                           <p className="text-slate-600 mt-0.5">{item.message}</p>
-                          <span className="text-[10px] text-slate-400 mt-1 block">{item.time}</span>
+                            <span className="text-[10px] text-slate-400 mt-1 block">
+                              {item.type
+                                ?.replaceAll('_', ' ')
+                                .toLowerCase()}
+                            </span>
                         </div>
                       </div>
                     </div>
@@ -162,6 +240,7 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
             </div>
           )}
         </div>
+        )}
 
         {/* User Profile Dropdown */}
         <div className="relative">
