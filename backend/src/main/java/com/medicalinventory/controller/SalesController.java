@@ -47,4 +47,10 @@ public class SalesController {
         User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
         return ResponseEntity.ok(saleService.cancelSale(id, user));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        saleService.deleteSale(id);
+        return ResponseEntity.noContent().build();
+    }
 }

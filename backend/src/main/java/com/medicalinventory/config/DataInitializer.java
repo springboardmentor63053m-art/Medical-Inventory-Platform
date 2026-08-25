@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -29,6 +30,10 @@ public class DataInitializer implements CommandLineRunner {
     private final SaleRepository          saleRepository;
     private final StockMovementRepository stockMovementRepository;
     private final AlertRepository         alertRepository;
+    private final PatientRepository       patientRepository;
+    private final DoctorRepository        doctorRepository;
+    private final PrescriptionRepository  prescriptionRepository;
+    private final AuditLogRepository      auditLogRepository;
     private final PasswordEncoder         passwordEncoder;
 
     public DataInitializer(RoleRepository roleRepository, UserRepository userRepository,
@@ -36,7 +41,9 @@ public class DataInitializer implements CommandLineRunner {
                            SupplierRepository supplierRepository, MedicineRepository medicineRepository,
                            InventoryRepository inventoryRepository, PurchaseRepository purchaseRepository,
                            SaleRepository saleRepository, StockMovementRepository stockMovementRepository,
-                           AlertRepository alertRepository, PasswordEncoder passwordEncoder) {
+                           AlertRepository alertRepository, PatientRepository patientRepository,
+                           DoctorRepository doctorRepository, PrescriptionRepository prescriptionRepository,
+                           AuditLogRepository auditLogRepository, PasswordEncoder passwordEncoder) {
         this.roleRepository          = roleRepository;
         this.userRepository          = userRepository;
         this.employeeRepository      = employeeRepository;
@@ -48,6 +55,10 @@ public class DataInitializer implements CommandLineRunner {
         this.saleRepository          = saleRepository;
         this.stockMovementRepository = stockMovementRepository;
         this.alertRepository         = alertRepository;
+        this.patientRepository       = patientRepository;
+        this.doctorRepository        = doctorRepository;
+        this.prescriptionRepository  = prescriptionRepository;
+        this.auditLogRepository      = auditLogRepository;
         this.passwordEncoder         = passwordEncoder;
     }
 
@@ -76,27 +87,51 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void initUsers() {
-        if (userRepository.count() > 0) return;
-        log.info("Seeding users...");
         Role adminRole = roleRepository.findByName("ADMIN").orElseThrow();
         Role pharmRole = roleRepository.findByName("PHARMACIST").orElseThrow();
         Role invRole   = roleRepository.findByName("INVENTORY_MANAGER").orElseThrow();
         Role staffRole = roleRepository.findByName("STAFF").orElseThrow();
+        Role suppRole  = roleRepository.findByName("SUPPLIER").orElse(null);
+        if (suppRole == null) {
+            suppRole = roleRepository.save(Role.builder().name("SUPPLIER").description("Supplier profile & catalog management").build());
+        }
 
-        userRepository.saveAll(List.of(
+        // Helper to ensure user exists and password is set
+        List<User> demoUsers = List.of(
                 User.builder().username("admin").email("admin@medicalinv.com")
                         .password(passwordEncoder.encode("Admin@123")).role(adminRole).isActive(true).build(),
                 User.builder().username("pavan").email("pavan@gmail.com")
                         .password(passwordEncoder.encode("Admin@123")).role(adminRole).isActive(true).build(),
                 User.builder().username("dr_patel").email("patel@medicalinv.com")
-                        .password(passwordEncoder.encode("Pharma@123")).role(pharmRole).isActive(true).build(),
+                        .password(passwordEncoder.encode("Admin@123")).role(staffRole).isActive(true).build(),
+                User.builder().username("ravi_inventory").email("ravi_inventory@medicalinv.com")
+                        .password(passwordEncoder.encode("Admin@123")).role(invRole).isActive(true).build(),
                 User.builder().username("ravi_inv").email("ravi@medicalinv.com")
-                        .password(passwordEncoder.encode("Inv@12345")).role(invRole).isActive(true).build(),
+                        .password(passwordEncoder.encode("Admin@123")).role(invRole).isActive(true).build(),
                 User.builder().username("priya_staff").email("priya@medicalinv.com")
-                        .password(passwordEncoder.encode("Staff@123")).role(staffRole).isActive(true).build(),
+                        .password(passwordEncoder.encode("Admin@123")).role(staffRole).isActive(true).build(),
+                User.builder().username("sneha_pharmacist").email("sneha_pharmacist@medicalinv.com")
+                        .password(passwordEncoder.encode("Admin@123")).role(pharmRole).isActive(true).build(),
                 User.builder().username("sneha_ph").email("sneha@medicalinv.com")
-                        .password(passwordEncoder.encode("Pharma@123")).role(pharmRole).isActive(true).build()
-        ));
+                        .password(passwordEncoder.encode("Admin@123")).role(pharmRole).isActive(true).build(),
+                User.builder().username("supplier_cipla").email("contact@cipla.com")
+                        .password(passwordEncoder.encode("Admin@123")).role(suppRole).isActive(true).build(),
+                User.builder().username("supplier_main").email("supplier@medicalinv.com")
+                        .password(passwordEncoder.encode("Admin@123")).role(suppRole).isActive(true).build()
+        );
+
+        for (User u : demoUsers) {
+            if (userRepository.findByEmail(u.getEmail()).isEmpty() && userRepository.findByUsername(u.getUsername()).isEmpty()) {
+                userRepository.save(u);
+            } else {
+                userRepository.findByEmail(u.getEmail()).ifPresent(existing -> {
+                    existing.setPassword(passwordEncoder.encode("Admin@123"));
+                    existing.setIsActive(true);
+                    userRepository.save(existing);
+                });
+            }
+        }
+        log.info("Initialized and verified all 5 demo role users.");
     }
 
     private void initEmployees() {
@@ -529,6 +564,185 @@ public class DataInitializer implements CommandLineRunner {
             ));
         }
 
-        log.info("Complete sample_data.sql seeded! (10 medicines, 10 inventory, 10 suppliers, 8 purchases, 10 sales, 10 movements, 6 alerts)");
+        // ── 4 Doctors ───────────────────────────────────────────────────
+        if (doctorRepository.count() == 0) {
+            log.info("Seeding 4 doctors...");
+            doctorRepository.saveAll(List.of(
+                    Doctor.builder().doctorId("DOC-0001").name("Dr. S. K. Gupta").specialty("Cardiologist")
+                            .registrationNumber("MCI-DL-2012-4521").hospital("Apex Heart Institute, Delhi")
+                            .contactPhone("9811002233").email("dr.gupta@apexheart.org").isActive(true).build(),
+                    Doctor.builder().doctorId("DOC-0002").name("Dr. Ananya Sen").specialty("General Physician")
+                            .registrationNumber("MCI-WB-2015-8834").hospital("City Care Multispecialty, Kolkata")
+                            .contactPhone("9830011224").email("ananya.sen@citycare.in").isActive(true).build(),
+                    Doctor.builder().doctorId("DOC-0003").name("Dr. Vikram Malhotra").specialty("Pediatrician")
+                            .registrationNumber("MCI-MH-2018-9012").hospital("Lilavati Children's Hospital, Mumbai")
+                            .contactPhone("9820033445").email("v.malhotra@lilavati.org").isActive(true).build(),
+                    Doctor.builder().doctorId("DOC-0004").name("Dr. Meenakshi Sundaram").specialty("Orthopedic Specialist")
+                            .registrationNumber("MCI-TN-2010-3321").hospital("Apollo Specialty Hospital, Chennai")
+                            .contactPhone("9840055667").email("m.sundaram@apollo.com").isActive(true).build()
+            ));
+        }
+
+        // ── 5 Patients ──────────────────────────────────────────────────
+        if (patientRepository.count() == 0) {
+            log.info("Seeding 5 patients...");
+            Doctor doc1 = doctorRepository.findByDoctorId("DOC-0001").orElse(null);
+            Doctor doc2 = doctorRepository.findByDoctorId("DOC-0002").orElse(null);
+            Doctor doc3 = doctorRepository.findByDoctorId("DOC-0003").orElse(null);
+            Doctor doc4 = doctorRepository.findByDoctorId("DOC-0004").orElse(null);
+
+            patientRepository.saveAll(List.of(
+                    Patient.builder().patientId("PAT-2026-0001").firstName("Rahul").lastName("Sharma").age(38).gender("Male")
+                            .phone("9876500001").email("rahul.sharma@example.com").address("42 Green Park, New Delhi")
+                            .bloodGroup("O+").allergies("Penicillin allergy").medicalHistory("Seasonal bronchitis, mild asthma")
+                            .status(Patient.PatientStatus.ATTENTION_REQUIRED).primaryDoctor(doc2).build(),
+                    Patient.builder().patientId("PAT-2026-0002").firstName("Priya").lastName("Patel").age(29).gender("Female")
+                            .phone("9876500002").email("priya.patel@example.com").address("12 Lake View Apts, Ahmedabad")
+                            .bloodGroup("B+").allergies("None reported").medicalHistory("Hypertension Stage 1, quarterly checkup")
+                            .status(Patient.PatientStatus.ACTIVE).primaryDoctor(doc1).build(),
+                    Patient.builder().patientId("PAT-2026-0003").firstName("Amit").lastName("Verma").age(54).gender("Male")
+                            .phone("9876500003").email("amit.verma@example.com").address("78 Civil Lines, Jaipur")
+                            .bloodGroup("A+").allergies("Sulfa drugs").medicalHistory("Type 2 Diabetes (HbA1c: 7.2), hyperlipidemia")
+                            .status(Patient.PatientStatus.FOLLOW_UP).primaryDoctor(doc2).build(),
+                    Patient.builder().patientId("PAT-2026-0004").firstName("Sunita").lastName("Rao").age(45).gender("Female")
+                            .phone("9876500004").email("sunita.rao@example.com").address("204 Palm Grove, Bengaluru")
+                            .bloodGroup("AB+").allergies("None").medicalHistory("Knee arthroscopy post-op recovery")
+                            .status(Patient.PatientStatus.ACTIVE).primaryDoctor(doc4).build(),
+                    Patient.builder().patientId("PAT-2026-0005").firstName("Rajesh").lastName("Nair").age(62).gender("Male")
+                            .phone("9876500005").email("rajesh.nair@example.com").address("15 Marine Drive, Kochi")
+                            .bloodGroup("O-").allergies("Aspirin").medicalHistory("Chronic osteoarthritis, GERD")
+                            .status(Patient.PatientStatus.FOLLOW_UP).primaryDoctor(doc3).build()
+            ));
+        }
+
+        // ── 5 Prescriptions (with PrescriptionItems) ────────────────────
+        if (prescriptionRepository.count() == 0) {
+            log.info("Seeding 5 prescriptions...");
+            Patient pat1 = patientRepository.findByPatientId("PAT-2026-0001").orElse(null);
+            Patient pat2 = patientRepository.findByPatientId("PAT-2026-0002").orElse(null);
+            Patient pat3 = patientRepository.findByPatientId("PAT-2026-0003").orElse(null);
+            Patient pat4 = patientRepository.findByPatientId("PAT-2026-0004").orElse(null);
+            Patient pat5 = patientRepository.findByPatientId("PAT-2026-0005").orElse(null);
+
+            Doctor d1 = doctorRepository.findByDoctorId("DOC-0001").orElse(null);
+            Doctor d2 = doctorRepository.findByDoctorId("DOC-0002").orElse(null);
+            Doctor d3 = doctorRepository.findByDoctorId("DOC-0003").orElse(null);
+            Doctor d4 = doctorRepository.findByDoctorId("DOC-0004").orElse(null);
+
+            // RX 1: Pending Review (from OCR upload simulation)
+            Prescription rx1 = new Prescription();
+            rx1.setPrescriptionNumber("RX-2026-0001");
+            rx1.setPatient(pat1);
+            rx1.setDoctor(d2);
+            rx1.setPrescriptionDate(LocalDate.now());
+            rx1.setDiagnosis("Upper respiratory tract infection with low-grade fever");
+            rx1.setStatus(Prescription.PrescriptionStatus.PENDING);
+            rx1.setNotes("AI extracted from prescription scan — requires pharmacist verification");
+            rx1.setOcrConfidence(94.2);
+            rx1.setCreatedBy(admin);
+            rx1.setItems(new ArrayList<>(List.of(
+                    new PrescriptionItem(null, rx1, m[0], "500mg", "1 capsule 3x daily", "5 days", 15, "Take after meals"),
+                    new PrescriptionItem(null, rx1, m[3], "500mg", "1 tablet as needed", "3 days", 6, "For fever/pain relief")
+            )));
+            prescriptionRepository.save(rx1);
+
+            // RX 2: Approved
+            Prescription rx2 = new Prescription();
+            rx2.setPrescriptionNumber("RX-2026-0002");
+            rx2.setPatient(pat2);
+            rx2.setDoctor(d1);
+            rx2.setPrescriptionDate(LocalDate.now().minusDays(1));
+            rx2.setDiagnosis("Hypertension Stage 1 maintenance therapy");
+            rx2.setStatus(Prescription.PrescriptionStatus.APPROVED);
+            rx2.setNotes("Verified by senior pharmacist. Stock availability confirmed.");
+            rx2.setVerifiedBy(patel);
+            rx2.setVerifiedAt(LocalDateTime.now().minusHours(4));
+            rx2.setCreatedBy(patel);
+            rx2.setItems(new ArrayList<>(List.of(
+                    new PrescriptionItem(null, rx2, m[2], "5mg", "1 tablet once daily", "30 days", 30, "Take in the morning with water")
+            )));
+            prescriptionRepository.save(rx2);
+
+            // RX 3: Dispensed
+            Prescription rx3 = new Prescription();
+            rx3.setPrescriptionNumber("RX-2026-0003");
+            rx3.setPatient(pat3);
+            rx3.setDoctor(d2);
+            rx3.setPrescriptionDate(LocalDate.now().minusDays(3));
+            rx3.setDiagnosis("Type 2 Diabetes routine refill");
+            rx3.setStatus(Prescription.PrescriptionStatus.DISPENSED);
+            rx3.setNotes("Dispensed and billed under SALE-2026-0010");
+            rx3.setVerifiedBy(sneha);
+            rx3.setVerifiedAt(LocalDateTime.now().minusDays(3));
+            rx3.setCreatedBy(sneha);
+            rx3.setSaleId(10L);
+            rx3.setItems(new ArrayList<>(List.of(
+                    new PrescriptionItem(null, rx3, m[1], "2mg", "1 tablet before breakfast", "30 days", 30, "Monitor blood sugar weekly"),
+                    new PrescriptionItem(null, rx3, m[8], "500mg", "1 tablet twice daily", "30 days", 60, "Take with meals")
+            )));
+            prescriptionRepository.save(rx3);
+
+            // RX 4: Under Review
+            Prescription rx4 = new Prescription();
+            rx4.setPrescriptionNumber("RX-2026-0004");
+            rx4.setPatient(pat4);
+            rx4.setDoctor(d4);
+            rx4.setPrescriptionDate(LocalDate.now());
+            rx4.setDiagnosis("Post-operative pain management & inflammation");
+            rx4.setStatus(Prescription.PrescriptionStatus.UNDER_REVIEW);
+            rx4.setNotes("Verifying interaction between Diclofenac and patient history");
+            rx4.setCreatedBy(admin);
+            rx4.setOcrConfidence(88.7);
+            rx4.setItems(new ArrayList<>(List.of(
+                    new PrescriptionItem(null, rx4, m[5], "50mg", "1 tablet twice daily", "7 days", 14, "Take with food to prevent gastric irritation")
+            )));
+            prescriptionRepository.save(rx4);
+
+            // RX 5: Rejected
+            Prescription rx5 = new Prescription();
+            rx5.setPrescriptionNumber("RX-2026-0005");
+            rx5.setPatient(pat5);
+            rx5.setDoctor(d3);
+            rx5.setPrescriptionDate(LocalDate.now().minusDays(5));
+            rx5.setDiagnosis("Unclear prescription handwritten dosage");
+            rx5.setStatus(Prescription.PrescriptionStatus.REJECTED);
+            rx5.setRejectionReason("Dosage frequency illegible; physician contact attempted without response");
+            rx5.setVerifiedBy(patel);
+            rx5.setVerifiedAt(LocalDateTime.now().minusDays(5));
+            rx5.setCreatedBy(patel);
+            rx5.setItems(new ArrayList<>(List.of(
+                    new PrescriptionItem(null, rx5, m[7], "100mg", "Dosage uncertain", "7 days", 10, "Awaiting physician clarification")
+            )));
+            prescriptionRepository.save(rx5);
+        }
+
+        // ── 5 Audit Logs ────────────────────────────────────────────────
+        if (auditLogRepository.count() == 0) {
+            log.info("Seeding 5 audit logs...");
+            auditLogRepository.saveAll(List.of(
+                    AuditLog.builder().action("PRESCRIPTION_APPROVED").entityType("PRESCRIPTION").entityId(2L)
+                            .oldValue("PENDING").newValue("APPROVED")
+                            .description("Prescription RX-2026-0002 approved by pharmacist")
+                            .performedBy(patel).build(),
+                    AuditLog.builder().action("PRESCRIPTION_DISPENSED").entityType("PRESCRIPTION").entityId(3L)
+                            .oldValue("APPROVED").newValue("DISPENSED")
+                            .description("Prescription RX-2026-0003 dispensed to patient Amit Verma")
+                            .performedBy(sneha).build(),
+                    AuditLog.builder().action("STOCK_ADJUSTED").entityType("INVENTORY").entityId(6L)
+                            .oldValue("180").newValue("230")
+                            .description("Physical audit recount adjustment (+50 units Diclofenac)")
+                            .performedBy(admin).build(),
+                    AuditLog.builder().action("PURCHASE_RECEIVED").entityType("PURCHASE").entityId(1L)
+                            .oldValue("ORDERED").newValue("RECEIVED")
+                            .description("Purchase INV-2024-0001 goods received & verified into warehouse")
+                            .performedBy(ravi).build(),
+                    AuditLog.builder().action("USER_LOGIN").entityType("AUTH").entityId(1L)
+                            .oldValue(null).newValue("SUCCESS")
+                            .description("Administrator admin@medicalinv.com authenticated via JWT")
+                            .performedBy(admin).build()
+            ));
+        }
+
+        log.info("Complete sample_data.sql seeded! (10 medicines, 10 inventory, 10 suppliers, 8 purchases, 10 sales, 10 movements, 6 alerts, 5 patients, 4 doctors, 5 prescriptions, 5 audit logs)");
     }
 }

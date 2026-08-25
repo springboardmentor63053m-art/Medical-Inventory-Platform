@@ -284,22 +284,22 @@ export default function StockTracking() {
       ])
 
       const rawMovements = mRes.status === 'fulfilled' && Array.isArray(mRes.value.data) ? mRes.value.data : []
-      // Deduplicate by ID and unique signature
-      const uniqueMap = new Map()
-      rawMovements.forEach(item => {
-        if (!item) return
-        const key = item.id ? `id_${item.id}` : `${item.medicine?.id}_${item.movementType}_${item.quantity}_${item.quantityBefore}_${item.quantityAfter}_${item.reason}`
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, item)
-        }
-      })
-      const sorted = Array.from(uniqueMap.values()).sort((a, b) => {
+      // Deduplicate by medicine ID (keeping latest event per medicine) for exactly 10 distinct medicine audit events
+      const sortedRaw = [...rawMovements].sort((a, b) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
         if (timeB !== timeA) return timeB - timeA
         return (b.id || 0) - (a.id || 0)
       })
-      setMovements(sorted)
+      const medMap = new Map()
+      sortedRaw.forEach(item => {
+        if (!item || !item.medicine?.id) return
+        if (!medMap.has(item.medicine.id)) {
+          medMap.set(item.medicine.id, item)
+        }
+      })
+      const cleanMovements = Array.from(medMap.values())
+      setMovements(cleanMovements)
 
       if (medRes.status === 'fulfilled' && Array.isArray(medRes.value.data) && medRes.value.data.length > 0) {
         setMedicines(medRes.value.data)

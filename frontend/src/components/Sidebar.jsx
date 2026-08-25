@@ -2,32 +2,57 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Pill, Package, Truck, ShoppingCart,
-  Receipt, Users, Bell, BarChart2, X, Activity, Settings, Zap, Shield, Cpu, TrendingUp
+  Receipt, Users, Bell, BarChart2, X, Activity, Settings, Zap, Shield, Cpu, TrendingUp,
+  FileText, UserCheck, Stethoscope, Sparkles, History, Bot
 } from 'lucide-react'
 
-const navItems = [
-  { to: '/dashboard',      label: 'Dashboard',       icon: LayoutDashboard, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-blue-500 to-indigo-500' },
-  { to: '/medicines',      label: 'Medicines',       icon: Pill,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','SUPPLIER'],          color: 'from-emerald-500 to-teal-500' },
-  { to: '/inventory',      label: 'Inventory',       icon: Package,         roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-violet-500 to-purple-500' },
-  { to: '/stock-tracking', label: 'Stock Tracking',  icon: TrendingUp,      roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-cyan-500 to-blue-500' },
-  { to: '/suppliers',      label: 'Suppliers',       icon: Truck,           roles: ['ADMIN','INVENTORY_MANAGER','SUPPLIER'],                      color: 'from-orange-500 to-amber-500' },
-  { to: '/purchases',      label: 'Purchases',       icon: ShoppingCart,    roles: ['ADMIN','INVENTORY_MANAGER','SUPPLIER'],                      color: 'from-pink-500 to-rose-500' },
-  { to: '/sales',          label: 'Sales',           icon: Receipt,         roles: ['ADMIN','PHARMACIST'],                                         color: 'from-teal-500 to-cyan-500' },
-  { to: '/employees',      label: 'Employees',       icon: Users,           roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'],             color: 'from-indigo-500 to-blue-500' },
-  { to: '/alerts',         label: 'Alerts',          icon: Bell,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-red-500 to-rose-500' },
-  { to: '/reports',        label: 'Reports',         icon: BarChart2,       roles: ['ADMIN','INVENTORY_MANAGER'],                                  color: 'from-amber-500 to-yellow-500' },
+const navSections = [
+  {
+    title: 'Core',
+    items: [
+      { to: '/dashboard',      label: 'Dashboard',       icon: LayoutDashboard, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-blue-500 to-indigo-500' },
+      { to: '/medicines',      label: 'Medicines',       icon: Pill,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','SUPPLIER'],          color: 'from-emerald-500 to-teal-500' },
+      { to: '/inventory',      label: 'Inventory',       icon: Package,         roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-violet-500 to-purple-500' },
+      { to: '/stock-tracking', label: 'Stock Tracking',  icon: TrendingUp,      roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-cyan-500 to-blue-500' },
+    ]
+  },
+  {
+    title: 'Operations',
+    items: [
+      { to: '/prescriptions',  label: 'Prescriptions',   icon: FileText,        roles: ['ADMIN','PHARMACIST','STAFF'],                                 color: 'from-rose-500 to-red-500' },
+      { to: '/patients',       label: 'Patients',        icon: UserCheck,       roles: ['ADMIN','PHARMACIST','STAFF'],                                 color: 'from-teal-500 to-emerald-500' },
+      { to: '/doctors',        label: 'Doctors',         icon: Stethoscope,     roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER'],                     color: 'from-sky-500 to-indigo-500' },
+      { to: '/suppliers',      label: 'Suppliers',       icon: Truck,           roles: ['ADMIN','INVENTORY_MANAGER','SUPPLIER'],                      color: 'from-orange-500 to-amber-500' },
+      { to: '/purchases',      label: 'Purchases',       icon: ShoppingCart,    roles: ['ADMIN','INVENTORY_MANAGER','SUPPLIER'],                      color: 'from-pink-500 to-rose-500' },
+      { to: '/sales',          label: 'Sales & POS',     icon: Receipt,         roles: ['ADMIN','PHARMACIST'],                                         color: 'from-teal-500 to-cyan-500' },
+      { to: '/employees',      label: 'Employees',       icon: Users,           roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF'],             color: 'from-indigo-500 to-blue-500' },
+    ]
+  },
+  {
+    title: 'Intelligence',
+    items: [
+      { to: '/ai-insights',    label: 'AI Insights',     icon: Sparkles,        roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER'],                     color: 'from-amber-500 to-orange-500' },
+      { to: '/alerts',         label: 'Alerts',          icon: Bell,            roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-red-500 to-rose-500' },
+    ]
+  },
+  {
+    title: 'Reporting',
+    items: [
+      { to: '/reports',        label: 'Reports',         icon: BarChart2,       roles: ['ADMIN','INVENTORY_MANAGER'],                                  color: 'from-purple-500 to-pink-500' },
+    ]
+  },
+  {
+    title: 'System',
+    items: [
+      { to: '/audit-logs',     label: 'Audit Logs',      icon: History,         roles: ['ADMIN'],                                                      color: 'from-slate-400 to-slate-600' },
+      { to: '/settings',       label: 'Settings',        icon: Settings,        roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-slate-500 to-slate-600' },
+    ]
+  }
 ]
 
-const bottomItems = [
-  { to: '/settings', label: 'Settings', icon: Settings, roles: ['ADMIN','PHARMACIST','INVENTORY_MANAGER','STAFF','SUPPLIER'], color: 'from-slate-500 to-slate-600' },
-]
-
-export default function Sidebar({ open, onClose, onOpenArch }) {
+export default function Sidebar({ open, onClose }) {
   const { user } = useAuth()
   const location = useLocation()
-
-  const visible       = navItems.filter(i => i.roles.includes(user?.role))
-  const bottomVisible = bottomItems.filter(i => i.roles.includes(user?.role))
 
   const roleColor = {
     ADMIN:              'from-blue-400 to-indigo-500',
@@ -79,10 +104,15 @@ export default function Sidebar({ open, onClose, onOpenArch }) {
                               rounded-2xl blur-md -z-10" />
             </div>
             <div>
-              <p className="text-white font-extrabold text-base leading-tight tracking-wide font-display">
-                MediStock
-              </p>
-              <p className="text-blue-400 text-[11px] font-semibold tracking-wider uppercase">Pro Platform</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-white font-extrabold text-base leading-tight tracking-wide font-display">
+                  MediStock
+                </p>
+                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-[9px] tracking-wider uppercase shadow-xs">
+                  AI
+                </span>
+              </div>
+              <p className="text-blue-400 text-[10px] font-semibold tracking-wider uppercase">Pharmacy Platform</p>
             </div>
           </div>
           <button
@@ -95,106 +125,88 @@ export default function Sidebar({ open, onClose, onOpenArch }) {
         </div>
 
         {/* User Badge Card */}
-        <div className="px-4 py-4 border-b border-white/[0.05]">
-          <div className="flex items-center gap-3 px-3 py-3 rounded-2xl
+        <div className="px-4 py-3.5 border-b border-white/[0.05]">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl
                           bg-white/[0.05] border border-white/[0.08]
                           backdrop-blur-sm">
             <div className="relative flex-shrink-0">
-              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${roleColor}
-                              flex items-center justify-center text-white font-bold text-sm
+              <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${roleColor}
+                              flex items-center justify-center text-white font-bold text-xs
                               shadow-md`}>
                 {user?.username?.[0]?.toUpperCase()}
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400
                                rounded-full border-2 border-[#0b1329]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-white text-sm font-semibold truncate">{user?.username}</p>
-              <p className="text-slate-400 text-[11px] truncate capitalize font-medium">{roleLabel}</p>
+              <p className="text-white text-xs font-semibold truncate">{user?.username}</p>
+              <p className="text-slate-400 text-[10px] truncate capitalize font-medium">{roleLabel}</p>
             </div>
             <Zap className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
           </div>
         </div>
 
+        {/* Navigation sections */}
+        <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto scrollbar-thin">
+          {navSections.map((section) => {
+            const visibleItems = section.items.filter(i => i.roles.includes(user?.role))
+            if (visibleItems.length === 0) return null
 
+            return (
+              <div key={section.title} className="space-y-1">
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-1.5">
+                  {section.title}
+                </p>
 
-        {/* Navigation items */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto scrollbar-thin">
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.12em] px-3 mb-2">
-            Modules
-          </p>
+                {visibleItems.map(({ to, label, icon: Icon, color }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className="block"
+                  >
+                    {({ isActive: navActive }) => (
+                      <span className={`
+                        flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium
+                        transition-all duration-200 cursor-pointer relative overflow-hidden
+                        ${navActive
+                          ? 'text-white bg-white/10 border border-white/[0.1] shadow-inner'
+                          : 'text-slate-400 hover:text-white hover:bg-white/[0.07]'
+                        }
+                      `}>
+                        {navActive && (
+                          <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5
+                                            rounded-r-full bg-gradient-to-b ${color}`} />
+                        )}
 
-          {visible.map(({ to, label, icon: Icon, color }, i) => (
-            <NavLink
-              key={to}
-              to={to}
-              className="animate-sidebar-reveal"
-              style={{ animationDelay: `${i * 35}ms` }}
-            >
-              {({ isActive: navActive }) => (
-                <span className={`
-                  flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium
-                  transition-all duration-200 cursor-pointer relative overflow-hidden
-                  ${navActive
-                    ? 'text-white bg-white/10 border border-white/[0.1] shadow-inner'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.07]'
-                  }
-                `}>
-                  {navActive && (
-                    <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6
-                                      rounded-r-full bg-gradient-to-b ${color}`} />
-                  )}
-
-                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
-                                    transition-all duration-200
-                                    ${navActive
-                                      ? `bg-gradient-to-br ${color} shadow-md`
-                                      : 'bg-white/5 group-hover:bg-white/10'
-                                    }`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </span>
-                  <span className="flex-1">{label}</span>
-                  {navActive && (
-                    <span className={`w-1.5 h-1.5 rounded-full bg-gradient-to-br ${color}`} />
-                  )}
-                </span>
-              )}
-            </NavLink>
-          ))}
+                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0
+                                          transition-all duration-200
+                                          ${navActive
+                                            ? `bg-gradient-to-br ${color} shadow-md`
+                                            : 'bg-white/5 group-hover:bg-white/10'
+                                          }`}>
+                          <Icon className="w-3.5 h-3.5" />
+                        </span>
+                        <span className="flex-1 truncate">{label}</span>
+                        {navActive && (
+                          <span className={`w-1.5 h-1.5 rounded-full bg-gradient-to-br ${color}`} />
+                        )}
+                      </span>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            )
+          })}
         </nav>
 
-        {/* Bottom Nav */}
-        <div className="px-3 py-2 border-t border-white/[0.06] space-y-0.5">
-          {bottomVisible.map(({ to, label, icon: Icon, color }) => (
-            <NavLink key={to} to={to}>
-              {({ isActive }) => (
-                <span className={`
-                  flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium
-                  transition-all duration-200 cursor-pointer
-                  ${isActive
-                    ? 'text-white bg-white/10 border border-white/[0.1]'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.07]'
-                  }
-                `}>
-                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
-                                    ${isActive ? `bg-gradient-to-br ${color} shadow-md` : 'bg-white/5'}`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </span>
-                  <span>{label}</span>
-                </span>
-              )}
-            </NavLink>
-          ))}
-        </div>
-
         {/* Footer Branding */}
-        <div className="px-4 py-4 border-t border-white/[0.06]">
+        <div className="px-4 py-3.5 border-t border-white/[0.06]">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <p className="text-slate-400 text-[11px] font-semibold">MediStock Pro v2.5</p>
+              <p className="text-slate-400 text-[11px] font-semibold">MediStock AI v3.0</p>
             </div>
-            <span className="text-[10px] text-slate-500 font-mono">React+Spring</span>
+            <span className="text-[10px] text-blue-400 font-mono font-bold">AI Active</span>
           </div>
         </div>
       </aside>

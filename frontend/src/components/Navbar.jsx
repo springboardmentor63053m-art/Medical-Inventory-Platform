@@ -90,12 +90,11 @@ export default function Navbar({ onMenuClick, onOpenArch }) {
           <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-none">
             MediStock Platform
           </p>
-          <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight mt-0.5">
-            {user?.username}
-            <span className="ml-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
               {user?.role?.replace('_', ' ')}
             </span>
-          </p>
+          </div>
         </div>
       </div>
 

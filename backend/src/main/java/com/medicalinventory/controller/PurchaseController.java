@@ -53,4 +53,10 @@ public class PurchaseController {
     public ResponseEntity<Purchase> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(purchaseService.cancelPurchase(id));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        purchaseService.deletePurchase(id);
+        return ResponseEntity.noContent().build();
+    }
 }

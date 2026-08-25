@@ -43,16 +43,20 @@ public class PurchaseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier", purchase.getSupplier().getId()));
         purchase.setSupplier(supplier);
         purchase.setCreatedBy(creator);
-        purchase.setStatus(Purchase.PurchaseStatus.PENDING);
+        if (purchase.getStatus() == null) {
+            purchase.setStatus(Purchase.PurchaseStatus.PENDING);
+        }
 
         BigDecimal total = BigDecimal.ZERO;
-        for (PurchaseItem item : purchase.getItems()) {
-            Medicine med = medicineRepository.findById(item.getMedicine().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Medicine", item.getMedicine().getId()));
-            item.setMedicine(med);
-            item.setPurchase(purchase);
-            item.setTotalCost(item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity())));
-            total = total.add(item.getTotalCost());
+        if (purchase.getItems() != null) {
+            for (PurchaseItem item : purchase.getItems()) {
+                Medicine med = medicineRepository.findById(item.getMedicine().getId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Medicine", item.getMedicine().getId()));
+                item.setMedicine(med);
+                item.setPurchase(purchase);
+                item.setTotalCost(item.getUnitCost().multiply(BigDecimal.valueOf(item.getQuantity())));
+                total = total.add(item.getTotalCost());
+            }
         }
         purchase.setTotalAmount(total);
         BigDecimal discount = purchase.getDiscount() != null ? purchase.getDiscount() : BigDecimal.ZERO;
@@ -97,5 +101,12 @@ public class PurchaseService {
         }
         purchase.setStatus(Purchase.PurchaseStatus.CANCELLED);
         return purchaseRepository.save(purchase);
+    }
+
+    @Transactional
+    public void deletePurchase(Long id) {
+        Purchase purchase = getPurchaseById(id);
+        purchaseRepository.delete(purchase);
+        log.info("Deleted purchase order: {}", purchase.getInvoiceNumber());
     }
 }
