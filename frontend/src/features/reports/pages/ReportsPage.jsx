@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import { inventoryService } from '../../../services/api/inventoryService';
 import { reportsApi } from '../services/api/reportsApi';
-import { useTheme } from '../../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -47,10 +47,27 @@ ChartJS.register(
 );
 
 export default function ReportsPage() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const {
+    isAdmin,
+    isPharmacist,
+    isStaff,
+    isSupplier,
+    isUser,
+  } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('VALUATION'); // 'VALUATION' | 'EXPIRY' | 'SUPPLIERS'
+  const canViewInventoryReports =
+    isAdmin || isPharmacist || isStaff;
+
+  const canViewSupplierReports =
+    isAdmin || isSupplier;
+
+  const hasReportsAccess =
+    canViewInventoryReports ||
+    canViewSupplierReports;
+
+  const [activeTab, setActiveTab] = useState(
+    isSupplier ? 'SUPPLIERS' : 'VALUATION'
+  );
   const [dateRange, setDateRange] = useState('30');
   const [supplierShareData, setSupplierShareData] = useState(null);
   const [supplierSummary, setSupplierSummary] = useState([]);
@@ -65,7 +82,28 @@ export default function ReportsPage() {
   const [exporting, setExporting] = useState(false);
   const [reportSearch, setReportSearch] = useState('');
   const [reportPage, setReportPage] = useState(1);
+  useEffect(() => {
+  if (
+    isSupplier &&
+    activeTab !== 'SUPPLIERS'
+  ) {
+    setActiveTab('SUPPLIERS');
+    return;
+  }
 
+  if (
+    !canViewInventoryReports &&
+    canViewSupplierReports &&
+    activeTab !== 'SUPPLIERS'
+  ) {
+    setActiveTab('SUPPLIERS');
+  }
+}, [
+  isSupplier,
+  canViewInventoryReports,
+  canViewSupplierReports,
+  activeTab,
+]);
   const REPORT_PAGE_SIZE = 10;
   const formatINR = (val) => {
     return new Intl.NumberFormat('en-IN', {
@@ -409,17 +447,25 @@ export default function ReportsPage() {
     window.print();
   };
 
-  // Fetch real supplier share data from backend APIs
-  useEffect(() => {
+  // Load operational inventory reports only for authorised roles.
+useEffect(() => {
+  if (!canViewInventoryReports) {
+    setInventoryItems([]);
+    setValuationSummary(null);
+    setLoadingInventory(false);
+    return;
+  }
+
   const fetchInventoryData = async () => {
     setLoadingInventory(true);
     setReportError('');
 
     try {
-      const [data, summary] = await Promise.all([
-        inventoryService.getAllInventory(),
-        reportsApi.getInventoryValuationSummary(),
-      ]);
+      const [data, summary] =
+        await Promise.all([
+          inventoryService.getAllInventory(),
+          reportsApi.getInventoryValuationSummary(),
+        ]);
 
       setInventoryItems(
         Array.isArray(data) ? data : []
@@ -446,10 +492,13 @@ export default function ReportsPage() {
   };
 
   fetchInventoryData();
-}, [refreshKey]);
+}, [refreshKey, canViewInventoryReports]);
 
 useEffect(() => {
-  if (activeTab !== 'EXPIRY') {
+  if (
+    !canViewInventoryReports ||
+    activeTab !== 'EXPIRY'
+  ) {
     return;
   }
 
@@ -483,7 +532,12 @@ useEffect(() => {
   };
 
   fetchExpirySummary();
-}, [activeTab, dateRange, refreshKey]);
+}, [
+  activeTab,
+  dateRange,
+  refreshKey,
+  canViewInventoryReports,
+]);
 
   useEffect(() => {
     setReportSearch('');
@@ -491,9 +545,12 @@ useEffect(() => {
   }, [activeTab, dateRange]);
 
   useEffect(() => {
-    if (activeTab !== 'SUPPLIERS') {
-      return;
-    }
+  if (
+    !canViewSupplierReports ||
+    activeTab !== 'SUPPLIERS'
+  ) {
+    return;
+  }
 
     const fetchSupplierPerformance = async () => {
       setLoadingSuppliers(true);
@@ -619,7 +676,12 @@ useEffect(() => {
     };
 
     fetchSupplierPerformance();
-  }, [activeTab, dateRange, refreshKey]);
+    }, [
+      activeTab,
+      dateRange,
+      refreshKey,
+      canViewSupplierReports,
+    ]);
 
     const categoryTotals = inventoryItems.reduce(
     (totals, item) => {
@@ -1099,6 +1161,32 @@ const expiryForecastLabel =
       safeSupplierPage * REPORT_PAGE_SIZE
     );
 
+    if (!hasReportsAccess) {
+    return (
+      <div className="min-h-[65vh] flex items-center justify-center">
+        <div className="w-full max-w-lg bg-white p-8 rounded-2xl border border-rose-200 shadow-sm text-center">
+          <div className="w-14 h-14 mx-auto rounded-full bg-rose-100 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-rose-600" />
+          </div>
+
+          <h1 className="text-xl font-black text-slate-900 mt-4">
+            Reports Access Restricted
+          </h1>
+
+          <p className="text-sm text-slate-600 mt-2">
+            {isUser
+              ? 'Customer accounts cannot access internal inventory and procurement reports.'
+              : 'Your account does not have permission to access the MediStock reporting module.'}
+          </p>
+
+          <p className="text-xs text-slate-400 mt-3">
+            Contact a system administrator if you believe you require report access.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 font-sans text-slate-900 pb-10">
       {/* Header Banner */}
@@ -1212,40 +1300,49 @@ const expiryForecastLabel =
 
       {/* Tabs and Date Range Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('VALUATION')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-              activeTab === 'VALUATION'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <IndianRupee className="w-4 h-4" /> Inventory Valuation
-          </button>
+      {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {canViewInventoryReports && (
+            <button
+              onClick={() => setActiveTab('VALUATION')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'VALUATION'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <IndianRupee className="w-4 h-4" />
+              Inventory Valuation
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('EXPIRY')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-              activeTab === 'EXPIRY'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <AlertTriangle className="w-4 h-4" /> Expiry Risk Audit
-          </button>
+          {canViewInventoryReports && (
+            <button
+              onClick={() => setActiveTab('EXPIRY')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'EXPIRY'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Expiry Risk Audit
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('SUPPLIERS')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-              activeTab === 'SUPPLIERS'
-                ? 'bg-purple-600 text-white shadow-sm'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <PieChart className="w-4 h-4" /> Supplier Share
-          </button>
+          {canViewSupplierReports && (
+            <button
+              onClick={() => setActiveTab('SUPPLIERS')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeTab === 'SUPPLIERS'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <PieChart className="w-4 h-4" />
+              Supplier Share
+            </button>
+          )}
         </div>
         
 
@@ -1928,17 +2025,6 @@ const expiryForecastLabel =
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'bottom',
-                              labels: {
-                                color: isDark ? '#cbd5e1' : '#475569',
-                                boxWidth: 12,
-                                padding: 12,
-                                font: { size: 11, weight: '600' }
-                              }
-                            }
-                          }
                         }}
                       />
                     ) : (
