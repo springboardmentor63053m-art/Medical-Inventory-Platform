@@ -53,13 +53,19 @@ export default function SidebarLayout({ isOpen, onClose }) {
       { name: 'Purchase Orders', path: '/purchase-orders', icon: ShoppingCart },
       { name: 'Rx Verification Queue', path: '/pharmacist/verify', icon: ShieldCheck, badge: isAdmin ? 'Admin' : 'Pharmacist' },
       { name: 'In-Store POS Counter', path: '/store-counter', icon: Store, badge: 'POS' },
-      { name: 'Reports', path: '/reports', icon: FileText }
     );
   } else if (isSupplier) {
     primaryNavItems.push(
       { name: 'My Supplier Profile', path: '/suppliers', icon: Truck },
       { name: 'Orders From MediStock', path: '/purchase-orders', icon: ShoppingCart, badge: 'MediStock Orders' }
     );
+  }
+  if (isAdmin || isPharmacist || isStaff || isSupplier) {
+    primaryNavItems.push({
+      name: 'Reports',
+      path: '/reports',
+      icon: FileText,
+    });
   }
 
   if (isAdmin || isPharmacist || isStaff || isSupplier) {

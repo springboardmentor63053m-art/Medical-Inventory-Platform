@@ -265,7 +265,14 @@ export default function AppRoutes() {
       <Route
         path="/reports"
         element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST']}>
+          <ProtectedRoute
+            allowedRoles={[
+              'ADMIN',
+              'PHARMACIST',
+              'STAFF',
+              'SUPPLIER',
+            ]}
+          >
             <MainLayout>
               <ReportsPage />
             </MainLayout>
