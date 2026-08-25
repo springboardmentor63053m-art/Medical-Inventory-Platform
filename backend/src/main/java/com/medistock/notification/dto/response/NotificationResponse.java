@@ -31,5 +31,12 @@ public class NotificationResponse {
     private Integer minimumStock;
     private LocalDate expiryDate;
 
+    private Boolean isRead;
+    private Boolean read;
+    private Boolean isActive;
+
     private LocalDateTime generatedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime resolvedAt;
 }

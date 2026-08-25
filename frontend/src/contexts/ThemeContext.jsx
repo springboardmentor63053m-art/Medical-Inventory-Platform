@@ -3,14 +3,21 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('medistock-theme') || localStorage.getItem('theme');
+    if (saved) return saved;
+    return 'light';
+  });
 
   useEffect(() => {
+    localStorage.setItem('medistock-theme', theme);
     localStorage.setItem('theme', theme);
+    const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
     if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
+      root.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      root.classList.remove('dark');
     }
   }, [theme]);
 
@@ -19,7 +26,7 @@ export const ThemeProvider = ({ children }) => {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -11,6 +11,7 @@ import com.medistock.inventory.service.StockMovementService;
 import com.medistock.medicine.dto.response.MedicineResponse;
 import com.medistock.medicine.entity.Medicine;
 import com.medistock.medicine.repository.MedicineRepository;
+import com.medistock.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryRepository inventoryRepository;
     private final MedicineRepository medicineRepository;
     private final StockMovementService stockMovementService;
+    private final NotificationService notificationService;
 
     private synchronized String resolveUniqueBatchNumber(String requestedBatch, Long currentId) {
         String year = String.valueOf(LocalDate.now().getYear());
@@ -91,6 +93,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .build();
 
         Inventory saved = inventoryRepository.save(inventory);
+        notificationService.syncNotificationForInventory(saved.getId());
 
         stockMovementService.recordMovement(
                 medicine,
@@ -189,6 +192,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         Inventory saved =
                 inventoryRepository.save(inventory);
+        notificationService.syncNotificationForInventory(saved.getId());
 
         stockMovementService.recordMovement(
                 medicine,
@@ -246,6 +250,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory.setStorageLocation(request.getStorageLocation());
 
         Inventory updated = inventoryRepository.save(inventory);
+        notificationService.syncNotificationForInventory(updated.getId());
 
         if (diff != 0) {
             stockMovementService.recordMovement(
@@ -350,7 +355,7 @@ public class InventoryServiceImpl implements InventoryService {
         LocalDate expiryDate = inventory.getExpiryDate();
 
         boolean isOutOfStock = quantity == 0;
-        boolean isLowStock = quantity <= minimumStock;
+        boolean isLowStock = quantity > 0 && quantity < minimumStock;
 
         boolean isExpired =
                 expiryDate != null &&

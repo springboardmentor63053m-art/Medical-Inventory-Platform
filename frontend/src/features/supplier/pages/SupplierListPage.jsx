@@ -8,6 +8,8 @@ import { toast } from 'react-toastify';
 import Modal from '../../../components/common/Modal';
 import StatusBadge from '../../../components/common/StatusBadge';
 import FormField from '../../../components/common/FormField';
+import SupplierCommunicationDrawer from '../components/SupplierCommunicationDrawer';
+import { supplierCommunicationService } from '../../../services/api/supplierCommunicationService';
 import {
   Truck,
   Plus,
@@ -30,7 +32,8 @@ import {
   CheckCircle2,
   ShoppingCart,
   Calendar,
-  ArrowLeft
+  ArrowLeft,
+  MessageSquare
 } from 'lucide-react';
 
 import { getMedicinesSupplied } from '../../../utils/dataHelpers';
@@ -54,6 +57,11 @@ export default function SupplierListPage() {
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [viewSupplier, setViewSupplier] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Communication Drawer State
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [chatSupplier, setChatSupplier] = useState(null);
+  const [unreadCounts, setUnreadCounts] = useState({});
 
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -269,10 +277,23 @@ export default function SupplierListPage() {
     setSelectedLineItems((prev) => prev.filter((item) => Number(item.id) !== Number(medicineId)));
   };
 
+  const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleProceedToReview = (e) => {
     if (e) e.preventDefault();
     if (!viewSupplier || selectedLineItems.length === 0 || !orderExpectedDate) {
       toast.error('Please select at least one formulation and specify a delivery date.');
+      return;
+    }
+
+    if (orderExpectedDate < getTodayString()) {
+      toast.error('Expected Delivery Date cannot be in the past.');
       return;
     }
 
@@ -288,6 +309,11 @@ export default function SupplierListPage() {
   const handleConfirmAndSubmitOrder = async () => {
     if (!viewSupplier || selectedLineItems.length === 0 || !orderExpectedDate) {
       toast.error('Please select at least one formulation and specify a delivery date.');
+      return;
+    }
+
+    if (orderExpectedDate < getTodayString()) {
+      toast.error('Expected Delivery Date cannot be in the past.');
       return;
     }
 
@@ -424,10 +450,25 @@ export default function SupplierListPage() {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                      <button
+                        onClick={() => {
+                          setChatSupplier(sup);
+                          setChatDrawerOpen(true);
+                        }}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition relative"
+                        title="Communicate with supplier"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        {unreadCounts[sup.id] > 0 && (
+                          <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-rose-500 text-white text-[9px] font-extrabold rounded-full animate-pulse">
+                            {unreadCounts[sup.id]}
+                          </span>
+                        )}
+                      </button>
                       {canManage && (
                         <button
                           onClick={() => handleOpenEditModal(sup)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition"
                           title="Edit Supplier"
                         >
                           <Edit3 className="w-4 h-4" />
@@ -1131,10 +1172,11 @@ export default function SupplierListPage() {
 
               {/* SECTION 3: ORDER EXPECTED DATE & TOTAL SUMMARY */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                <FormField label="Expected Delivery Date" required helperText="Projected shipment arrival date">
+                <FormField label="Expected Delivery Date" required helperText="Target expected delivery date (estimated arrival)">
                   <input
                     type="date"
                     required
+                    min={getTodayString()}
                     value={orderExpectedDate}
                     onChange={(e) => setOrderExpectedDate(e.target.value)}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
@@ -1186,6 +1228,13 @@ export default function SupplierListPage() {
           </div>
         </Modal>
       )}
+      {/* Supplier Communication Right-Side Drawer */}
+      <SupplierCommunicationDrawer
+        isOpen={chatDrawerOpen}
+        onClose={() => setChatDrawerOpen(false)}
+        supplier={chatSupplier}
+        onConversationUpdated={fetchSuppliers}
+      />
     </div>
   );
 }

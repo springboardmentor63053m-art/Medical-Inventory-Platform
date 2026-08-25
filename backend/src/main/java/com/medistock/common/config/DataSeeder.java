@@ -42,6 +42,7 @@ public class DataSeeder implements CommandLineRunner {
     private final StockMovementRepository stockMovementRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
+    private final com.medistock.notification.service.NotificationService notificationService;
 
     @Override
     @Transactional
@@ -52,6 +53,7 @@ public class DataSeeder implements CommandLineRunner {
             log.info("Database inventory dataset found with {} records. Preserving inventory quantities and expiry dates.", inventoryRepository.count());
             sanitizeSupplierDatasetAndRemapPOs();
             seedSupplierMedicineRelationships();
+            notificationService.syncInventoryNotifications();
             return;
         }
 
@@ -167,6 +169,7 @@ public class DataSeeder implements CommandLineRunner {
         // Seed 100 Purchase Orders
         seedPurchaseOrders(suppliers);
 
+        notificationService.syncInventoryNotifications();
         log.info("Enterprise Seeding Complete! Total Medicines: {}, Total Inventory: {}, Total Suppliers: {}, Total POs: {}",
                 medicineRepository.count(), inventoryRepository.count(), supplierRepository.count(),
                 jdbcTemplate.queryForObject("SELECT COUNT(*) FROM purchase_orders", Long.class));

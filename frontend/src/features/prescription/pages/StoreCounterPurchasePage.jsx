@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { medicineService } from '../../../services/api/medicineService';
 import { inventoryService } from '../../../services/api/inventoryService';
 import { prescriptionService } from '../../../services/api/prescriptionService';
+import { customerService } from '../../../services/api/customerService';
 import { toast } from 'react-toastify';
 import Modal from '../../../components/common/Modal';
 import {
@@ -32,6 +33,9 @@ export default function StoreCounterPurchasePage() {
   const [cart, setCart] = useState([]);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [searchingCustomer, setSearchingCustomer] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,6 +52,77 @@ export default function StoreCounterPurchasePage() {
     fetchMedicinesAndStock();
     fetchPastPurchases();
   }, []);
+
+  const normalizePhoneJS = (raw) => {
+    if (!raw) return '';
+    const digits = raw.replace(/[^0-9]/g, '');
+    if (digits.length === 10) return digits;
+    if (digits.length === 12 && digits.startsWith('91')) return digits.substring(2);
+    if (digits.length === 11 && digits.startsWith('0')) return digits.substring(1);
+    return digits;
+  };
+
+  const handlePhoneChange = (val) => {
+    setCustomerPhone(val);
+    setSelectedCustomer(null);
+    setIsNewCustomer(false);
+  };
+
+  useEffect(() => {
+    const norm = normalizePhoneJS(customerPhone);
+    if (!norm || norm.length < 10) {
+      setSelectedCustomer(null);
+      setIsNewCustomer(false);
+      setSearchingCustomer(false);
+      return;
+    }
+
+    setSearchingCustomer(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await customerService.lookupCustomer(customerPhone);
+        if (res && res.exists) {
+          setSelectedCustomer(res);
+          setCustomerName(res.name);
+          setIsNewCustomer(false);
+        } else {
+          setSelectedCustomer(null);
+          setIsNewCustomer(true);
+        }
+      } catch (err) {
+        console.error('Customer lookup error:', err);
+        setSelectedCustomer(null);
+        setIsNewCustomer(true);
+      } finally {
+        setSearchingCustomer(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [customerPhone]);
+
+  const triggerImmediateLookup = async () => {
+    const norm = normalizePhoneJS(customerPhone);
+    if (!norm || norm.length < 10) return;
+    setSearchingCustomer(true);
+    try {
+      const res = await customerService.lookupCustomer(customerPhone);
+      if (res && res.exists) {
+        setSelectedCustomer(res);
+        setCustomerName(res.name);
+        setIsNewCustomer(false);
+      } else {
+        setSelectedCustomer(null);
+        setIsNewCustomer(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setSelectedCustomer(null);
+      setIsNewCustomer(true);
+    } finally {
+      setSearchingCustomer(false);
+    }
+  };
 
   const fetchMedicinesAndStock = async () => {
     setLoadingMeds(true);
@@ -166,8 +241,25 @@ export default function StoreCounterPurchasePage() {
 
     setSubmitting(true);
     try {
+      let finalCustomerId = selectedCustomer ? selectedCustomer.id : null;
+
+      if (!finalCustomerId && isNewCustomer && customerPhone.trim() && customerName.trim()) {
+        try {
+          const created = await customerService.createCustomer({
+            name: customerName.trim(),
+            phone: customerPhone.trim(),
+          });
+          if (created && created.id) {
+            finalCustomerId = created.id;
+          }
+        } catch (cErr) {
+          console.warn('Customer creation warning during checkout:', cErr);
+        }
+      }
+
       const payload = {
-        customerName: customerName.trim(),
+        customerId: finalCustomerId,
+        customerName: customerName.trim() || 'Walk-in Customer',
         customerPhone: customerPhone.trim(),
         paymentMethod,
         items: cart.map((item) => ({
@@ -178,6 +270,7 @@ export default function StoreCounterPurchasePage() {
 
       const res = await prescriptionService.createStorePurchase(payload);
       toast.success(`Walk-in sale completed! Receipt #${res.receiptNumber}`);
+      window.dispatchEvent(new Event('medistock-inventory-updated'));
 
       setCompletedReceipt(res);
       setReceiptModalOpen(true);
@@ -186,8 +279,11 @@ export default function StoreCounterPurchasePage() {
       setCart([]);
       setCustomerName('');
       setCustomerPhone('');
+      setSelectedCustomer(null);
+      setIsNewCustomer(false);
       setPaymentMethod('CASH');
       fetchMedicinesAndStock();
+      fetchPastPurchases();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to complete store walk-in checkout');
     } finally {
@@ -563,34 +659,93 @@ export default function StoreCounterPurchasePage() {
               )}
 
               {/* Customer & Payment Form */}
-              <form onSubmit={handlePOSCheckout} className="space-y-3.5 pt-2 border-t border-slate-800">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300">Customer Name *</label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      required
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="e.g. Walk-in Customer / Alex Vance"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
+              <form onSubmit={handlePOSCheckout} className="space-y-4 pt-2 border-t border-slate-800">
+                <div className="space-y-3 bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-blue-400" /> Customer
+                    </label>
+                    {selectedCustomer && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Existing Customer
+                      </span>
+                    )}
+                    {isNewCustomer && (
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full">
+                        ○ New Customer
+                      </span>
+                    )}
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300">Customer Phone</label>
-                  <div className="relative">
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="e.g. +1 800-555-0123"
-                      className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                      Phone Number <span className="text-slate-500 font-normal">(Primary Lookup)</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={customerPhone}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            triggerImmediateLookup();
+                          }
+                        }}
+                        placeholder="📞 e.g. +91 98765 43210 or 9876543210"
+                        className="w-full pl-9 pr-9 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      />
+                      {searchingCustomer && (
+                        <Loader2 className="w-4 h-4 text-blue-400 animate-spin absolute right-3 top-1/2 -translate-y-1/2" />
+                      )}
+                    </div>
                   </div>
+
+                  {/* Existing Customer Details Card */}
+                  {selectedCustomer && (
+                    <div className="p-3 bg-emerald-950/40 border border-emerald-500/30 rounded-xl space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-emerald-300 text-sm">{selectedCustomer.name}</div>
+                          <div className="text-emerald-400/80 font-mono text-[11px]">
+                            {selectedCustomer.phone || selectedCustomer.normalizedPhone}
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Recognized
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-emerald-500/20 text-[11px]">
+                        <div className="bg-emerald-900/30 p-2 rounded-lg border border-emerald-500/20">
+                          <span className="block text-[10px] text-emerald-400/70 font-semibold uppercase">Previous Purchases</span>
+                          <span className="font-bold text-emerald-200">{selectedCustomer.previousPurchasesCount || 0} Sales</span>
+                        </div>
+                        <div className="bg-emerald-900/30 p-2 rounded-lg border border-emerald-500/20">
+                          <span className="block text-[10px] text-emerald-400/70 font-semibold uppercase">Lifetime Spend</span>
+                          <span className="font-bold text-emerald-200">₹{(selectedCustomer.lifetimeSpend || selectedCustomer.totalAmountSpent || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Customer / Guest Name Field */}
+                  {(isNewCustomer || !selectedCustomer) && (
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                        Customer Name {isNewCustomer ? <span className="text-rose-400">*</span> : <span className="text-slate-500 font-normal">(Optional for Guest)</span>}
+                      </label>
+                      <input
+                        type="text"
+                        required={isNewCustomer}
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder={isNewCustomer ? "Enter customer full name..." : "Enter guest name..."}
+                        className="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>

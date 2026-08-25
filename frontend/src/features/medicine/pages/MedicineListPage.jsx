@@ -570,7 +570,7 @@ export default function MedicineListPage() {
                       )}
                     </td>
                     <td className="py-4 px-6">
-                      <span className="px-2.5 py-1 bg-blue-50 text-blue-700 font-semibold rounded-full border border-blue-100 text-[11px]">
+                      <span className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 font-semibold rounded-full text-[11px] max-w-[220px] truncate" title={med.category?.name || 'Unassigned'}>
                         {med.category?.name || 'Unassigned'}
                       </span>
                     </td>

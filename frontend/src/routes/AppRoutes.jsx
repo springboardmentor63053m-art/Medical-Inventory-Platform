@@ -28,6 +28,8 @@ import UsersPage from '../features/users/pages/UsersPage';
 import PrescriptionOrderPage from '../features/prescription/pages/PrescriptionOrderPage';
 import PharmacistVerificationPage from '../features/prescription/pages/PharmacistVerificationPage';
 import StoreCounterPurchasePage from '../features/prescription/pages/StoreCounterPurchasePage';
+import CustomerListPage from '../features/customer/pages/CustomerListPage';
+import SupplierCommunicationPage from '../features/supplier/pages/SupplierCommunicationPage';
 
 function RoleDashboardRedirect() {
   const { getDashboardPath } = useAuth();
@@ -303,6 +305,24 @@ export default function AppRoutes() {
             </MainLayout>
           </ProtectedRoute>
         }
+      />
+
+      {/* POS Customer Management Route */}
+      <Route
+        path="/customers"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'PHARMACIST', 'STAFF']}>
+            <MainLayout>
+              <CustomerListPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Redirect old standalone communication route to /suppliers */}
+      <Route
+        path="/supplier-communications"
+        element={<Navigate to="/suppliers" replace />}
       />
 
       <Route

@@ -14,8 +14,11 @@ import java.util.List;
 public class StorePurchaseResponse {
     private Long id;
     private String receiptNumber;
+    private Long customerId;
     private String customerName;
     private String customerPhone;
+    private String normalizedPhone;
+    private long previousPurchasesCount;
     private String pharmacistName;
     private BigDecimal totalAmount;
     private String paymentMethod;

@@ -35,6 +35,10 @@ public class StorePurchase {
     @JoinColumn(name = "pharmacist_id")
     private User pharmacist;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private com.medistock.customer.entity.Customer customer;
+
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 

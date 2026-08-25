@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { inventoryService } from '../../../services/api/inventoryService';
 import { reportsApi } from '../services/api/reportsApi';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -46,6 +47,9 @@ ChartJS.register(
 );
 
 export default function ReportsPage() {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [activeTab, setActiveTab] = useState('VALUATION'); // 'VALUATION' | 'EXPIRY' | 'SUPPLIERS'
   const [dateRange, setDateRange] = useState('30');
   const [supplierShareData, setSupplierShareData] = useState(null);
@@ -1924,6 +1928,17 @@ const expiryForecastLabel =
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'bottom',
+                              labels: {
+                                color: isDark ? '#cbd5e1' : '#475569',
+                                boxWidth: 12,
+                                padding: 12,
+                                font: { size: 11, weight: '600' }
+                              }
+                            }
+                          }
                         }}
                       />
                     ) : (

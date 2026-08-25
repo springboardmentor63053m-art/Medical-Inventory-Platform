@@ -51,7 +51,7 @@ export default function StaffDashboardPage() {
   const totalMedicines = medicines.length;
   const availableStockCount = inventory.filter((inv) => Number(inv.quantity || 0) > 0).length;
   const lowStockCount = inventory.filter(
-    (inv) => Number(inv.quantity || 0) <= Number(inv.minimumStock || 10)
+    (inv) => Number(inv.quantity || 0) > 0 && Number(inv.quantity || 0) < Number(inv.minimumStock || 10)
   ).length;
 
   const filteredMedicines = medicines.filter(

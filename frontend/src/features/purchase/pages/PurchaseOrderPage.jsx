@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import { toast } from 'react-toastify';
 import { purchaseOrderService } from '../../../services/api/purchaseOrderService';
@@ -6,6 +7,7 @@ import { supplierService } from '../../../services/api/supplierService';
 import { medicineService } from '../../../services/api/medicineService';
 import { inventoryService } from '../../../services/api/inventoryService';
 import { useAuth } from '../../../contexts/AuthContext';
+import SupplierCommunicationDrawer from '../../supplier/components/SupplierCommunicationDrawer';
 import {
   ShoppingCart,
   Plus,
@@ -23,14 +25,20 @@ import {
   IndianRupee,
   RefreshCw,
   Loader2,
+  MessageSquare,
   ArrowUpDown,
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
 
 export default function PurchaseOrderPage() {
+  const navigate = useNavigate();
   const { user, isSupplier, isAdmin, isPharmacist } = useAuth();
   const canCreatePO = isAdmin || isPharmacist;
+
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [chatSupplier, setChatSupplier] = useState(null);
+  const [chatPO, setChatPO] = useState(null);
 
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -172,10 +180,24 @@ export default function PurchaseOrderPage() {
     return lineItems.reduce((acc, item) => acc + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0);
   };
 
+  const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const handleCreateOrder = async (e) => {
     e.preventDefault();
     if (!selectedSupplierId || !expectedDate || lineItems.some(i => !i.medicineId)) {
       toast.error('Please fill in required fields: Supplier, Expected Date, and Medicine line items.');
+      return;
+    }
+
+    const todayStr = getTodayString();
+    if (expectedDate < todayStr) {
+      toast.error('Expected Delivery Date cannot be in the past.');
       return;
     }
 
@@ -287,6 +309,7 @@ export default function PurchaseOrderPage() {
       toast.success(
         `${updatedOrder.orderNumber} received and inventory updated`
       );
+      window.dispatchEvent(new Event('medistock-inventory-updated'));
 
       setReceiveModalOpen(false);
       setReceivingOrder(null);
@@ -913,12 +936,29 @@ export default function PurchaseOrderPage() {
                     </td>
                     <td className="py-4 px-6">{getStatusBadge(po.status)}</td>
                     <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => setViewOrder(po)}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition inline-flex items-center gap-1"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> View PO
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setViewOrder(po)}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition inline-flex items-center gap-1"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> View PO
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (po.supplier) {
+                              setChatSupplier(po.supplier);
+                              setChatPO(po);
+                              setChatDrawerOpen(true);
+                            } else {
+                              toast.error('No supplier vendor attached to this order');
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold rounded-lg transition inline-flex items-center gap-1"
+                          title="Communicate with supplier regarding this Purchase Order"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" /> Chat
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -966,6 +1006,7 @@ export default function PurchaseOrderPage() {
                   <input
                     type="date"
                     required
+                    min={getTodayString()}
                     value={expectedDate}
                     onChange={(e) => setExpectedDate(e.target.value)}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1399,6 +1440,14 @@ export default function PurchaseOrderPage() {
           </div>
         </div>
       )}
+      {/* Supplier Communication Drawer */}
+      <SupplierCommunicationDrawer
+        isOpen={chatDrawerOpen}
+        onClose={() => setChatDrawerOpen(false)}
+        supplier={chatSupplier}
+        initialPO={chatPO}
+        onConversationUpdated={fetchOrders}
+      />
     </div>
   );
 }

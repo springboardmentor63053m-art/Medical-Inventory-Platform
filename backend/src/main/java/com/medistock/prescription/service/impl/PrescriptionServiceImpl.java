@@ -25,6 +25,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import com.medistock.inventory.service.StockMovementService;
+import com.medistock.customer.entity.Customer;
+import com.medistock.customer.dto.CreateCustomerRequest;
+import com.medistock.customer.dto.CustomerDTO;
+import com.medistock.customer.repository.CustomerRepository;
+import com.medistock.customer.service.CustomerService;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +43,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final UserRepository userRepository;
     private final InventoryRepository inventoryRepository;
     private final StockMovementService stockMovementService;
+    private final CustomerService customerService;
+    private final CustomerRepository customerRepository;
+    private final com.medistock.notification.service.NotificationService notificationService;
 
     @Override
     @Transactional
@@ -307,10 +315,25 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             purchaseItems.add(item);
         }
 
+        Customer customer = null;
+        if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
+            customer = customerService.recordCustomerSale(
+                    request.getCustomerName(),
+                    request.getCustomerPhone(),
+                    totalAmount
+            );
+        } else if (request.getCustomerId() != null) {
+            customer = customerRepository.findById(request.getCustomerId()).orElse(null);
+        }
+
+        String custName = customer != null ? customer.getName() : (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty() ? request.getCustomerName().trim() : "Walk-in Customer");
+        String custPhone = customer != null ? customer.getPhone() : (request.getCustomerPhone() != null ? request.getCustomerPhone().trim() : "");
+
         StorePurchase purchase = StorePurchase.builder()
                 .receiptNumber(receiptNum)
-                .customerName(request.getCustomerName())
-                .customerPhone(request.getCustomerPhone())
+                .customer(customer)
+                .customerName(custName)
+                .customerPhone(custPhone)
                 .pharmacist(pharmacist)
                 .totalAmount(totalAmount)
                 .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "CASH")
@@ -358,6 +381,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 inv.setQuantity(oldBatchQty - deductAmount);
                 remainingToDeduct -= deductAmount;
                 inventoryRepository.save(inv);
+                notificationService.syncNotificationForInventory(inv.getId());
 
                 stockMovementService.recordMovement(
                         medicine,
@@ -465,12 +489,18 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .collect(Collectors.toList());
 
         String pharmacistName = purchase.getPharmacist() != null ? purchase.getPharmacist().getFirstName() + " " + purchase.getPharmacist().getLastName() : "Store Pharmacist";
+        Long customerId = purchase.getCustomer() != null ? purchase.getCustomer().getId() : null;
+        String normPhone = purchase.getCustomer() != null ? purchase.getCustomer().getNormalizedPhone() : "";
+        long purchasesCount = customerId != null ? storePurchaseRepository.countByCustomerId(customerId) : 0;
 
         return StorePurchaseResponse.builder()
                 .id(purchase.getId())
                 .receiptNumber(purchase.getReceiptNumber())
+                .customerId(customerId)
                 .customerName(purchase.getCustomerName())
                 .customerPhone(purchase.getCustomerPhone())
+                .normalizedPhone(normPhone)
+                .previousPurchasesCount(purchasesCount)
                 .pharmacistName(pharmacistName)
                 .totalAmount(purchase.getTotalAmount())
                 .paymentMethod(purchase.getPaymentMethod())

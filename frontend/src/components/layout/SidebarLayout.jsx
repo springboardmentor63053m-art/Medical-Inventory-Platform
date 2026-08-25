@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard,
@@ -13,6 +13,8 @@ import {
   Bell,
   User,
   Users,
+  UserCheck,
+  MessageSquare,
   X,
   Activity,
   ShieldCheck,
@@ -22,6 +24,8 @@ import {
 
 export default function SidebarLayout({ isOpen, onClose }) {
   const { isAdmin, isPharmacist, isStaff, isUser, isSupplier, getDashboardPath } = useAuth();
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   const userDashboardPath = getDashboardPath();
 
@@ -31,21 +35,19 @@ export default function SidebarLayout({ isOpen, onClose }) {
     { name: 'Categories', path: '/categories', icon: Boxes },
   ];
 
-  if (isStaff) {
+  if (isUser) {
+    primaryNavItems.push({ name: 'Prescription Orders', path: '/prescription-orders', icon: FileText, badge: 'Rx Order' });
+  }
+
+  if (isAdmin || isPharmacist || isStaff) {
     primaryNavItems.push(
       { name: 'Inventory', path: '/inventory', icon: Package },
       { name: 'Stock Movements', path: '/stock-movements', icon: ArrowRightLeft }
     );
   }
 
-  if (isUser) {
-    primaryNavItems.push({ name: 'Prescription Orders', path: '/prescription-orders', icon: FileText, badge: 'Rx Order' });
-  }
-
   if (isAdmin || isPharmacist) {
     primaryNavItems.push(
-      { name: 'Inventory', path: '/inventory', icon: Package },
-      { name: 'Stock Movements', path: '/stock-movements', icon: ArrowRightLeft },
       { name: 'Expiring Soon', path: '/expiring', icon: Clock, badge: '< 90d' },
       { name: 'Suppliers', path: '/suppliers', icon: Truck },
       { name: 'Purchase Orders', path: '/purchase-orders', icon: ShoppingCart },
@@ -53,9 +55,7 @@ export default function SidebarLayout({ isOpen, onClose }) {
       { name: 'In-Store POS Counter', path: '/store-counter', icon: Store, badge: 'POS' },
       { name: 'Reports', path: '/reports', icon: FileText }
     );
-  }
-
-  if (isSupplier) {
+  } else if (isSupplier) {
     primaryNavItems.push(
       { name: 'My Supplier Profile', path: '/suppliers', icon: Truck },
       { name: 'Orders From MediStock', path: '/purchase-orders', icon: ShoppingCart, badge: 'MediStock Orders' }
@@ -66,11 +66,39 @@ export default function SidebarLayout({ isOpen, onClose }) {
     primaryNavItems.push({ name: 'Notifications', path: '/notifications', icon: Bell });
   }
 
+  if (isAdmin || isPharmacist || isStaff) {
+    primaryNavItems.push({ name: 'Customer Management', path: '/customers', icon: UserCheck, badge: 'POS' });
+  }
+
   if (isAdmin) {
     primaryNavItems.push({ name: 'User Management', path: '/users', icon: Users, badge: 'Admin' });
   }
 
   primaryNavItems.push({ name: 'Profile', path: '/profile', icon: User });
+
+  // Deduplicate items strictly by route path to guarantee unique keys and prevent multi-active state collisions
+  const uniqueNavItems = primaryNavItems.filter(
+    (item, index, self) => index === self.findIndex((t) => t.path === item.path)
+  );
+
+  const isItemActive = (itemPath) => {
+    if (!itemPath) return false;
+    if (currentPath === itemPath) return true;
+    if (
+      itemPath === userDashboardPath &&
+      (currentPath === '/' || currentPath === '/dashboard' || currentPath.endsWith('/dashboard'))
+    ) {
+      return true;
+    }
+    if (
+      itemPath !== '/' &&
+      itemPath !== userDashboardPath &&
+      currentPath.startsWith(itemPath + '/')
+    ) {
+      return true;
+    }
+    return false;
+  };
 
   return (
     <>
@@ -115,20 +143,19 @@ export default function SidebarLayout({ isOpen, onClose }) {
           <div className="px-3 pb-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
             Core Operations
           </div>
-          {primaryNavItems.map((item) => {
+          {uniqueNavItems.map((item) => {
             const Icon = item.icon;
+            const active = isItemActive(item.path);
             return (
-              <NavLink
+              <Link
                 key={item.path}
                 to={item.path}
                 onClick={onClose}
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`
-                }
+                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+                  active
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon className="w-5 h-5 flex-shrink-0 transition-transform group-hover:scale-110" />
@@ -139,7 +166,7 @@ export default function SidebarLayout({ isOpen, onClose }) {
                     {item.badge}
                   </span>
                 )}
-              </NavLink>
+              </Link>
             );
           })}
         </nav>

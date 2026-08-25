@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface StorePurchaseRepository extends JpaRepository<StorePurchase, Long> {
     List<StorePurchase> findAllByOrderByCreatedAtDesc();
+    long countByCustomerId(Long customerId);
+    long countByCustomer_NormalizedPhone(String normalizedPhone);
 }

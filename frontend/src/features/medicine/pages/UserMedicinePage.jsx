@@ -363,9 +363,11 @@ export default function UserMedicinePage() {
                 )}
 
                 <div className="mt-3 space-y-1.5 text-xs text-slate-600 border-t border-slate-100 pt-2.5">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-slate-400">Category:</span>
-                    <span className="font-semibold text-slate-800">{med.category?.name || 'General'}</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 font-semibold rounded-full text-[11px] max-w-[180px] truncate" title={med.category?.name || 'General'}>
+                      {med.category?.name || 'General'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Dosage:</span>

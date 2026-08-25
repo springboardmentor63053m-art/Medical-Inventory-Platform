@@ -7,6 +7,7 @@ import { inventoryService } from '../../../services/api/inventoryService';
 import { dashboardApi } from '../services/api/dashboardApi';
 import { purchaseOrderService } from '../../../services/api/purchaseOrderService';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 import StatisticCard from '../../../components/common/StatisticCard';
 import StatusBadge from '../../../components/common/StatusBadge';
 import {
@@ -54,6 +55,13 @@ ChartJS.register(
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  const chartTextColor = isDark ? '#94a3b8' : '#64748b';
+  const chartGridColor = isDark ? 'rgba(51, 65, 85, 0.4)' : '#f1f5f9';
+  const chartBorderColor = isDark ? '#131c31' : '#ffffff';
+
   const [loading, setLoading] = useState(true);
 
   // Statistics state calculated directly from backend datasets
@@ -178,7 +186,7 @@ export default function DashboardPage() {
         const calculatedStockStatus =
           quantity === 0
             ? 'OUT_OF_STOCK'
-            : quantity <= minimumStock
+            : quantity < minimumStock
               ? 'LOW_STOCK'
               : 'NORMAL';
 
@@ -502,15 +510,26 @@ export default function DashboardPage() {
 
           <div className="w-full max-w-[220px] mx-auto my-4">
             <Doughnut
-              data={stockChartData}
+              data={{
+                ...stockChartData,
+                datasets: stockChartData.datasets.map((ds) => ({
+                  ...ds,
+                  borderColor: chartBorderColor,
+                })),
+              }}
               options={{
                 responsive: true,
                 plugins: {
                   legend: {
                     position: 'bottom',
-                    labels: { boxWidth: 12, padding: 12, font: { size: 11, weight: '600' } }
-                  }
-                }
+                    labels: {
+                      boxWidth: 12,
+                      padding: 12,
+                      color: chartTextColor,
+                      font: { size: 11, weight: '600' },
+                    },
+                  },
+                },
               }}
             />
           </div>
@@ -542,8 +561,15 @@ export default function DashboardPage() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                  y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
-                  x: { grid: { display: false }, ticks: { font: { size: 10, weight: '600' } } },
+                  y: {
+                    beginAtZero: true,
+                    grid: { color: chartGridColor },
+                    ticks: { color: chartTextColor, font: { size: 11 } },
+                  },
+                  x: {
+                    grid: { display: false },
+                    ticks: { color: chartTextColor, font: { size: 10, weight: '600' } },
+                  },
                 },
               }}
             />

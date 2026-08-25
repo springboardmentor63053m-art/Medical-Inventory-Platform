@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { inventoryService } from '../../services/api/inventoryService';
+import { useNotifications } from '../../features/notifications/hooks/useNotifications';
 import { 
   Bell, 
   User, 
@@ -10,56 +10,59 @@ import {
   Moon, 
   Sun, 
   AlertTriangle,
+  Clock,
   ChevronDown,
   Activity
 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 export default function Header({ toggleSidebar, sidebarOpen }) {
   const { user, logout, isAdmin, isPharmacist, isSupplier, isUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { notifications, unreadCount } = useNotifications();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [alerts, setAlerts] = useState([]);
+
+  const notifRef = useRef(null);
+  const userDropdownRef = useRef(null);
+
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // Close all popover dropdowns whenever the route/path changes
   useEffect(() => {
-    const fetchAlerts = async () => {
-      // Do not fetch inventory alerts for normal USER role or unauthenticated users
-      if (!user || isUser) return;
-      try {
-        const [lowStockRes, expiringRes] = await Promise.allSettled([
-          inventoryService.getLowStockInventory(),
-          inventoryService.getExpiringInventory(30)
-        ]);
+    setNotifOpen(false);
+    setDropdownOpen(false);
+  }, [location.pathname]);
 
-        let items = [];
-        if (lowStockRes.status === 'fulfilled' && Array.isArray(lowStockRes.value)) {
-          items.push(...lowStockRes.value.map(i => ({
-            id: `ls-${i.id}`,
-            type: 'low-stock',
-            title: `Low Stock: ${i.medicine?.name || 'Medicine'}`,
-            message: `Current Qty: ${i.quantity} (Min: ${i.minimumStock})`,
-            time: 'Immediate action required',
-          })));
-        }
-        if (expiringRes.status === 'fulfilled' && Array.isArray(expiringRes.value)) {
-          items.push(...expiringRes.value.map(i => ({
-            id: `exp-${i.id}`,
-            type: 'expiring',
-            title: `Expiring Soon: ${i.medicine?.name || 'Medicine'}`,
-            message: `Batch ${i.batchNumber} expires on ${i.expiryDate}`,
-            time: 'Review inventory',
-          })));
-        }
-        setAlerts(items.slice(0, 5));
-      } catch (err) {
-        // Fallback silently if unauthenticated or network error
+  // Handle outside clicks and keyboard Escape key globally
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setNotifOpen(false);
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
       }
     };
 
-    fetchAlerts();
-  }, [user, isUser]);
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setNotifOpen(false);
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('pointerdown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('pointerdown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -74,6 +77,8 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
     : isSupplier
     ? 'bg-amber-100 text-amber-700 border-amber-200'
     : 'bg-slate-100 text-slate-700 border-slate-200';
+
+  const previewNotifications = notifications.slice(0, 5);
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-4 flex items-center justify-between shadow-xs">
@@ -99,24 +104,27 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
         <button
           onClick={toggleTheme}
           className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-          title="Toggle theme"
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          aria-label="Toggle Theme"
         >
           {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-slate-600" />}
         </button>
 
-        {/* Notifications Dropdown */}
-        <div className="relative">
+        {/* Notifications Dropdown Container */}
+        <div className="relative" ref={notifRef}>
           <button
             onClick={() => {
-              setNotifOpen(!notifOpen);
+              setNotifOpen((prev) => !prev);
               setDropdownOpen(false);
             }}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition relative"
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition relative flex items-center justify-center"
             title="Notifications"
           >
             <Bell className="w-5 h-5 text-slate-600" />
-            {alerts.length > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse"></span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-extrabold leading-none text-white bg-rose-500 rounded-full border-2 border-white min-w-[1.25rem] text-center shadow-xs">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
             )}
           </button>
 
@@ -127,23 +135,29 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
                   <Bell className="w-4 h-4 text-blue-600" /> Notifications
                 </span>
                 <span className="text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                  {alerts.length} New
+                  {unreadCount} Unread
                 </span>
               </div>
               <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
-                {alerts.length === 0 ? (
+                {previewNotifications.length === 0 ? (
                   <div className="p-6 text-center text-xs text-slate-500">
-                    No active stock alerts
+                    No active notifications
                   </div>
                 ) : (
-                  alerts.map((item) => (
-                    <div key={item.id} className="p-3 hover:bg-slate-50 transition text-xs">
+                  previewNotifications.map((item) => (
+                    <div key={item.id} className={`p-3 hover:bg-slate-50 transition text-xs ${item.read ? 'opacity-70' : 'bg-blue-50/20'}`}>
                       <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-semibold text-slate-800">{item.title}</p>
+                        {item.type === 'EXPIRED' || item.type === 'EXPIRING_SOON' ? (
+                          <Clock className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-semibold text-slate-800 flex items-center justify-between">
+                            <span>{item.title}</span>
+                            {!item.read && <span className="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>}
+                          </p>
                           <p className="text-slate-600 mt-0.5">{item.message}</p>
-                          <span className="text-[10px] text-slate-400 mt-1 block">{item.time}</span>
                         </div>
                       </div>
                     </div>
@@ -156,18 +170,18 @@ export default function Header({ toggleSidebar, sidebarOpen }) {
                   onClick={() => setNotifOpen(false)}
                   className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
                 >
-                  View All Notifications
+                  View All Notifications ({notifications.length})
                 </Link>
               </div>
             </div>
           )}
         </div>
 
-        {/* User Profile Dropdown */}
-        <div className="relative">
+        {/* User Profile Dropdown Container */}
+        <div className="relative" ref={userDropdownRef}>
           <button
             onClick={() => {
-              setDropdownOpen(!dropdownOpen);
+              setDropdownOpen((prev) => !prev);
               setNotifOpen(false);
             }}
             className="flex items-center gap-2 p-1.5 hover:bg-slate-100 rounded-xl transition border border-transparent hover:border-slate-200"

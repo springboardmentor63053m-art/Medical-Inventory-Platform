@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { notificationsApi } from '../services/api/notificationsApi';
+import { useNotifications } from '../hooks/useNotifications';
 import {
   Bell,
   AlertTriangle,
@@ -13,138 +13,32 @@ import {
   Loader2,
 } from 'lucide-react';
 
-const READ_STORAGE_KEY = 'medistock-read-notification-ids';
-const DISMISSED_STORAGE_KEY =
-  'medistock-dismissed-notification-ids';
-
-const getStoredIds = (key) => {
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem(key) || '[]'
-    );
-
-    return Array.isArray(stored) ? stored : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveStoredIds = (key, ids) => {
-  localStorage.setItem(
-    key,
-    JSON.stringify([...new Set(ids)])
-  );
-};
-
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    notifications,
+    loading,
+    unreadCount,
+    stockAlertCount,
+    expiryAlertCount,
+    markAsRead,
+    markAllAsRead,
+    dismissNotification,
+  } = useNotifications();
+
   const [filterType, setFilterType] = useState('ALL');
 
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      setLoading(true);
-
-      try {
-        const response =
-          await notificationsApi.getActiveNotifications();
-
-        const activeNotifications =
-          Array.isArray(response) ? response : [];
-
-        const readIds = new Set(
-          getStoredIds(READ_STORAGE_KEY)
-        );
-
-        const dismissedIds = new Set(
-          getStoredIds(DISMISSED_STORAGE_KEY)
-        );
-
-        const preparedNotifications =
-          activeNotifications
-            .filter(
-              (notification) =>
-                !dismissedIds.has(notification.id)
-            )
-            .map((notification) => ({
-              ...notification,
-              read: readIds.has(notification.id),
-            }));
-
-        setNotifications(preparedNotifications);
-      } catch (error) {
-        console.error(
-          'Failed to load notifications from API:',
-          error
-        );
-        toast.error('Unable to load notifications');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAlerts();
-  }, []);
-
   const handleMarkAsRead = (id) => {
-    setNotifications((currentNotifications) => {
-      const updatedNotifications =
-        currentNotifications.map((notification) =>
-          notification.id === id
-            ? { ...notification, read: true }
-            : notification
-        );
-
-      saveStoredIds(
-        READ_STORAGE_KEY,
-        updatedNotifications
-          .filter((notification) => notification.read)
-          .map((notification) => notification.id)
-      );
-
-      return updatedNotifications;
-    });
-
+    markAsRead(id);
     toast.success('Notification marked as read');
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications((currentNotifications) => {
-      const updatedNotifications =
-        currentNotifications.map((notification) => ({
-          ...notification,
-          read: true,
-        }));
-
-      saveStoredIds(
-        READ_STORAGE_KEY,
-        updatedNotifications.map(
-          (notification) => notification.id
-        )
-      );
-
-      return updatedNotifications;
-    });
-
+    markAllAsRead();
     toast.success('All notifications marked as read');
   };
 
   const handleDelete = (id) => {
-    const dismissedIds = getStoredIds(
-      DISMISSED_STORAGE_KEY
-    );
-
-    saveStoredIds(
-      DISMISSED_STORAGE_KEY,
-      [...dismissedIds, id]
-    );
-
-    setNotifications((currentNotifications) =>
-      currentNotifications.filter(
-        (notification) => notification.id !== id
-      )
-    );
-
+    dismissNotification(id);
     toast.info('Notification dismissed');
   };
 
@@ -170,22 +64,6 @@ export default function NotificationsPage() {
 
       return true;
     });
-
-  const unreadCount = notifications.filter(
-    (notification) => !notification.read
-  ).length;
-
-  const stockAlertCount = notifications.filter(
-    (notification) =>
-      notification.type === 'LOW_STOCK' ||
-      notification.type === 'OUT_OF_STOCK'
-  ).length;
-
-  const expiryAlertCount = notifications.filter(
-    (notification) =>
-      notification.type === 'EXPIRING_SOON' ||
-      notification.type === 'EXPIRED'
-  ).length;
 
   const getIcon = (type) => {
     switch (type) {

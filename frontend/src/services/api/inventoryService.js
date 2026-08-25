@@ -35,16 +35,19 @@ export const inventoryService = {
 
   createInventory: async (data) => {
     const response = await apiClient.post('/inventory', data);
+    window.dispatchEvent(new Event('medistock-inventory-updated'));
     return response.data;
   },
 
   updateInventory: async (id, data) => {
     const response = await apiClient.put(`/inventory/${id}`, data);
+    window.dispatchEvent(new Event('medistock-inventory-updated'));
     return response.data;
   },
 
   deleteInventory: async (id) => {
     const response = await apiClient.delete(`/inventory/${id}`);
+    window.dispatchEvent(new Event('medistock-inventory-updated'));
     return response.data;
   },
 

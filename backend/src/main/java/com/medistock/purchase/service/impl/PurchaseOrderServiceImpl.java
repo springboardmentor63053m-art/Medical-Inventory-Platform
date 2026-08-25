@@ -99,6 +99,10 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         Supplier supplier = supplierRepository.findById(request.getSupplierId())
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + request.getSupplierId()));
 
+        if (request.getExpectedDelivery() != null && request.getExpectedDelivery().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Expected delivery date cannot be in the past");
+        }
+
         String orderNumber = "PO-2026-" + String.format("%03d", (purchaseOrderRepository.count() + 1));
 
         PurchaseOrder order = PurchaseOrder.builder()

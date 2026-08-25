@@ -31,7 +31,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     Long sumQuantityByMedicineId(@Param("medicineId") Long medicineId);
 
     @EntityGraph(attributePaths = {"medicine", "medicine.category"})
-    @Query("SELECT i FROM Inventory i WHERE i.quantity <= i.minimumStock")
+    @Query("SELECT i FROM Inventory i WHERE i.quantity < i.minimumStock")
     List<Inventory> findLowStockItems();
 
     @EntityGraph(attributePaths = {"medicine", "medicine.category"})
@@ -53,10 +53,10 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("SELECT COALESCE(SUM(i.quantity), 0) FROM Inventory i")
     Long sumTotalQuantity();
 
-    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > i.minimumStock")
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity >= i.minimumStock")
     Long countNormalStockItems();
 
-    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > 0 AND i.quantity <= i.minimumStock")
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > 0 AND i.quantity < i.minimumStock")
     Long countLowStockItemsExcludingOutOfStock();
 
     @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity = 0")

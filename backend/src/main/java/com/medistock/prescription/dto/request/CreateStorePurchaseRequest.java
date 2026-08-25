@@ -13,7 +13,8 @@ import java.util.List;
 @Builder
 public class CreateStorePurchaseRequest {
 
-    @NotNull(message = "Customer name is required")
+    private Long customerId;
+
     private String customerName;
 
     private String customerPhone;

@@ -312,6 +312,7 @@ export default function InventoryListPage() {
         await inventoryService.createInventory(payload);
         toast.success('Inventory record added');
       }
+      window.dispatchEvent(new Event('medistock-inventory-updated'));
       setModalOpen(false);
       fetchInventoryData();
       fetchMovements();
@@ -329,6 +330,7 @@ export default function InventoryListPage() {
     try {
       await inventoryService.deleteInventory(deleteId);
       toast.success('Inventory record deleted');
+      window.dispatchEvent(new Event('medistock-inventory-updated'));
       setDeleteId(null);
       fetchInventoryData();
       fetchMovements();

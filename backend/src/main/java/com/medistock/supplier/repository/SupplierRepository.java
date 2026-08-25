@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
     Optional<Supplier> findBySupplierCode(String supplierCode);
     Optional<Supplier> findByEmailIgnoreCase(String email);
+    Optional<Supplier> findByEmail(String email);
     Boolean existsBySupplierCode(String supplierCode);
     List<Supplier> findBySupplierNameContainingIgnoreCase(String name);
 

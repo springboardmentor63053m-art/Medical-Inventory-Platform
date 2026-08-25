@@ -62,7 +62,7 @@ export default function PharmacistDashboardPage() {
       const invs = invRes.status === 'fulfilled' ? (invRes.value || []) : [];
       const pos = poRes.status === 'fulfilled' ? (poRes.value || []) : [];
 
-      const lowList = invs.filter((item) => Number(item.quantity || 0) <= Number(item.minimumStock || 10));
+      const lowList = invs.filter((item) => Number(item.quantity || 0) > 0 && Number(item.quantity || 0) < Number(item.minimumStock || 10));
 
       // Calculate monthly purchases and total spend from real POs
       const currentMonth = new Date().getMonth();
