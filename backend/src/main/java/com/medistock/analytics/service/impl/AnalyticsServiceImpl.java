@@ -13,6 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
+import com.medistock.inventory.entity.Inventory;
+import com.medistock.medicine.entity.Medicine;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -27,32 +34,101 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     private final PurchaseOrderRepository purchaseOrderRepository;
 
     @Override
-    public InventoryAnalyticsResponse getInventoryAnalytics() {
+        public InventoryAnalyticsResponse getInventoryAnalytics() {
+        LocalDate today = LocalDate.now();
         LocalDate expiringThrough =
-                LocalDate.now().plusDays(EXPIRING_SOON_DAYS);
+                today.plusDays(EXPIRING_SOON_DAYS);
+
+        List<Inventory> inventoryItems =
+                inventoryRepository.findAll();
+
+        Map<Long, Long> usableQuantityByMedicine =
+                new HashMap<>();
+
+        for (Inventory item : inventoryItems) {
+                if (item.getMedicine() == null ||
+                        item.getMedicine().getId() == null ||
+                        item.getExpiryDate() == null ||
+                        item.getExpiryDate().isBefore(today)) {
+                continue;
+                }
+
+                long quantity =
+                        item.getQuantity() == null
+                                ? 0L
+                                : item.getQuantity();
+
+                usableQuantityByMedicine.merge(
+                        item.getMedicine().getId(),
+                        quantity,
+                        Long::sum
+                );
+        }
+
+        long totalUsableStock =
+                usableQuantityByMedicine.values()
+                        .stream()
+                        .mapToLong(Long::longValue)
+                        .sum();
+
+        long normalStockCount = 0L;
+        long lowStockCount = 0L;
+        long outOfStockCount = 0L;
+
+        List<Medicine> medicines =
+                medicineRepository.findAll();
+
+        for (Medicine medicine : medicines) {
+                long usableQuantity =
+                        usableQuantityByMedicine.getOrDefault(
+                                medicine.getId(),
+                                0L
+                        );
+
+                int reorderLevel =
+                        medicine.getReorderLevel() == null
+                                ? 0
+                                : medicine.getReorderLevel();
+
+                if (usableQuantity == 0L) {
+                outOfStockCount++;
+                } else if (usableQuantity <= reorderLevel) {
+                lowStockCount++;
+                } else {
+                normalStockCount++;
+                }
+        }
 
         return InventoryAnalyticsResponse.builder()
-                .totalMedicines(medicineRepository.count())
+                .totalMedicines((long) medicines.size())
                 .totalCategories(categoryRepository.count())
                 .totalSuppliers(supplierRepository.count())
-                .totalInventoryRecords(inventoryRepository.count())
-                .totalStockQuantity(inventoryRepository.sumTotalQuantity())
-                .normalStockCount(inventoryRepository.countNormalStockItems())
-                .lowStockCount(
-                        inventoryRepository.countLowStockItemsExcludingOutOfStock()
+                .totalInventoryRecords(
+                        (long) inventoryItems.size()
                 )
-                .outOfStockCount(inventoryRepository.countOutOfStockItems())
+                .totalStockQuantity(totalUsableStock)
+                .normalStockCount(normalStockCount)
+                .lowStockCount(lowStockCount)
+                .outOfStockCount(outOfStockCount)
                 .validCount(
-                        inventoryRepository.countValidItemsAfter(expiringThrough)
+                        inventoryRepository.countValidItemsAfter(
+                                expiringThrough
+                        )
                 )
                 .expiringSoonCount(
-                        inventoryRepository.countExpiringItems(expiringThrough)
+                        inventoryRepository.countExpiringItems(
+                                expiringThrough
+                        )
                 )
-                .expiredCount(inventoryRepository.countExpiredItems())
-                .totalPurchaseOrders(purchaseOrderRepository.count())
+                .expiredCount(
+                        inventoryRepository.countExpiredItems()
+                )
+                .totalPurchaseOrders(
+                        purchaseOrderRepository.count()
+                )
                 .totalPurchaseOrderValue(
                         purchaseOrderRepository.sumTotalAmount()
                 )
                 .build();
-    }
+        }
 }
