@@ -1,1 +1,6 @@
 node_modules/
+# Backend build files
+backend/target/
+
+# Frontend build files
+frontend/dist/
