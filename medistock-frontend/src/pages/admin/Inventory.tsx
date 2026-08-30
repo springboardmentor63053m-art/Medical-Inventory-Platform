@@ -57,10 +57,9 @@ function Inventory() {
 
   const [search, setSearch] = useState("");
   const [stockStatus, setStockStatus] = useState("all");
-  const [expiryStatus, setExpiryStatus] = useState("all");
   
 
-  const API_URL = "http://localhost:8080/api/medicines";
+  const API_URL = "http://localhost:8081/api/medicines";
 
   // ============================================================
   // LOAD INVENTORY FROM MEDICINES DATABASE
@@ -445,19 +444,9 @@ function Inventory() {
             stockStatus === "all" ||
             stock === stockStatus;
 
-          const expiry =
-            getExpiryStatus(
-              getItemExpiryDate(item)
-            );
-
-          const matchesExpiry =
-            expiryStatus === "all" ||
-            expiry === expiryStatus;
-
           return (
             matchesSearch &&
-            matchesStock &&
-            matchesExpiry
+            matchesStock
           );
         }
       );
@@ -465,7 +454,6 @@ function Inventory() {
       inventory,
       search,
       stockStatus,
-      expiryStatus,
     ]);
 
   // ============================================================
@@ -589,18 +577,11 @@ function Inventory() {
   // ============================================================
 
   const clearFilters = () => {
-
     setSearch("");
-
     setStockStatus("all");
-
-    setExpiryStatus("all");
   };
 
-  const hasFilters =
-    search ||
-    stockStatus !== "all" ||
-    expiryStatus !== "all";
+  const hasFilters = Boolean(search) || stockStatus !== "all";
 
   // ============================================================
   // UI
@@ -699,33 +680,6 @@ function Inventory() {
 
           <option value="out">
             Out of stock
-          </option>
-
-        </select>
-
-        <select
-          value={expiryStatus}
-          onChange={(e) =>
-            setExpiryStatus(
-              e.target.value
-            )
-          }
-        >
-
-          <option value="all">
-            All expiry
-          </option>
-
-          <option value="valid">
-            Valid
-          </option>
-
-          <option value="soon">
-            Expiring soon
-          </option>
-
-          <option value="expired">
-            Expired
           </option>
 
         </select>
@@ -878,10 +832,6 @@ function Inventory() {
                 </th>
 
                 <th>
-                  EXPIRY
-                </th>
-
-                <th>
                   LOCATION
                 </th>
 
@@ -900,7 +850,7 @@ function Inventory() {
                 <tr>
 
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="inventory-message"
                   >
                     Loading inventory...
@@ -914,7 +864,7 @@ function Inventory() {
                 <tr>
 
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="inventory-message empty"
                   >
 
@@ -1060,47 +1010,6 @@ function Inventory() {
                             )}
 
                           </span>
-
-                        </td>
-
-                        {/* EXPIRY */}
-
-                        <td>
-
-                          <div className="inventory-expiry">
-
-                            <span>
-                              {formatDate(
-                                getItemExpiryDate(
-                                  item
-                                )
-                              )}
-                            </span>
-
-                            {expiry !==
-                              "unknown" && (
-
-                              <small
-                                className={`expiry-${expiry}`}
-                              >
-
-                                {expiry ===
-                                  "valid" &&
-                                  "Valid"}
-
-                                {expiry ===
-                                  "soon" &&
-                                  "Expiring soon"}
-
-                                {expiry ===
-                                  "expired" &&
-                                  "Expired"}
-
-                              </small>
-
-                            )}
-
-                          </div>
 
                         </td>
 

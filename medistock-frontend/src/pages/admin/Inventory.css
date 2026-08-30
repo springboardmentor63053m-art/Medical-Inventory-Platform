@@ -100,7 +100,7 @@
   border-radius: 18px;
   background: #ffffff;
   display: grid;
-  grid-template-columns: minmax(280px, 1.7fr) minmax(180px, 0.75fr) minmax(180px, 0.75fr);
+  grid-template-columns: minmax(280px, 1.8fr) minmax(200px, 0.8fr);
   gap: 12px;
   box-shadow: 0 7px 25px rgba(39, 74, 119, 0.055);
 }

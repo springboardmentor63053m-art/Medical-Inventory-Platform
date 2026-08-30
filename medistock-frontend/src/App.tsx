@@ -6,9 +6,11 @@ import {
   Link,
   Outlet,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
 import { Toaster } from "sonner";
+import axiosInstance from "@/api/axios";
 
 import {
   LayoutDashboard,
@@ -29,7 +31,7 @@ import {
   X,
 } from "lucide-react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // ============================================================
 // AUTH
@@ -37,6 +39,7 @@ import { useState } from "react";
 
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import { ProtectedRoute } from "./routes/ProtectedRoute";
 
 // ============================================================
 // ADMIN PAGES
@@ -46,6 +49,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminMedicines from "./pages/admin/Medicines";
 import Inventory from "./pages/admin/Inventory";
 import Purchases from "./pages/admin/Purchases";
+import PurchaseItems from "./pages/purchases/PurchaseItems";
 import { MedicineForm } from "./pages/medicines/MedicineForm";
 import { ExpiryTracking } from "@/pages/admin/ExpiryTracking";
 import AdminNotifications from "./pages/admin/AdminNotifications";
@@ -423,6 +427,25 @@ function AdminSidebar() {
 
 function AdminHeader() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const response = await axiosInstance.get("/notifications?role=ROLE_ADMIN");
+        if (Array.isArray(response.data)) {
+          const unread = response.data.filter(
+            (n: any) => !n.isRead && (!n.user || n.user?.role?.name === "ROLE_ADMIN" || n.user?.role?.name === "ADMIN")
+          ).length;
+          setUnreadCount(unread);
+        }
+      } catch {
+        // non-blocking
+      }
+    };
+    fetchUnread();
+  }, [location.pathname]);
 
   const getTitle = () => {
     const pathname = location.pathname;
@@ -539,7 +562,10 @@ function AdminHeader() {
       >
         {/* Notification */}
         <button
+          onClick={() => navigate("/admin/notifications")}
+          title="Notifications"
           style={{
+            position: "relative",
             width: "54px",
             height: "54px",
             borderRadius: "14px",
@@ -553,6 +579,24 @@ function AdminHeader() {
           }}
         >
           <Bell size={23} />
+          {unreadCount > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "-4px",
+                right: "-4px",
+                background: "#ef4444",
+                color: "#ffffff",
+                borderRadius: "50%",
+                padding: "2px 6px",
+                fontSize: "11px",
+                fontWeight: 800,
+                lineHeight: 1,
+              }}
+            >
+              {unreadCount}
+            </span>
+          )}
         </button>
 
         {/* User */}
@@ -728,22 +772,23 @@ function App() {
             ADMIN
         ================================================== */}
 
-        <Route
-          path="/admin"
-          element={<AdminLayout />}
-        >
-
-          {/* /admin -> /admin/dashboard */}
-
+        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
           <Route
-            index
-            element={
-              <Navigate
-                to="/admin/dashboard"
-                replace
-              />
-            }
-          />
+            path="/admin"
+            element={<AdminLayout />}
+          >
+
+            {/* /admin -> /admin/dashboard */}
+
+            <Route
+              index
+              element={
+                <Navigate
+                  to="/admin/dashboard"
+                  replace
+                />
+              }
+            />
 
           {/* ==================================================
               DASHBOARD
@@ -815,11 +860,7 @@ function App() {
 
           <Route
             path="purchase-items"
-            element={
-              <ResourceManager
-                config={resources.purchaseItems}
-              />
-            }
+            element={<PurchaseItems />}
           />
 
           {/* ==================================================
@@ -893,6 +934,7 @@ function App() {
           />
 
         </Route>
+        </Route>
 
         {/* ==================================================
             SUPPLIER PORTAL
@@ -941,129 +983,132 @@ function App() {
             STAFF
         ================================================== */}
 
-        <Route
-          path="/staff"
-          element={<StaffLayout />}
-        >
-
+        <Route element={<ProtectedRoute allowedRoles={["STAFF", "ADMIN"]} />}>
           <Route
-            index
-            element={
-              <Navigate
-                to="/staff/dashboard"
-                replace
-              />
-            }
-          />
+            path="/staff"
+            element={<StaffLayout />}
+          >
 
-          <Route
-            path="dashboard"
-            element={<StaffDashboard />}
-          />
+            <Route
+              index
+              element={
+                <Navigate
+                  to="/staff/dashboard"
+                  replace
+                />
+              }
+            />
 
-          <Route
-            path="search"
-            element={<StaffSearchMedicine />}
-          />
+            <Route
+              path="dashboard"
+              element={<StaffDashboard />}
+            />
 
-          <Route
-            path="stock"
-            element={<StaffStock />}
-          />
+            <Route
+              path="search"
+              element={<StaffSearchMedicine />}
+            />
 
-          <Route
-            path="activity"
-            element={<StaffActivity />}
-          />
+            <Route
+              path="stock"
+              element={<StaffStock />}
+            />
 
-          <Route
-            path="notifications"
-            element={<StaffNotifications />}
-          />
+            <Route
+              path="activity"
+              element={<StaffActivity />}
+            />
 
+            <Route
+              path="notifications"
+              element={<StaffNotifications />}
+            />
+
+          </Route>
         </Route>
-
 
         {/* ==================================================
             PHARMACIST
         ================================================== */}
 
-        <Route
-          path="/pharmacist"
-          element={<PharmacistLayout />}
-        >
-
-          {/* /pharmacist -> /pharmacist/dashboard */}
-
+        <Route element={<ProtectedRoute allowedRoles={["PHARMACIST", "ADMIN"]} />}>
           <Route
-            index
-            element={
-              <Navigate
-                to="/pharmacist/dashboard"
-                replace
-              />
-            }
-          />
+            path="/pharmacist"
+            element={<PharmacistLayout />}
+          >
 
-          {/* ==================================================
-              PHARMACIST DASHBOARD
-          ================================================== */}
+            {/* /pharmacist -> /pharmacist/dashboard */}
 
-          <Route
-            path="dashboard"
-            element={<PharmacistDashboard />}
-          />
+            <Route
+              index
+              element={
+                <Navigate
+                  to="/pharmacist/dashboard"
+                  replace
+                />
+              }
+            />
 
-          {/* ==================================================
-              PHARMACIST MEDICINES
-          ================================================== */}
+            {/* ==================================================
+                PHARMACIST DASHBOARD
+            ================================================== */}
 
-          <Route
-            path="medicines"
-            element={<PharmacistMedicines />}
-          />
+            <Route
+              path="dashboard"
+              element={<PharmacistDashboard />}
+            />
 
-          {/* ==================================================
-              CUSTOMER ORDERS
-          ================================================== */}
+            {/* ==================================================
+                PHARMACIST MEDICINES
+            ================================================== */}
 
-          <Route
-            path="orders"
-            element={<PharmacistOrders />}
-          />
+            <Route
+              path="medicines"
+              element={<PharmacistMedicines />}
+            />
 
-          <Route
-            path="prescriptions"
-            element={<PharmacistPrescriptions />}
-          />
+            {/* ==================================================
+                CUSTOMER ORDERS
+            ================================================== */}
 
-          {/* ==================================================
-              NOTIFICATIONS
-          ================================================== */}
+            <Route
+              path="orders"
+              element={<PharmacistOrders />}
+            />
 
-          <Route
-            path="notifications"
-            element={<PharmacistNotifications />}
-          />
+            <Route
+              path="prescriptions"
+              element={<PharmacistPrescriptions />}
+            />
 
-          {/* ==================================================
-              ACTIVITY
-          ================================================== */}
+            {/* ==================================================
+                NOTIFICATIONS
+            ================================================== */}
 
-          <Route
-            path="activity"
-            element={<PharmacistActivity />}
-          />
+            <Route
+              path="notifications"
+              element={<PharmacistNotifications />}
+            />
 
-          {/* ==================================================
-              PROFILE
-          ================================================== */}
+            {/* ==================================================
+                ACTIVITY
+            ================================================== */}
 
-          <Route
-            path="dispensing"
-            element={<PharmacistDispensing />}
-          />
+            <Route
+              path="activity"
+              element={<PharmacistActivity />}
+            />
 
+            {/* ==================================================
+                PROFILE
+            ================================================== */}
+
+            <Route
+              path="dispensing"
+              element={<PharmacistDispensing />}
+            />
+
+          </Route>
         </Route>
 
         {/* ==================================================

@@ -7,10 +7,25 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
+import com.medistock.medistockbackend.entity.Notification;
+import com.medistock.medistockbackend.entity.User;
+import com.medistock.medistockbackend.repository.NotificationRepository;
+import com.medistock.medistockbackend.repository.UserRepository;
+
 @RestController
 @RequestMapping("/api/purchaseorders")
 public class PurchaseOrderController {
     private final PurchaseOrderService service;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+
+    public PurchaseOrderController(final PurchaseOrderService service,
+                                   final NotificationRepository notificationRepository,
+                                   final UserRepository userRepository) {
+        this.service = service;
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
+    }
 
     @GetMapping
     public ResponseEntity<List<PurchaseOrder>> getAll() {
@@ -33,14 +48,46 @@ public class PurchaseOrderController {
         return ResponseEntity.ok(service.save(entity));
     }
 
+    @PostMapping("/{id}/submit-bill")
+    public ResponseEntity<PurchaseOrder> submitBill(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, Object> payload) {
+        PurchaseOrder po = service.findById(id);
+        po.setStatus("BILL_SUBMITTED");
+        PurchaseOrder savedPo = service.save(po);
+
+        try {
+            double amount = 0.0;
+            if (payload != null && payload.get("amount") != null) {
+                amount = Double.parseDouble(payload.get("amount").toString());
+            }
+            String supplierName = savedPo.getSupplier() != null ? savedPo.getSupplier().getName() : "Supplier";
+
+            User adminUser = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() != null &&
+                            ("ROLE_ADMIN".equalsIgnoreCase(u.getRole().getName()) ||
+                             "ADMIN".equalsIgnoreCase(u.getRole().getName())))
+                    .findFirst()
+                    .orElseGet(() -> userRepository.findAll().stream().findFirst().orElse(null));
+
+            if (adminUser != null) {
+                Notification n = new Notification();
+                n.setUser(adminUser);
+                n.setTitle("Bill Submitted");
+                n.setType("BILL_SUBMITTED");
+                n.setMessage("Bill submitted by " + supplierName + " for Stock Order #PO-" + id + ". Amount: ₹" + (int)amount + ". Please review the bill.");
+                n.setIsRead(false);
+                n.setTimestamp(java.time.LocalDateTime.now());
+                notificationRepository.save(n);
+            }
+        } catch (Exception e) {
+            // Non-blocking notification creation
+        }
+
+        return ResponseEntity.ok(savedPo);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.deleteById(id);
         return ResponseEntity.ok().build();
-    }
-
-    @java.lang.SuppressWarnings("all")
-    public PurchaseOrderController(final PurchaseOrderService service) {
-        this.service = service;
     }
 }

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import axiosInstance from "@/api/axios";
 import "../../styles/supplier-dashboard.css";
 
 type Medicine = {
@@ -37,35 +39,7 @@ type SupplierProfile = {
   address: string;
 };
 
-const getLoggedInUser = () => {
-  try {
-    return JSON.parse(localStorage.getItem("user") || "null");
-  } catch {
-    return null;
-  }
-};
 
-const loggedInUser = getLoggedInUser();
-
-const getLoggedInSupplierName = () => {
-  const name =
-    loggedInUser?.username ||
-    loggedInUser?.name ||
-    loggedInUser?.fullName ||
-    "Rahul";
-
-  return String(name)
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-};
-
-const demoProfile: SupplierProfile = {
-  id: loggedInUser?.supplierId ?? loggedInUser?.id ?? 1,
-  name: getLoggedInSupplierName(),
-  contact: loggedInUser?.phone ?? loggedInUser?.contact ?? "+91 XXXXX XXXXX",
-  email: loggedInUser?.email ?? "rahul@medistock.com",
-  address: loggedInUser?.address ?? "Supplier Address",
-};
 
 const demoMedicines: Medicine[] = [
   {
@@ -192,10 +166,43 @@ const formatDate = (value: string) => {
 
 export default function SupplierDashboard() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [activeMenu, setActiveMenu] = useState("dashboard");
 
-  const [profile, setProfile] =
-    useState<SupplierProfile>(demoProfile);
+  const currentProfile: SupplierProfile = useMemo(() => {
+    const rawUser = user || (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        return null;
+      }
+    })();
+
+    const rawName =
+      rawUser?.username ||
+      rawUser?.name ||
+      rawUser?.fullName ||
+      localStorage.getItem("username") ||
+      "Supplier";
+
+    const formattedName = String(rawName)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
+    return {
+      id: rawUser?.supplierId ?? rawUser?.id ?? 1,
+      name: formattedName,
+      contact: rawUser?.phone ?? rawUser?.contact ?? "+91 98765 43210",
+      email: rawUser?.email || `${String(rawName).toLowerCase().replace(/\s+/g, "")}@medistock.com`,
+      address: rawUser?.address || "Supplier Central Hub, Industrial Area",
+    };
+  }, [user]);
+
+  const [profile, setProfile] = useState<SupplierProfile>(currentProfile);
+
+  useEffect(() => {
+    setProfile(currentProfile);
+  }, [currentProfile]);
 
   const [medicines, setMedicines] =
     useState<Medicine[]>(demoMedicines);
@@ -205,6 +212,8 @@ export default function SupplierDashboard() {
 
   const [activities, setActivities] =
     useState<Activity[]>(demoActivities);
+
+  const [dashboardNotifications, setDashboardNotifications] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
 
@@ -251,20 +260,35 @@ export default function SupplierDashboard() {
         }
       }
 
-      const ordersResponse = await fetch(
-        "/suppliers/me/purchase-orders",
-      );
-
-      if (ordersResponse.ok) {
-        const data = await ordersResponse.json();
-
-        const list = Array.isArray(data)
-          ? data
-          : data?.data ?? data?.content ?? [];
-
-        if (Array.isArray(list) && list.length > 0) {
-          setOrders(list);
+      try {
+        const ordersRes = await axiosInstance.get("/purchaseorders");
+        if (Array.isArray(ordersRes.data) && ordersRes.data.length > 0) {
+          const mappedOrders = ordersRes.data.map((item: any) => {
+            const totAmount = Number(
+              item.totalAmount ||
+                item.amount ||
+                (Array.isArray(item.items) && item.items.length > 0
+                  ? item.items.reduce(
+                      (sum: number, i: any) =>
+                        sum + Number(i.price || i.medicine?.price || 0) * Number(i.quantity || 0),
+                      0
+                    )
+                  : 0)
+            );
+            return {
+              id: item.id,
+              orderNumber: item.orderNumber || `PO-2026-00${item.id}`,
+              orderDate: item.orderDate ? String(item.orderDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+              expectedDelivery: item.expectedDelivery ? String(item.expectedDelivery).slice(0, 10) : new Date().toISOString().slice(0, 10),
+              amount: totAmount,
+              status: (item.status === "COMPLETED" || item.status === "CANCELLED" || item.status === "BILL_SUBMITTED") ? (item.status === "BILL_SUBMITTED" ? "COMPLETED" : item.status) : "PENDING",
+              items: Array.isArray(item.items) ? item.items.length : 1,
+            };
+          });
+          setOrders(mappedOrders);
         }
+      } catch {
+        // Fallback to static demo if offline
       }
 
       const activityResponse = await fetch(
@@ -289,9 +313,35 @@ export default function SupplierDashboard() {
     }
   };
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
   useEffect(() => {
     loadDashboard();
-  }, []);
+    const fetchNotifications = async () => {
+      try {
+        const rawUser = user || (() => {
+          try {
+            return JSON.parse(localStorage.getItem("user") || "null");
+          } catch {
+            return null;
+          }
+        })();
+        const userId = rawUser?.id || rawUser?.userId;
+        const endpoint = userId ? `/notifications?userId=${userId}` : "/notifications?role=ROLE_SUPPLIER";
+        const response = await axiosInstance.get(endpoint);
+        if (Array.isArray(response.data)) {
+          setDashboardNotifications(response.data);
+          const unread = response.data.filter(
+            (n: any) => !n.isRead
+          ).length;
+          setUnreadCount(unread);
+        }
+      } catch {
+        // non-blocking
+      }
+    };
+    fetchNotifications();
+  }, [user]);
 
   const pendingOrders = orders.filter(
     (order) => order.status === "PENDING",
@@ -489,7 +539,7 @@ export default function SupplierDashboard() {
             <span>♧</span>
             <strong>Notifications</strong>
 
-            <em>3</em>
+            {unreadCount > 0 && <em>{unreadCount}</em>}
           </button>
 
         </nav>
@@ -499,11 +549,7 @@ export default function SupplierDashboard() {
           <button
             type="button"
             className="supplier-logout"
-            onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              window.location.href = "/";
-            }}
+            onClick={logout}
           >
             <span>↪</span>
             <strong>Logout</strong>
@@ -532,10 +578,29 @@ export default function SupplierDashboard() {
             <button
               type="button"
               className="supplier-notification-button"
+              title="Notifications"
+              style={{ position: "relative" }}
               onClick={() => handleMenu("notifications")}
             >
               ♧
-              <span />
+              {unreadCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-4px",
+                    right: "-4px",
+                    background: "#ef4444",
+                    color: "#ffffff",
+                    borderRadius: "50%",
+                    padding: "2px 6px",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    lineHeight: 1,
+                  }}
+                >
+                  {unreadCount}
+                </span>
+              )}
             </button>
 
             <div className="supplier-user">
@@ -554,11 +619,7 @@ export default function SupplierDashboard() {
             <button
               type="button"
               className="supplier-top-logout"
-              onClick={() => {
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
-                window.location.href = "/";
-              }}
+              onClick={logout}
             >
               ↪ Logout
             </button>
@@ -1058,6 +1119,136 @@ export default function SupplierDashboard() {
                 </tbody>
 
               </table>
+
+            </div>
+
+          </section>
+
+          {/* LIVE NOTIFICATIONS & STOCK ORDERS */}
+
+          <section className="supplier-card" id="supplier-live-notifications" style={{ marginBottom: "24px" }}>
+
+            <div className="supplier-card-heading">
+
+              <div>
+                <h2>🔔 Live Stock Orders & Notifications</h2>
+                <p>Real-time purchase orders and notifications sent from Admin</p>
+              </div>
+
+              <button
+                type="button"
+                className="supplier-refresh"
+                onClick={() => navigate("/supplier/notifications")}
+                style={{ fontSize: "12px", padding: "6px 14px" }}
+              >
+                View All Notifications →
+              </button>
+
+            </div>
+
+            <div className="supplier-activity-list">
+
+              {dashboardNotifications.length === 0 ? (
+                <div style={{ padding: "20px", color: "#64748b", textAlign: "center", fontSize: "14px" }}>
+                  No new notifications received yet.
+                </div>
+              ) : (
+                dashboardNotifications.slice(0, 5).map((n) => (
+                  <div
+                    className="supplier-activity-item"
+                    key={n.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      padding: "14px",
+                      borderRadius: "10px",
+                      background: n.isRead ? "#f8fafc" : "#eff6ff",
+                      borderLeft: n.isRead ? "3px solid #cbd5e1" : "3px solid #2563eb",
+                      marginBottom: "10px",
+                    }}
+                  >
+
+                    <div
+                      className="supplier-activity-icon"
+                      style={{
+                        background: n.isRead ? "#f1f5f9" : "#dbeafe",
+                        color: "#2563eb",
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "18px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      📦
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <strong style={{ fontSize: "14px", color: "#0f172a" }}>
+                          {n.title || "New Stock Order"}
+                        </strong>
+
+                        {!n.isRead && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 800,
+                              background: "#ef4444",
+                              color: "#ffffff",
+                              padding: "2px 8px",
+                              borderRadius: "10px",
+                            }}
+                          >
+                            NEW
+                          </span>
+                        )}
+                      </div>
+
+                      <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#334155", lineHeight: "1.4" }}>
+                        {n.message}
+                      </p>
+
+                    </div>
+
+                    <div style={{ textAlign: "right" }}>
+
+                      <time style={{ fontSize: "11px", color: "#64748b", display: "block", marginBottom: "4px" }}>
+                        {n.timestamp
+                          ? new Date(n.timestamp).toLocaleTimeString("en-IN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "Just now"}
+                      </time>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate("/supplier/notifications")}
+                        style={{
+                          border: "none",
+                          background: "#2563eb",
+                          color: "#ffffff",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          padding: "4px 10px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Review →
+                      </button>
+
+                    </div>
+
+                  </div>
+                ))
+              )}
 
             </div>
 

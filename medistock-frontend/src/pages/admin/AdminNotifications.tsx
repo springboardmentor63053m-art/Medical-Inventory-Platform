@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axiosInstance from "@/api/axios";
 import {
   AlertTriangle,
   Bell,
@@ -16,7 +18,8 @@ type NotificationType =
   | "LOW_STOCK"
   | "OUT_OF_STOCK"
   | "EXPIRY"
-  | "EXPIRED";
+  | "EXPIRED"
+  | "BILL_SUBMITTED";
 
 type NotificationStatus = "UNREAD" | "READ";
 
@@ -29,78 +32,6 @@ interface AdminNotification {
   time: string;
   status: NotificationStatus;
 }
-
-const initialNotifications: AdminNotification[] = [
-  {
-    id: 1,
-    type: "OUT_OF_STOCK",
-    title: "Out of Stock",
-    message: "Insulin 10ml is currently out of stock.",
-    medicine: "Insulin 10ml",
-    time: "Today, 10:30 AM",
-    status: "UNREAD",
-  },
-  {
-    id: 2,
-    type: "LOW_STOCK",
-    title: "Low Stock Alert",
-    message:
-      "Amoxicillin 250mg is below the reorder level.",
-    medicine: "Amoxicillin 250mg",
-    time: "Today, 09:45 AM",
-    status: "UNREAD",
-  },
-  {
-    id: 3,
-    type: "EXPIRY",
-    title: "Medicine Expiring Soon",
-    message:
-      "Paracetamol 500mg expires within 30 days.",
-    medicine: "Paracetamol 500mg",
-    time: "Today, 09:20 AM",
-    status: "UNREAD",
-  },
-  {
-    id: 4,
-    type: "EXPIRED",
-    title: "Expired Medicine",
-    message:
-      "Cetirizine 10mg has already expired.",
-    medicine: "Cetirizine 10mg",
-    time: "Today, 08:50 AM",
-    status: "UNREAD",
-  },
-  {
-    id: 5,
-    type: "LOW_STOCK",
-    title: "Low Stock Alert",
-    message:
-      "Azithromycin 500mg stock is below the reorder level.",
-    medicine: "Azithromycin 500mg",
-    time: "Yesterday, 05:30 PM",
-    status: "READ",
-  },
-  {
-    id: 6,
-    type: "EXPIRY",
-    title: "Expiry Reminder",
-    message:
-      "Vitamin C 500mg will expire within 60 days.",
-    medicine: "Vitamin C 500mg",
-    time: "Yesterday, 03:15 PM",
-    status: "READ",
-  },
-  {
-    id: 7,
-    type: "LOW_STOCK",
-    title: "Low Stock Alert",
-    message:
-      "Metformin 500mg is approaching its reorder level.",
-    medicine: "Metformin 500mg",
-    time: "Yesterday, 11:40 AM",
-    status: "READ",
-  },
-];
 
 const getNotificationIcon = (
   type: NotificationType
@@ -117,6 +48,9 @@ const getNotificationIcon = (
 
     case "EXPIRED":
       return <XCircle size={21} />;
+
+    case "BILL_SUBMITTED":
+      return <CheckCircle2 size={21} />;
 
     default:
       return <Bell size={21} />;
@@ -139,22 +73,136 @@ const getNotificationClass = (
     case "EXPIRED":
       return "notification-expired";
 
+    case "BILL_SUBMITTED":
+      return "notification-success";
+
     default:
       return "";
   }
 };
 
 const AdminNotifications = () => {
-  const [notifications, setNotifications] =
-    useState<AdminNotification[]>(
-      initialNotifications
-    );
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [showBillModal, setShowBillModal] = useState(false);
+  const [selectedPO, setSelectedPO] = useState<any>(null);
+  const [loadingPO, setLoadingPO] = useState(false);
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [selectedLowStockData, setSelectedLowStockData] = useState<any>(null);
 
   const [filter, setFilter] = useState<
     "ALL" | "UNREAD" | "CRITICAL"
   >("ALL");
 
   const [search, setSearch] = useState("");
+
+  const handleNotificationClick = async (notification: AdminNotification) => {
+    markAsRead(notification.id);
+
+    const match = notification.message?.match(/#PO-(\d+)/i);
+    const poId = match ? match[1] : null;
+
+    if (poId) {
+      setShowBillModal(true);
+      setLoadingPO(true);
+      setSelectedPO(null);
+
+      try {
+        const response = await axiosInstance.get(`/purchaseorders/${poId}`);
+        if (response.data) {
+          setSelectedPO(response.data);
+        }
+      } catch (err) {
+        console.warn("Could not load PO details for admin review:", err);
+      } finally {
+        setLoadingPO(false);
+      }
+    } else {
+      let medName = notification.medicine || "Medicine";
+      if (notification.message?.includes("alert for ")) {
+        const medMatch = notification.message.match(/alert for (.+?)\./i);
+        if (medMatch) medName = medMatch[1].trim();
+      }
+
+      let stockQty = "Low";
+      if (notification.message?.includes("Current Stock: ")) {
+        const stockMatch = notification.message.match(/Current Stock:\s*(\d+\s*\w*)/i);
+        if (stockMatch) stockQty = stockMatch[1];
+      }
+
+      setSelectedLowStockData({
+        id: notification.id,
+        medicineName: medName,
+        stockQuantity: stockQty,
+        message: notification.message,
+        time: notification.time,
+        title: notification.title,
+      });
+      setShowLowStockModal(true);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await axiosInstance.get("/notifications?role=ROLE_ADMIN");
+      if (Array.isArray(response.data)) {
+        const mapped: AdminNotification[] = response.data.map((item: any) => {
+          let type: NotificationType = "LOW_STOCK";
+          if (item.type) {
+            type = item.type as NotificationType;
+          } else if (item.message?.toLowerCase().includes("out of stock")) {
+            type = "OUT_OF_STOCK";
+          } else if (item.message?.toLowerCase().includes("expired")) {
+            type = "EXPIRED";
+          } else if (item.message?.toLowerCase().includes("expir")) {
+            type = "EXPIRY";
+          }
+
+          let title = item.title;
+          if (!title) {
+            if (type === "OUT_OF_STOCK") title = "Out of Stock";
+            else if (type === "LOW_STOCK") title = "Low Stock Alert";
+            else if (type === "EXPIRED") title = "Expired Medicine";
+            else title = "Medicine Expiring Soon";
+          }
+
+          let medName = "Inventory";
+          if (type === "BILL_SUBMITTED" || item.type === "BILL_SUBMITTED") {
+            type = "BILL_SUBMITTED";
+            const supMatch = item.message?.match(/submitted by (.+?) for Stock Order/i);
+            medName = supMatch ? supMatch[1]?.trim() : "Supplier Invoice";
+          } else if (item.message?.includes("Low Stock Alert:")) {
+            const medMatch = item.message?.match(/Low Stock Alert:\s*(.+?)\s+stock is below/i);
+            medName = medMatch ? medMatch[1]?.trim() : item.message?.split(" ")[3] || "Medicine";
+          } else {
+            medName = item.message?.split(" ")[0] || "Medicine";
+          }
+
+          return {
+            id: item.id,
+            type,
+            title,
+            message: item.message,
+            medicine: medName,
+            time: item.timestamp
+              ? new Date(item.timestamp).toLocaleString("en-IN", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })
+              : "Just now",
+            status: item.isRead ? "READ" : "UNREAD",
+          };
+        });
+        setNotifications(mapped);
+      }
+    } catch (err) {
+      console.warn("Could not load backend notifications:", err);
+    }
+  };
 
   const unreadCount = notifications.filter(
     (notification) =>
@@ -199,7 +247,7 @@ const AdminNotifications = () => {
     });
   }, [notifications, search, filter]);
 
-  const markAsRead = (id: number) => {
+  const markAsRead = async (id: number) => {
     setNotifications((current) =>
       current.map((notification) =>
         notification.id === id
@@ -210,15 +258,27 @@ const AdminNotifications = () => {
           : notification
       )
     );
+    try {
+      await axiosInstance.put(`/notifications/${id}/read`);
+    } catch (err) {
+      console.warn("Could not mark notification as read on server:", err);
+    }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setNotifications((current) =>
       current.map((notification) => ({
         ...notification,
         status: "READ",
       }))
     );
+    notifications.forEach(async (n) => {
+      if (n.status === "UNREAD") {
+        try {
+          await axiosInstance.put(`/notifications/${n.id}/read`);
+        } catch (e) {}
+      }
+    });
   };
 
   const deleteNotification = (id: number) => {
@@ -481,6 +541,8 @@ const AdminNotifications = () => {
                       ? "unread"
                       : ""
                   }`}
+                  onClick={() => handleNotificationClick(notification)}
+                  style={{ cursor: "pointer" }}
                 >
 
                   <div
@@ -530,16 +592,48 @@ const AdminNotifications = () => {
                   </div>
 
                   <div className="notification-actions">
+                    {notification.message?.includes("#PO-") ? (
+                      <button
+                        className="read-button"
+                        style={{
+                          background: "#2563eb",
+                          color: "#ffffff",
+                          borderColor: "#2563eb",
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNotificationClick(notification);
+                        }}
+                      >
+                        Review Bill Details →
+                      </button>
+                    ) : (
+                      <button
+                        className="read-button"
+                        style={{
+                          background: "#ea580c",
+                          color: "#ffffff",
+                          borderColor: "#ea580c",
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNotificationClick(notification);
+                        }}
+                      >
+                        Review Low Stock →
+                      </button>
+                    )}
 
                     {notification.status ===
                       "UNREAD" && (
                       <button
                         className="read-button"
-                        onClick={() =>
+                        onClick={(e) => {
+                          e.stopPropagation();
                           markAsRead(
                             notification.id
-                          )
-                        }
+                          );
+                        }}
                       >
                         <CheckCircle2
                           size={16}
@@ -637,6 +731,507 @@ const AdminNotifications = () => {
         </div>
 
       </div>
+
+      {/* ADMIN SUBMITTED BILL DETAILS MODAL */}
+      {showBillModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "560px",
+              boxShadow:
+                "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1px solid #f1f5f9",
+                paddingBottom: "16px",
+                marginBottom: "16px",
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#2563eb",
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Submitted Bill & Stock Order Verification
+                </span>
+                <h3
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: "#0f172a",
+                    marginTop: "2px",
+                  }}
+                >
+                  Stock Order #PO-{selectedPO?.id || "—"} Details
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowBillModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {loadingPO ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "36px 0",
+                  color: "#64748b",
+                  fontSize: "14px",
+                }}
+              >
+                Loading order and bill details...
+              </div>
+            ) : (
+              <div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "12px",
+                    background: "#f8fafc",
+                    padding: "16px",
+                    borderRadius: "12px",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div>
+                    <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>
+                      Supplier Name
+                    </span>
+                    <strong style={{ fontSize: "14px", color: "#0f172a" }}>
+                      {selectedPO?.supplier?.name || "Supplier"}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>
+                      Order / Bill Status
+                    </span>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "12px",
+                        background:
+                          selectedPO?.status === "COMPLETED"
+                            ? "#dcfce7"
+                            : "#fef3c7",
+                        color:
+                          selectedPO?.status === "COMPLETED"
+                            ? "#166534"
+                            : "#92400e",
+                      }}
+                    >
+                      {selectedPO?.status === "BILL_SUBMITTED"
+                        ? "Bill Submitted"
+                        : selectedPO?.status || "PENDING"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>
+                      Order Date
+                    </span>
+                    <strong style={{ fontSize: "14px", color: "#0f172a" }}>
+                      {selectedPO?.orderDate
+                        ? new Date(selectedPO.orderDate).toLocaleDateString(
+                            "en-IN",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )
+                        : "Today"}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>
+                      Total Bill Amount
+                    </span>
+                    <strong style={{ fontSize: "16px", color: "#059669" }}>
+                      ₹
+                      {Number(
+                        selectedPO?.totalAmount || selectedPO?.amount || 0
+                      ).toLocaleString("en-IN")}
+                    </strong>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: "20px" }}>
+                  <h4
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      color: "#334155",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Bill Item Breakdown (Medicines & Quantities)
+                  </h4>
+                  <div
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      background: "#ffffff",
+                      maxHeight: "200px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {Array.isArray(selectedPO?.items) &&
+                    selectedPO.items.length > 0 ? (
+                      selectedPO.items.map((item: any, idx: number) => (
+                        <div
+                          key={item.id || idx}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            fontSize: "13px",
+                            padding: "8px 0",
+                            borderBottom:
+                              idx === selectedPO.items.length - 1
+                                ? "none"
+                                : "1px solid #f1f5f9",
+                          }}
+                        >
+                          <div>
+                            <span
+                              style={{
+                                fontWeight: 600,
+                                color: "#1e293b",
+                                display: "block",
+                              }}
+                            >
+                              {item.medicine?.name ||
+                                item.medicineName ||
+                                "Medicine"}
+                            </span>
+                            <small style={{ color: "#64748b" }}>
+                              Unit Price: ₹
+                              {item.price || item.medicine?.price || 0}
+                            </small>
+                          </div>
+                          <strong
+                            style={{
+                              color: "#2563eb",
+                              background: "#eff6ff",
+                              padding: "4px 10px",
+                              borderRadius: "12px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            {item.quantity} Units (₹
+                            {(
+                              (item.price || item.medicine?.price || 0) *
+                              (item.quantity || 0)
+                            ).toLocaleString("en-IN")}
+                            )
+                          </strong>
+                        </div>
+                      ))
+                    ) : (
+                      <div
+                        style={{
+                          color: "#64748b",
+                          fontSize: "13px",
+                          textAlign: "center",
+                          padding: "8px 0",
+                        }}
+                      >
+                        No specific medicine items listed for this order.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    gap: "12px",
+                    borderTop: "1px solid #f1f5f9",
+                    paddingTop: "16px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setShowBillModal(false)}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      background: "#ffffff",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Close
+                  </button>
+
+                  {selectedPO?.status !== "COMPLETED" && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await axiosInstance.put(
+                            `/purchaseorders/${selectedPO.id}`,
+                            {
+                              ...selectedPO,
+                              status: "COMPLETED",
+                            }
+                          );
+                          setSelectedPO({
+                            ...selectedPO,
+                            status: "COMPLETED",
+                          });
+                          fetchNotifications();
+                        } catch (e) {
+                          console.warn("Could not update order status:", e);
+                        }
+                      }}
+                      style={{
+                        padding: "8px 18px",
+                        borderRadius: "8px",
+                        border: "none",
+                        background: "#059669",
+                        color: "#ffffff",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ✔ Approve Bill & Complete Order
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN LOW STOCK REPORT MODAL */}
+      {showLowStockModal && selectedLowStockData && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "520px",
+              boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1px solid #f1f5f9",
+                paddingBottom: "12px",
+                marginBottom: "16px",
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    color: "#ea580c",
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Staff Low Stock Report Details
+                </span>
+                <h3
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: "#0f172a",
+                    marginTop: "2px",
+                  }}
+                >
+                  {selectedLowStockData.title || "Low Stock Medicine Alert"}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowLowStockModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: "#fff7ed",
+                border: "1px solid #ffedd5",
+                padding: "16px",
+                borderRadius: "12px",
+                marginBottom: "20px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "8px",
+                }}
+              >
+                <strong style={{ fontSize: "16px", color: "#9a3412" }}>
+                  {selectedLowStockData.medicineName}
+                </strong>
+                <span
+                  style={{
+                    background: "#ea580c",
+                    color: "#ffffff",
+                    padding: "2px 10px",
+                    borderRadius: "12px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  LOW STOCK
+                </span>
+              </div>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#c2410c",
+                  margin: 0,
+                  lineHeight: 1.5,
+                  fontWeight: 500,
+                }}
+              >
+                {selectedLowStockData.message}
+              </p>
+              <div
+                style={{
+                  marginTop: "12px",
+                  fontSize: "11px",
+                  color: "#9a3412",
+                  fontWeight: 600,
+                }}
+              >
+                Report Time: {selectedLowStockData.time}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+                borderTop: "1px solid #f1f5f9",
+                paddingTop: "16px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowLowStockModal(false)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLowStockModal(false);
+                  navigate("/admin/purchases");
+                }}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "#2563eb",
+                  color: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                + Create Purchase Order →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

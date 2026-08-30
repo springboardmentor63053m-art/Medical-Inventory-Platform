@@ -1,44 +1,50 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import "../../styles/supplier-dashboard.css";
 import "../../styles/supplier-profile.css";
 
 const SupplierProfile: React.FC = () => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const [editing, setEditing] = useState(false);
 
-  const getUser = () => {
-    try {
-      return JSON.parse(localStorage.getItem("user") || "null");
-    } catch {
-      return null;
-    }
-  };
+  const rawUser = useMemo(() => {
+    return user || (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        return null;
+      }
+    })();
+  }, [user]);
 
-  const user = getUser();
+  const loggedInName = useMemo(() => {
+    const name =
+      rawUser?.username ||
+      rawUser?.name ||
+      rawUser?.fullName ||
+      localStorage.getItem("username") ||
+      "Supplier";
 
-  const loggedInName = String(
-    user?.username ||
-      user?.name ||
-      user?.fullName ||
-      "Rahul"
-  )
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+    return String(name)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }, [rawUser]);
 
   const [profile, setProfile] = useState({
     name: loggedInName,
-    supplierId: user?.supplierId || "SUP-0002",
-    email: user?.email || "rahul@medistock.com",
-    phone: user?.phone || "+91 XXXXX XXXXX",
+    supplierId: rawUser?.supplierId || (rawUser?.id ? `SUP-${String(rawUser.id).padStart(4, "0")}` : "SUP-0002"),
+    email: rawUser?.email || `${loggedInName.toLowerCase().replace(/\s+/g, "")}@medistock.com`,
+    phone: rawUser?.phone || "+91 98765 43210",
     company:
-      user?.company ||
-      user?.companyName ||
-      "Rahul Medical Supplies",
-    address: user?.address || "Supplier Address",
-    city: user?.city || "Chittoor",
-    state: user?.state || "Andhra Pradesh",
+      rawUser?.company ||
+      rawUser?.companyName ||
+      `${loggedInName} Medical Supplies`,
+    address: rawUser?.address || "Supplier Central Hub, Industrial Area",
+    city: rawUser?.city || "Chittoor",
+    state: rawUser?.state || "Andhra Pradesh",
     status: "Active",
   });
 
@@ -59,13 +65,7 @@ const SupplierProfile: React.FC = () => {
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase())
-      .join("") || "R";
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  };
+      .join("") || "S";
 
   return (
     <div className="supplier-app">

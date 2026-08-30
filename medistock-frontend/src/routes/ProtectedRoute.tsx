@@ -15,14 +15,16 @@ export const ProtectedRoute = ({
     return <Navigate to="/login" replace />;
   }
 
-  // Get user's role
+  // Get user's role and normalize
   const userRoles = user?.roles || [];
+  const normalizedUserRoles = userRoles.map((r) => r.replace("ROLE_", "").toUpperCase());
+  const normalizedAllowed = allowedRoles?.map((r) => r.replace("ROLE_", "").toUpperCase()) || [];
 
   // If roles are specified, check permission
   if (
     allowedRoles &&
     allowedRoles.length > 0 &&
-    !allowedRoles.some((role) => userRoles.includes(role))
+    !normalizedAllowed.some((role) => normalizedUserRoles.includes(role))
   ) {
     // User is logged in but does not have permission
     return <Navigate to="/" replace />;

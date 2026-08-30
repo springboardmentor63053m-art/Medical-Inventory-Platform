@@ -147,10 +147,13 @@ export const AuthProvider = ({
   // ============================================
 
   const logout = () => {
-
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("role");
+    localStorage.removeItem("roles");
+    localStorage.removeItem("username");
+    localStorage.removeItem("isAuthenticated");
+    sessionStorage.clear();
 
     setToken(null);
     setUser(null);

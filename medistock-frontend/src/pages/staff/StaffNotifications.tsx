@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axiosInstance from "@/api/axios";
 import {
   Bell,
   AlertTriangle,
@@ -19,66 +20,43 @@ type Notification = {
   read: boolean;
 };
 
-const initialNotifications: Notification[] = [
-  {
-    id: 1,
-    title: "Low Stock Alert",
-    message: "Paracetamol 500mg is running low. Current stock: 12 units.",
-    type: "low-stock",
-    time: "10 minutes ago",
-    read: false,
-  },
-  {
-    id: 2,
-    title: "Medicine Expiring Soon",
-    message: "Amoxicillin 250mg will expire within 30 days.",
-    type: "expiry",
-    time: "1 hour ago",
-    read: false,
-  },
-  {
-    id: 3,
-    title: "Stock Received",
-    message: "100 units of Vitamin C 500mg have been added to inventory.",
-    type: "stock",
-    time: "3 hours ago",
-    read: true,
-  },
-  {
-    id: 4,
-    title: "Out of Stock",
-    message: "Ibuprofen 400mg is currently out of stock.",
-    type: "low-stock",
-    time: "5 hours ago",
-    read: false,
-  },
-  {
-    id: 5,
-    title: "Expiry Reminder",
-    message: "Cetirizine 10mg is nearing its expiry date.",
-    type: "expiry",
-    time: "Yesterday",
-    read: true,
-  },
-  {
-    id: 6,
-    title: "Stock Activity Updated",
-    message: "A new stock transaction was recorded in the inventory.",
-    type: "system",
-    time: "Yesterday",
-    read: true,
-  },
-];
+
 
 const StaffNotifications: React.FC = () => {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await axiosInstance.get("/notifications");
+        if (Array.isArray(response.data)) {
+          const mapped: Notification[] = response.data.map((item: any) => {
+            let type: "low-stock" | "expiry" | "stock" | "system" = "system";
+            if (item.type === "LOW_STOCK" || item.type === "OUT_OF_STOCK") type = "low-stock";
+            else if (item.type === "EXPIRY" || item.type === "EXPIRED") type = "expiry";
+            return {
+              id: item.id,
+              title: item.title || "Notification",
+              message: item.message,
+              type: type,
+              time: item.timestamp ? new Date(item.timestamp).toLocaleString("en-IN") : "Just now",
+              read: Boolean(item.isRead),
+            };
+          });
+          setNotifications(mapped);
+        }
+      } catch (e) {
+        console.warn("Could not fetch staff notifications:", e);
+      }
+    };
+    fetchNotifications();
+  }, []);
 
   const unreadCount = notifications.filter(
     (notification) => !notification.read
   ).length;
 
-  const markAsRead = (id: number) => {
+  const markAsRead = async (id: number) => {
     setNotifications((current) =>
       current.map((notification) =>
         notification.id === id
@@ -86,15 +64,25 @@ const StaffNotifications: React.FC = () => {
           : notification
       )
     );
+    try {
+      await axiosInstance.put(`/notifications/${id}/read`);
+    } catch (e) {}
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setNotifications((current) =>
       current.map((notification) => ({
         ...notification,
         read: true,
       }))
     );
+    notifications.forEach(async (n) => {
+      if (!n.read) {
+        try {
+          await axiosInstance.put(`/notifications/${n.id}/read`);
+        } catch (e) {}
+      }
+    });
   };
 
   const removeNotification = (id: number) => {

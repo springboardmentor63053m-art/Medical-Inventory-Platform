@@ -1,5 +1,9 @@
 import React, { useRef, useState } from "react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import axiosInstance from "@/api/axios";
+import { toast } from "sonner";
+import { addPharmacistOrder, addPharmacistActivity } from "../Pharmacist/pharmacistData";
 
 type Medicine = {
   id: number;
@@ -15,7 +19,7 @@ type CartItem = Medicine & {
 };
 
 export default function UserDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -213,7 +217,7 @@ export default function UserDashboard() {
     0
   );
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (cart.length === 0 && !prescription) {
       setOrderMessage(
         "Please add medicines or upload a prescription before placing an order."
@@ -221,9 +225,87 @@ export default function UserDashboard() {
       return;
     }
 
-    setOrderMessage(
-      "Your order has been submitted successfully. The pharmacy will review it shortly."
-    );
+    try {
+      const storedUser = localStorage.getItem("user");
+      let currentUser = user;
+      if (!currentUser && storedUser) {
+        try {
+          currentUser = JSON.parse(storedUser);
+        } catch {
+          // fallback
+        }
+      }
+
+      const userName =
+        currentUser?.name ||
+        currentUser?.username ||
+        currentUser?.fullName ||
+        localStorage.getItem("username") ||
+        "Customer";
+
+      const userId = currentUser?.id ? `USR-${currentUser.id}` : "USR-001";
+      const orderIdNum = Math.floor(1000 + Math.random() * 9000);
+      const orderId = `ORD-${orderIdNum}`;
+
+      const cartSummary =
+        cart.length > 0
+          ? cart.map((i) => `${i.name} (x${i.quantity})`).join(", ")
+          : prescription
+          ? "Prescription Upload"
+          : "Medicine Order";
+
+      const orderObj = {
+        id: orderId,
+        customerName: userName,
+        customerId: userId,
+        medicines: cart.map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          price: i.price,
+        })),
+        prescription: Boolean(prescription),
+        prescriptionName: prescription ? prescription.name : undefined,
+        status: "PENDING" as const,
+        createdAt: new Date().toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      addPharmacistOrder(orderObj);
+
+      addPharmacistActivity({
+        type: "ORDER",
+        message: `New medicine order #${orderId} placed by ${userName}`,
+        time: new Date().toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      });
+
+      const hasPrescription = Boolean(prescription);
+      const prescriptionText = hasPrescription
+        ? "with prescription"
+        : "without prescription";
+
+      const message = `New medicine order received ${prescriptionText} from ${userName}. Order ID: #${orderId}. Items: ${cartSummary}. Please review the order.`;
+
+      await axiosInstance.post("/notifications", {
+        title: "New Medicine Order",
+        type: hasPrescription ? "PRESCRIPTION_ORDER" : "NEW_ORDER",
+        message: message,
+        isRead: false,
+      });
+
+      toast.success(`Order #${orderId} placed successfully! Pharmacist notified.`);
+      setCart([]);
+      setPrescription(null);
+      setOrderMessage(
+        `Your order #${orderId} has been submitted successfully. The pharmacy will review it shortly.`
+      );
+    } catch (err) {
+      console.error("Failed to submit order notification:", err);
+      toast.error("Failed to place order. Please try again.");
+    }
   };
 
   return (
@@ -364,6 +446,40 @@ export default function UserDashboard() {
                 Customer
               </div>
             </div>
+
+            <button
+              onClick={() => {
+                if (window.confirm("Are you sure you want to log out?")) {
+                  logout();
+                }
+              }}
+              title="Log out of your account"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                border: "1px solid #fee2e2",
+                background: "#fef2f2",
+                borderRadius: "10px",
+                padding: "9px 16px",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "14px",
+                color: "#dc2626",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#fee2e2";
+                e.currentTarget.style.borderColor = "#fca5a5";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#fef2f2";
+                e.currentTarget.style.borderColor = "#fee2e2";
+              }}
+            >
+              <LogOut size={16} />
+              <span>Logout</span>
+            </button>
           </div>
         </div>
       </header>

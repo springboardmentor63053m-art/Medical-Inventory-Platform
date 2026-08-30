@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import "../../styles/supplier-supply-activity.css";
 
 type Activity = {
@@ -79,16 +80,28 @@ const getUser = () => {
 
 export default function SupplierSupplyActivity() {
   const navigate = useNavigate();
-  const user = getUser();
+  const { user, logout } = useAuth();
 
-  const supplierName = String(
-    user?.username ||
-      user?.name ||
-      user?.fullName ||
-      "Rahul"
-  )
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  const supplierName = useMemo(() => {
+    const rawUser = user || (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        return null;
+      }
+    })();
+
+    const name =
+      rawUser?.username ||
+      rawUser?.name ||
+      rawUser?.fullName ||
+      localStorage.getItem("username") ||
+      "Supplier";
+
+    return String(name)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }, [user]);
 
   const [activities] = useState<Activity[]>(demoActivities);
 
@@ -102,7 +115,7 @@ export default function SupplierSupplyActivity() {
       .filter(Boolean)
       .slice(0, 2)
       .map((part: string) => part[0]?.toUpperCase())
-      .join("") || "R";
+      .join("") || "S";
 
   /*
    * ============================================================
@@ -163,17 +176,7 @@ export default function SupplierSupplyActivity() {
     setStatusFilter("ALL");
   };
 
-  /*
-   * ============================================================
-   * LOGOUT
-   * ============================================================
-   */
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  };
 
   return (
     <div className="supplier-app">

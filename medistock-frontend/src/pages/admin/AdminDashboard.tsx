@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axiosInstance from "@/api/axios";
 
 interface Medicine {
   id: number;
@@ -30,13 +31,27 @@ interface DashboardStats {
   inventoryValue: number;
 }
 
-const API_BASE = "http://localhost:8080/api";
+interface BackendAnalytics {
+  totalMedicines: number;
+  totalStock: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  expiringCount: number;
+  inventoryValue: number;
+  totalSuppliers: number;
+  lowStockItems?: Medicine[];
+  outOfStockItems?: Medicine[];
+  expiringItems?: any[];
+}
+
+const API_BASE = "http://localhost:8081/api";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<BackendAnalytics | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -57,100 +72,49 @@ export default function AdminDashboard() {
       setLoading(true);
       setError("");
 
-      const token = localStorage.getItem("token");
-
-      const headers: HeadersInit = {
-        Accept: "application/json",
-        ...(token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : {}),
-      };
-
-      // ----------------------------------------------------------
-      // MEDICINES
-      // ----------------------------------------------------------
-
-      const medicineResponse = await fetch(
-        `${API_BASE}/medicines`,
-        {
-          method: "GET",
-          headers,
+      try {
+        const analyticsRes = await axiosInstance.get("/analytics");
+        if (analyticsRes.data) {
+          setAnalyticsData(analyticsRes.data);
         }
-      );
-
-      if (medicineResponse.status === 401) {
-        localStorage.clear();
-        navigate("/login");
-        return;
+      } catch (analyticsErr) {
+        console.warn("Analytics API fetch failed, falling back:", analyticsErr);
       }
 
-      if (!medicineResponse.ok) {
-        throw new Error(
-          `Medicine request failed: ${medicineResponse.status}`
-        );
-      }
-
-      const medicineData =
-        await medicineResponse.json();
-
-      setMedicines(
-        Array.isArray(medicineData)
-          ? medicineData
-          : []
-      );
-
-      // ----------------------------------------------------------
-      // SUPPLIERS
-      // ----------------------------------------------------------
+      const medicineRes = await axiosInstance.get("/medicines");
+      setMedicines(Array.isArray(medicineRes.data) ? medicineRes.data : []);
 
       try {
-        const supplierResponse = await fetch(
-          `${API_BASE}/suppliers`,
-          {
-            method: "GET",
-            headers,
-          }
-        );
-
-        if (supplierResponse.ok) {
-          const supplierData =
-            await supplierResponse.json();
-
-          setSuppliers(
-            Array.isArray(supplierData)
-              ? supplierData
-              : []
-          );
-        }
+        const supplierRes = await axiosInstance.get("/suppliers");
+        setSuppliers(Array.isArray(supplierRes.data) ? supplierRes.data : []);
       } catch (supplierError) {
-        console.warn(
-          "Supplier data could not be loaded:",
-          supplierError
-        );
-
+        console.warn("Supplier data could not be loaded:", supplierError);
         setSuppliers([]);
       }
     } catch (err) {
-      console.error(
-        "Dashboard loading error:",
-        err
-      );
-
-      setError(
-        "Unable to load dashboard data from the server."
-      );
+      console.error("Dashboard loading error:", err);
+      setError("Unable to load dashboard data from the server.");
     } finally {
       setLoading(false);
     }
   };
 
   // ============================================================
-  // CALCULATE STATISTICS
+  // CALCULATE STATISTICS (PREFER BACKEND ANALYTICS)
   // ============================================================
 
   const stats: DashboardStats = useMemo(() => {
+    if (analyticsData) {
+      return {
+        totalMedicines: analyticsData.totalMedicines,
+        availableStock: analyticsData.totalStock,
+        lowStock: analyticsData.lowStockCount,
+        outOfStock: analyticsData.outOfStockCount,
+        totalSuppliers: analyticsData.totalSuppliers,
+        inventoryValue: analyticsData.inventoryValue,
+      };
+    }
+
     let availableStock = 0;
     let lowStock = 0;
     let outOfStock = 0;
@@ -169,7 +133,7 @@ export default function AdminDashboard() {
 
       if (quantity <= 0) {
         outOfStock++;
-      } else if (quantity <= 20) {
+      } else if (quantity <= 10) {
         lowStock++;
       }
     });
@@ -182,7 +146,7 @@ export default function AdminDashboard() {
       totalSuppliers: suppliers.length,
       inventoryValue,
     };
-  }, [medicines, suppliers]);
+  }, [analyticsData, medicines, suppliers]);
 
   // ============================================================
   // RECENT MEDICINES
@@ -199,20 +163,21 @@ export default function AdminDashboard() {
   // ============================================================
 
   const lowStockMedicines = useMemo(() => {
+    if (analyticsData?.lowStockItems) {
+      return analyticsData.lowStockItems;
+    }
     return medicines
-      .filter(
-        (medicine) =>
-          (Number(
-            medicine.stockQuantity
-          ) || 0) <= 20
-      )
+      .filter((medicine) => {
+        const qty = Number(medicine.stockQuantity) || 0;
+        return qty > 0 && qty <= 20;
+      })
       .sort(
         (a, b) =>
           (Number(a.stockQuantity) || 0) -
           (Number(b.stockQuantity) || 0)
       )
       .slice(0, 5);
-  }, [medicines]);
+  }, [analyticsData, medicines]);
 
   // ============================================================
   // FORMAT CURRENCY
@@ -708,7 +673,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={() =>
                     navigate(
-                      "/medicines"
+                      "/admin/medicines"
                     )
                   }
                   style={{
@@ -747,7 +712,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={() =>
                     navigate(
-                      "/inventory"
+                      "/admin/inventory"
                     )
                   }
                   style={{
@@ -786,7 +751,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={() =>
                     navigate(
-                      "/suppliers"
+                      "/admin/suppliers"
                     )
                   }
                   style={{
@@ -825,7 +790,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={() =>
                     navigate(
-                      "/purchases"
+                      "/admin/purchases"
                     )
                   }
                   style={{
@@ -909,7 +874,7 @@ export default function AdminDashboard() {
                   <button
                     onClick={() =>
                       navigate(
-                        "/medicines"
+                        "/admin/medicines"
                       )
                     }
                     style={{
@@ -1056,7 +1021,7 @@ export default function AdminDashboard() {
                   <button
                     onClick={() =>
                       navigate(
-                        "/medicines"
+                        "/admin/medicines"
                       )
                     }
                     style={{

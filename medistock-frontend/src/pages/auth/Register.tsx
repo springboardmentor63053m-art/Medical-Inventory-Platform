@@ -14,7 +14,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-const API_URL = "http://localhost:8080/api/auth";
+const API_URL = "http://localhost:8081/api/auth";
 
 type Role =
   | "USER"

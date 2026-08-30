@@ -3,15 +3,37 @@ import {
   Link,
   Outlet,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
+import { Bell } from "lucide-react";
+import axiosInstance from "@/api/axios";
 
 import "./PharmacistLayout.css";
 
 const PharmacistLayout: React.FC = () => {
   const [username, setUsername] =
     useState("Pharmacist");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const response = await axiosInstance.get("/notifications?role=ROLE_PHARMACIST");
+        if (Array.isArray(response.data)) {
+          const unread = response.data.filter(
+            (n: any) => !n.isRead && (!n.user || n.user?.role?.name === "ROLE_PHARMACIST" || n.user?.role?.name === "PHARMACIST")
+          ).length;
+          setUnreadCount(unread);
+        }
+      } catch {
+        // non-blocking
+      }
+    };
+    fetchUnread();
+  }, [location.pathname]);
 
   useEffect(() => {
     const storedUser =
@@ -188,6 +210,19 @@ const PharmacistLayout: React.FC = () => {
 
 
           <Link
+            to="/pharmacist/notifications"
+            className={
+              isActive(
+                "/pharmacist/notifications"
+              )
+                ? "active"
+                : ""
+            }
+          >
+            Notifications
+          </Link>
+
+          <Link
             to="/pharmacist/activity"
             className={
               isActive(
@@ -232,24 +267,62 @@ const PharmacistLayout: React.FC = () => {
           </div>
 
 
-          <div className="pharmacist-user">
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <button
+              onClick={() => navigate("/pharmacist/notifications")}
+              title="Notifications"
+              style={{
+                position: "relative",
+                width: "44px",
+                height: "44px",
+                borderRadius: "12px",
+                border: "1px solid #cbd5e1",
+                background: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#475569",
+                cursor: "pointer",
+              }}
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-4px",
+                    right: "-4px",
+                    background: "#ef4444",
+                    color: "#ffffff",
+                    borderRadius: "50%",
+                    padding: "2px 6px",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    lineHeight: 1,
+                  }}
+                >
+                  {unreadCount}
+                </span>
+              )}
+            </button>
 
-            <div className="pharmacist-avatar">
-              {username
-                .charAt(0)
-                .toUpperCase()}
+            <div className="pharmacist-user">
+              <div className="pharmacist-avatar">
+                {username
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+
+              <div>
+                <strong>
+                  {username}
+                </strong>
+
+                <span>
+                  Pharmacist
+                </span>
+              </div>
             </div>
-
-            <div>
-              <strong>
-                {username}
-              </strong>
-
-              <span>
-                Pharmacist
-              </span>
-            </div>
-
           </div>
 
         </header>

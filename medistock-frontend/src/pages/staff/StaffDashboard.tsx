@@ -1,7 +1,32 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axiosInstance from "@/api/axios";
 import "./StaffDashboard.css";
 
 const StaffDashboard: React.FC = () => {
+  const [stats, setStats] = useState({
+    totalMedicines: 0,
+    availableStock: 0,
+    lowStock: 0,
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axiosInstance.get("/analytics");
+        if (res.data) {
+          setStats({
+            totalMedicines: res.data.totalMedicines || 0,
+            availableStock: res.data.totalStock || 0,
+            lowStock: res.data.lowStockCount || 0,
+          });
+        }
+      } catch (err) {
+        console.warn("Could not load staff dashboard analytics:", err);
+      }
+    };
+    fetchStats();
+  }, []);
+
   return (
     <div className="staff-dashboard-content">
 
@@ -18,7 +43,7 @@ const StaffDashboard: React.FC = () => {
 
           <div>
             <p>Total Medicines</p>
-            <h2>245</h2>
+            <h2>{stats.totalMedicines}</h2>
           </div>
         </div>
 
@@ -29,7 +54,7 @@ const StaffDashboard: React.FC = () => {
 
           <div>
             <p>Available Stock</p>
-            <h2>1,240</h2>
+            <h2>{stats.availableStock}</h2>
           </div>
         </div>
 
@@ -40,7 +65,7 @@ const StaffDashboard: React.FC = () => {
 
           <div>
             <p>Low Stock</p>
-            <h2>18</h2>
+            <h2>{stats.lowStock}</h2>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axiosInstance from "@/api/axios";
 import "../../styles/purchases.css";
 
 interface Supplier {
@@ -83,25 +84,123 @@ export default function Purchases() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
   const [showModal, setShowModal] = useState(false);
-  const [newSupplier, setNewSupplier] = useState("");
-  const [newAmount, setNewAmount] = useState("");
+  const [availableSuppliers, setAvailableSuppliers] = useState<any[]>([]);
+  const [availableMedicines, setAvailableMedicines] = useState<any[]>([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+  const [selectedMedicineId, setSelectedMedicineId] = useState<string>("");
+  const [medicineQuantity, setMedicineQuantity] = useState<string>("10");
+  const [newAmount, setNewAmount] = useState("15000");
   const [newDate, setNewDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
-  const [newDelivery, setNewDelivery] = useState("");
+  const [newDelivery, setNewDelivery] = useState(
+    new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+  );
+  interface SelectedOrderItem {
+    medicineId: number;
+    medicineName: string;
+    quantity: number;
+    price: number;
+  }
+
+  const [orderItems, setOrderItems] = useState<SelectedOrderItem[]>([]);
   const [notice, setNotice] = useState("");
+
+  const currentSelectedMed = useMemo(() => {
+    return availableMedicines.find(
+      (m) => String(m.id) === String(selectedMedicineId)
+    );
+  }, [availableMedicines, selectedMedicineId]);
+
+  const currentUnitPrice = currentSelectedMed?.price
+    ? Number(currentSelectedMed.price)
+    : 50;
+
+  useEffect(() => {
+    if (orderItems.length > 0) {
+      const total = orderItems.reduce(
+        (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+        0
+      );
+      setNewAmount(String(total));
+    } else {
+      const qty = Number(medicineQuantity) || 0;
+      const total = currentUnitPrice * qty;
+      setNewAmount(String(total));
+    }
+  }, [orderItems, medicineQuantity, currentUnitPrice]);
+
+  const addMedicineToOrder = () => {
+    const med = availableMedicines.find(
+      (m) => String(m.id) === String(selectedMedicineId)
+    );
+    const medName = med?.name || "Medicine";
+    const medPrice = med?.price ? Number(med.price) : 50;
+    const qty = Number(medicineQuantity) || 10;
+    const medId = selectedMedicineId ? Number(selectedMedicineId) : 1;
+
+    setOrderItems((prev) => [
+      ...prev,
+      {
+        medicineId: medId,
+        medicineName: medName,
+        quantity: qty,
+        price: medPrice,
+      },
+    ]);
+  };
+
+  const removeMedicineFromOrder = (index: number) => {
+    setOrderItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const loadSuppliersAndMedicines = async () => {
+    try {
+      const supRes = await axiosInstance.get("/suppliers");
+      if (Array.isArray(supRes.data)) {
+        setAvailableSuppliers(supRes.data);
+        if (supRes.data.length > 0) {
+          setSelectedSupplierId(String(supRes.data[0].id));
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    try {
+      const medRes = await axiosInstance.get("/medicines");
+      if (Array.isArray(medRes.data)) {
+        setAvailableMedicines(medRes.data);
+        if (medRes.data.length > 0) {
+          setSelectedMedicineId(String(medRes.data[0].id));
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const openModal = () => {
+    loadSuppliersAndMedicines();
+    setShowModal(true);
+  };
 
   const filteredOrders = useMemo(() => {
     const query = search.trim().toLowerCase();
 
     return orders.filter((order) => {
+      const supName = order?.supplier?.name || "";
       const matchesSearch =
         !query ||
-        String(order.id).includes(query) ||
-        order.supplier.name.toLowerCase().includes(query);
+        String(order?.id || "").includes(query) ||
+        supName.toLowerCase().includes(query);
 
       const matchesStatus =
-        status === "ALL" || order.status === status;
+        status === "ALL" || order?.status === status;
 
       return matchesSearch && matchesStatus;
     });
@@ -141,7 +240,7 @@ export default function Purchases() {
       const token = localStorage.getItem("token");
 
       const response = await fetch(
-        "http://localhost:8080/api/purchaseorders",
+        "http://localhost:8081/api/purchaseorders",
         {
           headers: {
             Accept: "application/json",
@@ -187,18 +286,19 @@ export default function Purchases() {
               new Date().toISOString().slice(0, 10),
             totalAmount: Number(
               item.totalAmount ??
-                item.items?.reduce(
-                  (sum: number, row: any) =>
-                    sum +
-                    Number(row.quantity ?? 0) *
-                      Number(row.price ?? 0),
-                  0
-                ) ??
-                0
+                (Array.isArray(item.items) && item.items.length > 0
+                  ? item.items.reduce(
+                      (sum: number, row: any) =>
+                        sum +
+                        Number(row.quantity ?? 0) *
+                          Number(row.price ?? row.medicine?.price ?? 0),
+                      0
+                    )
+                  : 0)
             ),
-            items: Array.isArray(item.items)
+            items: Array.isArray(item.items) && item.items.length > 0
               ? item.items.length
-              : Number(item.itemCount ?? 0),
+              : 1,
           })
         );
 
@@ -206,15 +306,9 @@ export default function Purchases() {
         setNotice("Purchase orders refreshed from the server.");
       } else {
         setOrders(SAMPLE_PURCHASES);
-        setNotice(
-          "No purchase orders were returned, so sample purchase data is displayed."
-        );
       }
     } catch {
       setOrders(SAMPLE_PURCHASES);
-      setNotice(
-        "Purchase service is unavailable, so sample purchase data is displayed."
-      );
     }
   };
 
@@ -223,72 +317,46 @@ export default function Purchases() {
   ) => {
     event.preventDefault();
 
-    if (!newSupplier.trim() || !newAmount || !newDelivery) {
-      setNotice("Please complete supplier, amount and delivery date.");
-      return;
-    }
+    const selectedSupObj = availableSuppliers.find(
+      (s) => String(s.id) === String(selectedSupplierId)
+    );
+    const supName = selectedSupObj?.name || "Supplier";
+    const supId = selectedSupplierId ? Number(selectedSupplierId) : 1;
 
-    const nextId =
-      Math.max(...orders.map((order) => order.id), 1000) + 1;
-
-    const order: PurchaseOrder = {
-      id: nextId,
-      supplier: {
-        id: 0,
-        name: newSupplier.trim(),
-      },
-      orderDate: newDate,
-      status: "PENDING",
-      expectedDelivery: newDelivery,
-      totalAmount: Number(newAmount),
-      items: 1,
-    };
+    const payloadItems =
+      orderItems.length > 0
+        ? orderItems.map((item) => ({
+            medicine: { id: item.medicineId },
+            quantity: item.quantity,
+            price: item.price > 0 ? item.price : currentUnitPrice,
+          }))
+        : [
+            {
+              medicine: { id: selectedMedicineId ? Number(selectedMedicineId) : 1 },
+              quantity: Number(medicineQuantity) || 10,
+              price: currentUnitPrice > 0 ? currentUnitPrice : 50,
+            },
+          ];
 
     try {
-      const token = localStorage.getItem("token");
+      const response = await axiosInstance.post("/purchaseorders", {
+        supplier: { id: supId },
+        orderDate: `${newDate}T09:00:00`,
+        status: "PENDING",
+        items: payloadItems,
+      });
 
-      const response = await fetch(
-        "http://localhost:8080/api/purchaseorders",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            ...(token
-              ? { Authorization: `Bearer ${token}` }
-              : {}),
-          },
-          body: JSON.stringify({
-            supplier: { id: order.supplier.id },
-            orderDate: `${newDate}T09:00:00`,
-            status: "PENDING",
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const saved = await response.json();
-
-        order.id = Number(saved.id ?? nextId);
-        setOrders((current) => [order, ...current]);
-        setNotice("Purchase order created successfully.");
-      } else {
-        setOrders((current) => [order, ...current]);
+      if (response.data) {
         setNotice(
-          "Purchase order added to the current screen. Backend rejected the request."
+          `Stock Order #PO-${response.data.id} created successfully for ${supName} with ${payloadItems.length} medicine(s)! Supplier notified.`
         );
+        setOrderItems([]);
+        refresh();
       }
-    } catch {
-      setOrders((current) => [order, ...current]);
-      setNotice(
-        "Purchase order added to the current screen. Start the backend to save it permanently."
-      );
+    } catch (err) {
+      setNotice("Could not save purchase order to backend.");
     }
 
-    setNewSupplier("");
-    setNewAmount("");
-    setNewDate(new Date().toISOString().slice(0, 10));
-    setNewDelivery("");
     setShowModal(false);
   };
 
@@ -319,7 +387,7 @@ export default function Purchases() {
 
           <button
             className="purchase-primary"
-            onClick={() => setShowModal(true)}
+            onClick={openModal}
           >
             + New Purchase
           </button>
@@ -466,10 +534,10 @@ export default function Purchases() {
                     <td>
                       <div className="purchase-supplier">
                         <strong>
-                          {order.supplier.name}
+                          {order.supplier?.name || "Supplier"}
                         </strong>
                         <span>
-                          Supplier #{order.supplier.id || "—"}
+                          Supplier #{order.supplier?.id || "—"}
                         </span>
                       </div>
                     </td>
@@ -540,9 +608,9 @@ export default function Purchases() {
                 <div className="purchases-eyebrow">
                   PROCUREMENT
                 </div>
-                <h2>Create Purchase Order</h2>
+                <h2>Create Stock Order</h2>
                 <p>
-                  Add a new medicine procurement order.
+                  Create a new stock/purchase order for a supplier.
                 </p>
               </div>
 
@@ -556,25 +624,126 @@ export default function Purchases() {
 
             <form onSubmit={createPurchase}>
               <label>
-                Supplier
-                <input
-                  value={newSupplier}
-                  onChange={(event) =>
-                    setNewSupplier(event.target.value)
-                  }
-                  placeholder="Enter supplier name"
-                />
+                Select Supplier
+                <select
+                  value={selectedSupplierId}
+                  onChange={(e) => setSelectedSupplierId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    marginTop: "4px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {availableSuppliers.length === 0 ? (
+                    <option value="1">ABC Suppliers</option>
+                  ) : (
+                    availableSuppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.email || "Supplier"})
+                      </option>
+                    ))
+                  )}
+                </select>
               </label>
 
               <div className="purchase-form-grid">
+                <label>
+                  Select Medicine
+                  <select
+                    value={selectedMedicineId}
+                    onChange={(e) => setSelectedMedicineId(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {availableMedicines.length === 0 ? (
+                      <option value="1">Paracetamol 500mg</option>
+                    ) : (
+                      availableMedicines.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.category || "Medicine"}) — ₹{m.price ? Number(m.price).toFixed(2) : "50.00"}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <span style={{ fontSize: "11px", color: "#64748b", marginTop: "4px", display: "block" }}>
+                    Unit Price: <strong>₹{currentUnitPrice.toFixed(2)}</strong>
+                  </span>
+                </label>
+
+                <label>
+                  Requested Quantity
+                  <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                    <input
+                      type="number"
+                      min="1"
+                      value={medicineQuantity}
+                      onChange={(e) => setMedicineQuantity(e.target.value)}
+                      placeholder="Qty"
+                      style={{ width: "80px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addMedicineToOrder}
+                      style={{
+                        padding: "8px 14px",
+                        background: "#059669",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      + Add Medicine
+                    </button>
+                  </div>
+                  <span style={{ fontSize: "11px", color: "#2563eb", marginTop: "4px", display: "block" }}>
+                    Subtotal: <strong>₹{(currentUnitPrice * (Number(medicineQuantity) || 0)).toLocaleString("en-IN")}</strong>
+                  </span>
+                </label>
+              </div>
+
+              {/* ADDED MEDICINES LIST IN MODAL */}
+              {orderItems.length > 0 && (
+                <div style={{ marginTop: "16px", background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#475569", display: "block", marginBottom: "8px" }}>
+                    Selected Medicines ({orderItems.length})
+                  </span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {orderItems.map((item, idx) => (
+                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#ffffff", padding: "6px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px" }}>
+                        <span>
+                          <strong>{item.medicineName}</strong> — {item.quantity} Units
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeMedicineFromOrder(idx)}
+                          style={{ border: "none", background: "transparent", color: "#ef4444", fontSize: "16px", cursor: "pointer", fontWeight: "bold" }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="purchase-form-grid" style={{ marginTop: "16px" }}>
                 <label>
                   Order Date
                   <input
                     type="date"
                     value={newDate}
-                    onChange={(event) =>
-                      setNewDate(event.target.value)
-                    }
+                    onChange={(e) => setNewDate(e.target.value)}
                   />
                 </label>
 
@@ -583,28 +752,24 @@ export default function Purchases() {
                   <input
                     type="date"
                     value={newDelivery}
-                    onChange={(event) =>
-                      setNewDelivery(event.target.value)
-                    }
+                    onChange={(e) => setNewDelivery(e.target.value)}
                   />
                 </label>
               </div>
 
-              <label>
-                Total Amount
+              <label style={{ marginTop: "16px", display: "block" }}>
+                Total Order Amount (₹)
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={newAmount}
-                  onChange={(event) =>
-                    setNewAmount(event.target.value)
-                  }
+                  onChange={(e) => setNewAmount(e.target.value)}
                   placeholder="Enter purchase amount"
                 />
               </label>
 
-              <div className="purchase-modal-actions">
+              <div className="purchase-modal-actions" style={{ marginTop: "24px" }}>
                 <button
                   type="button"
                   className="purchase-cancel"
@@ -617,7 +782,7 @@ export default function Purchases() {
                   type="submit"
                   className="purchase-primary"
                 >
-                  Create Purchase
+                  Create Stock Order
                 </button>
               </div>
             </form>

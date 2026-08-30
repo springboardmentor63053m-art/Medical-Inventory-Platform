@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axiosInstance from "@/api/axios";
 import "./PharmacistNotifications.css";
 
 interface Notification {
@@ -13,67 +14,78 @@ interface Notification {
   read: boolean;
 }
 
+
+
 const PharmacistNotifications: React.FC = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      type: "order",
-      title: "New Medicine Request",
-      message:
-        "A customer has requested medicines. Please review the order and prepare the medicines.",
-      customer: "Rahul Kumar",
-      medicine: "Paracetamol 500mg",
-      quantity: 2,
-      time: "10 minutes ago",
-      read: false,
-    },
-    {
-      id: 2,
-      type: "order",
-      title: "Medicine Request Pending",
-      message:
-        "A new medicine purchase request is waiting for your approval.",
-      customer: "Priya Sharma",
-      medicine: "Amoxicillin 250mg",
-      quantity: 1,
-      time: "25 minutes ago",
-      read: false,
-    },
-    {
-      id: 3,
-      type: "urgent",
-      title: "Low Stock Alert",
-      message:
-        "The stock quantity of Cetirizine 10mg has fallen below the minimum stock level.",
-      medicine: "Cetirizine 10mg",
-      quantity: 8,
-      time: "1 hour ago",
-      read: false,
-    },
-    {
-      id: 4,
-      type: "stock",
-      title: "Stock Updated",
-      message:
-        "New stock has been added to the medicine inventory.",
-      medicine: "Ibuprofen 400mg",
-      quantity: 210,
-      time: "2 hours ago",
-      read: true,
-    },
-    {
-      id: 5,
-      type: "order",
-      title: "Medicine Request Completed",
-      message:
-        "The medicine request has been successfully prepared and marked as completed.",
-      customer: "Anjali Reddy",
-      medicine: "Cough Syrup",
-      quantity: 1,
-      time: "3 hours ago",
-      read: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const response = await axiosInstance.get("/notifications?role=ROLE_PHARMACIST");
+        if (Array.isArray(response.data)) {
+          const mapped: Notification[] = response.data.map((item: any) => {
+            let nType: "order" | "stock" | "urgent" | "system" = "order";
+            const rawType = (item.type || "").toUpperCase();
+
+            if (
+              rawType === "NEW_ORDER" ||
+              rawType === "PRESCRIPTION_ORDER" ||
+              rawType === "ORDER"
+            ) {
+              nType = "order";
+            } else if (
+              rawType === "LOW_STOCK" ||
+              rawType === "OUT_OF_STOCK" ||
+              rawType === "EXPIRED"
+            ) {
+              nType = "urgent";
+            } else if (rawType === "EXPIRY") {
+              nType = "stock";
+            }
+
+            let title = item.title;
+            if (!title || title === "Order / Inventory Notification") {
+              if (rawType === "PRESCRIPTION_ORDER") {
+                title = "Medicine Order (With Prescription)";
+              } else if (rawType === "NEW_ORDER") {
+                title = "Medicine Order (Without Prescription)";
+              } else if (rawType === "LOW_STOCK") {
+                title = "Low Stock Alert";
+              } else {
+                title = "Medicine Order";
+              }
+            }
+
+            const customerMatch = item.message?.match(/from ([^.]+?)(?=\.|\s+Order|\s+Items|$)/i);
+            const customerName = customerMatch ? customerMatch[1]?.trim() : undefined;
+
+            return {
+              id: item.id,
+              type: nType,
+              title,
+              message: item.message,
+              customer: customerName,
+              medicine: item.message?.includes("Items:")
+                ? item.message.split("Items:")[1]?.split(".")[0]?.trim()
+                : undefined,
+              time: item.timestamp
+                ? new Date(item.timestamp).toLocaleString("en-IN", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })
+                : "Just now",
+              read: Boolean(item.isRead),
+            };
+          });
+          setNotifications(mapped);
+        }
+      } catch (err) {
+        console.warn("Could not load pharmacist notifications:", err);
+      }
+    };
+    fetchNotifications();
+  }, []);
 
   const [filter, setFilter] = useState("all");
 
@@ -98,7 +110,12 @@ const PharmacistNotifications: React.FC = () => {
         )
       : notifications;
 
-  const markAsRead = (id: number) => {
+  const markAsRead = async (id: number) => {
+    try {
+      await axiosInstance.put(`/notifications/${id}/read`);
+    } catch (err) {
+      console.warn("Could not mark notification as read in backend:", err);
+    }
     setNotifications((previous) =>
       previous.map((notification) =>
         notification.id === id
@@ -111,7 +128,16 @@ const PharmacistNotifications: React.FC = () => {
     );
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    try {
+      await Promise.all(
+        notifications
+          .filter((n) => !n.read)
+          .map((n) => axiosInstance.put(`/notifications/${n.id}/read`))
+      );
+    } catch (err) {
+      console.warn("Could not mark all as read:", err);
+    }
     setNotifications((previous) =>
       previous.map((notification) => ({
         ...notification,
@@ -120,7 +146,12 @@ const PharmacistNotifications: React.FC = () => {
     );
   };
 
-  const removeNotification = (id: number) => {
+  const removeNotification = async (id: number) => {
+    try {
+      await axiosInstance.delete(`/notifications/${id}`);
+    } catch (err) {
+      console.warn("Could not delete notification in backend:", err);
+    }
     setNotifications((previous) =>
       previous.filter(
         (notification) => notification.id !== id

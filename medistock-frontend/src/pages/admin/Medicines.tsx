@@ -57,7 +57,6 @@ export default function Medicines() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
-  const [expiryFilter, setExpiryFilter] = useState("all");
 
   const medicineService = new CrudService<Medicine>("/medicines");
 
@@ -206,17 +205,10 @@ export default function Medicines() {
         stockFilter === "all" ||
         getStockStatus(medicine) === stockFilter;
 
-      const expiryStatus = getExpiryStatus(medicine);
-
-      const matchesExpiry =
-        expiryFilter === "all" ||
-        expiryStatus.toLowerCase() === expiryFilter.toLowerCase();
-
       return (
         matchesSearch &&
         matchesCategory &&
-        matchesStock &&
-        matchesExpiry
+        matchesStock
       );
     });
   }, [
@@ -224,7 +216,6 @@ export default function Medicines() {
     search,
     categoryFilter,
     stockFilter,
-    expiryFilter,
   ]);
 
   const stockCounts = useMemo(() => {
@@ -289,7 +280,6 @@ export default function Medicines() {
     setSearch("");
     setCategoryFilter("all");
     setStockFilter("all");
-    setExpiryFilter("all");
   };
 
   return (
@@ -343,7 +333,7 @@ export default function Medicines() {
               color: "#71809a",
             }}
           >
-            Manage medicine stock, suppliers, expiry and pricing.
+            Manage medicine stock, suppliers and pricing.
           </p>
         </div>
 
@@ -427,7 +417,7 @@ export default function Medicines() {
             style={{
               display: "grid",
               gridTemplateColumns:
-                "minmax(280px, 2fr) repeat(3, minmax(160px, 1fr)) auto",
+                "minmax(280px, 2fr) repeat(2, minmax(160px, 1fr)) auto",
               gap: "12px",
               alignItems: "center",
             }}
@@ -489,17 +479,6 @@ export default function Medicines() {
               <option value="Out of Stock">Out of Stock</option>
             </select>
 
-            <select
-              value={expiryFilter}
-              onChange={(event) => setExpiryFilter(event.target.value)}
-              style={selectStyle}
-            >
-              <option value="all">All Expiry</option>
-              <option value="Valid">Valid</option>
-              <option value="Expired">Expired</option>
-              <option value="Not Set">Not Set</option>
-            </select>
-
             <button
               type="button"
               onClick={loadMedicines}
@@ -548,8 +527,7 @@ export default function Medicines() {
 
             {(search ||
               categoryFilter !== "all" ||
-              stockFilter !== "all" ||
-              expiryFilter !== "all") && (
+              stockFilter !== "all") && (
               <button
                 type="button"
                 onClick={resetFilters}
@@ -590,7 +568,6 @@ export default function Medicines() {
                 <th style={headerStyle}>SUPPLIER</th>
                 <th style={headerStyle}>QUANTITY</th>
                 <th style={headerStyle}>STOCK</th>
-                <th style={headerStyle}>EXPIRY</th>
                 <th style={headerStyle}>PRICE</th>
                 <th style={headerStyle}>ACTION</th>
               </tr>
@@ -599,13 +576,13 @@ export default function Medicines() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={emptyStyle}>
+                  <td colSpan={7} style={emptyStyle}>
                     Loading medicines...
                   </td>
                 </tr>
               ) : filteredMedicines.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={emptyStyle}>
+                  <td colSpan={7} style={emptyStyle}>
                     <Package
                       size={38}
                       style={{
@@ -753,53 +730,6 @@ export default function Medicines() {
 
                       <td style={cellStyle}>
                         <StockBadge status={stockStatus} />
-                      </td>
-
-                      <td style={cellStyle}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "7px",
-                          }}
-                        >
-                          <CalendarDays
-                            size={16}
-                            color={
-                              expiryStatus === "Expired"
-                                ? "#ef4444"
-                                : "#71809a"
-                            }
-                          />
-
-                          <div>
-                            <div
-                              style={{
-                                fontSize: "13px",
-                                fontWeight: 600,
-                                color:
-                                  expiryStatus === "Expired"
-                                    ? "#dc2626"
-                                    : "#40516b",
-                              }}
-                            >
-                              {formatDate(expiryDate)}
-                            </div>
-
-                            <div
-                              style={{
-                                fontSize: "11px",
-                                marginTop: "2px",
-                                color:
-                                  expiryStatus === "Expired"
-                                    ? "#ef4444"
-                                    : "#8a98ad",
-                              }}
-                            >
-                              {expiryStatus}
-                            </div>
-                          </div>
-                        </div>
                       </td>
 
                       <td style={cellStyle}>

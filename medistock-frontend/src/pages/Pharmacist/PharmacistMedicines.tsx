@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axiosInstance from "@/api/axios";
 import "./PharmacistMedicines.css";
 
 interface Medicine {
@@ -12,95 +13,44 @@ interface Medicine {
   status: "Available" | "Low Stock" | "Out of Stock";
 }
 
-const medicines: Medicine[] = [
-  {
-    id: 1,
-    name: "Paracetamol 500mg",
-    category: "Tablet",
-    supplier: "ABC Pharma",
-    stock: 450,
-    price: 25,
-    expiry: "12/2027",
-    status: "Available",
-  },
-  {
-    id: 2,
-    name: "Amoxicillin 250mg",
-    category: "Capsule",
-    supplier: "MediCare Ltd",
-    stock: 32,
-    price: 80,
-    expiry: "08/2027",
-    status: "Low Stock",
-  },
-  {
-    id: 3,
-    name: "Azithromycin 500mg",
-    category: "Tablet",
-    supplier: "HealthPlus",
-    stock: 120,
-    price: 95,
-    expiry: "10/2028",
-    status: "Available",
-  },
-  {
-    id: 4,
-    name: "Cough Syrup",
-    category: "Syrup",
-    supplier: "HealthPlus",
-    stock: 85,
-    price: 65,
-    expiry: "05/2027",
-    status: "Available",
-  },
-  {
-    id: 5,
-    name: "Cetirizine 10mg",
-    category: "Tablet",
-    supplier: "ABC Pharma",
-    stock: 8,
-    price: 35,
-    expiry: "03/2027",
-    status: "Low Stock",
-  },
-  {
-    id: 6,
-    name: "Ibuprofen 400mg",
-    category: "Tablet",
-    supplier: "MediCare Ltd",
-    stock: 210,
-    price: 45,
-    expiry: "11/2028",
-    status: "Available",
-  },
-  {
-    id: 7,
-    name: "Omeprazole 20mg",
-    category: "Capsule",
-    supplier: "ABC Pharma",
-    stock: 0,
-    price: 55,
-    expiry: "06/2027",
-    status: "Out of Stock",
-  },
-  {
-    id: 8,
-    name: "ORS Solution",
-    category: "Syrup",
-    supplier: "HealthPlus",
-    stock: 65,
-    price: 30,
-    expiry: "09/2027",
-    status: "Available",
-  },
-];
+
 
 const PharmacistMedicines: React.FC = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
+  const [medicineList, setMedicineList] = useState<Medicine[]>([]);
 
-  const filteredMedicines = medicines.filter((medicine) => {
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        const response = await axiosInstance.get("/medicines");
+        if (Array.isArray(response.data)) {
+          const mapped: Medicine[] = response.data.map((item: any) => {
+            const stockQty = item.stockQuantity ?? item.quantity ?? 0;
+            const computedStatus: "Available" | "Low Stock" | "Out of Stock" =
+              stockQty <= 0 ? "Out of Stock" : stockQty <= 10 ? "Low Stock" : "Available";
+            return {
+              id: item.id,
+              name: item.name,
+              category: item.category || "General",
+              supplier: item.supplier?.name || item.supplierName || "Standard Supplier",
+              stock: stockQty,
+              price: item.price || 0,
+              expiry: item.expiryDate || "12/2027",
+              status: computedStatus,
+            };
+          });
+          setMedicineList(mapped);
+        }
+      } catch (err) {
+        console.warn("Could not load backend medicines:", err);
+      }
+    };
+    fetchMedicines();
+  }, []);
+
+  const filteredMedicines = medicineList.filter((medicine) => {
     const searchValue = search.toLowerCase().trim();
 
     const matchesSearch =
@@ -139,7 +89,7 @@ const PharmacistMedicines: React.FC = () => {
 
           <div>
             <p>Total Medicines</p>
-            <h2>{medicines.length}</h2>
+            <h2>{medicineList.length}</h2>
           </div>
 
         </div>
@@ -155,7 +105,7 @@ const PharmacistMedicines: React.FC = () => {
             <p>Available</p>
             <h2>
               {
-                medicines.filter(
+                medicineList.filter(
                   (medicine) =>
                     medicine.status === "Available"
                 ).length
@@ -176,7 +126,7 @@ const PharmacistMedicines: React.FC = () => {
             <p>Low Stock</p>
             <h2>
               {
-                medicines.filter(
+                medicineList.filter(
                   (medicine) =>
                     medicine.status === "Low Stock"
                 ).length
@@ -190,14 +140,14 @@ const PharmacistMedicines: React.FC = () => {
         <div className="medicine-summary-card">
 
           <div className="medicine-summary-icon red">
-            ❌
+            🚫
           </div>
 
           <div>
             <p>Out of Stock</p>
             <h2>
               {
-                medicines.filter(
+                medicineList.filter(
                   (medicine) =>
                     medicine.status === "Out of Stock"
                 ).length

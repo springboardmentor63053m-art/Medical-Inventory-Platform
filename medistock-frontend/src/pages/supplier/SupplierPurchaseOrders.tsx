@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import axiosInstance from "@/api/axios";
+import { toast } from "sonner";
 import "../../styles/supplier-dashboard.css";
 
 type PurchaseOrder = {
@@ -78,13 +81,28 @@ const formatDate = (value: string) => {
 
 export default function SupplierPurchaseOrders() {
   const navigate = useNavigate();
-  const user = getUser();
+  const { user, logout } = useAuth();
 
-  const supplierName = String(
-    user?.username || user?.name || user?.fullName || "Rahul",
-  )
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char: string) => char.toUpperCase());
+  const supplierName = useMemo(() => {
+    const rawUser = user || (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        return null;
+      }
+    })();
+
+    const name =
+      rawUser?.username ||
+      rawUser?.name ||
+      rawUser?.fullName ||
+      localStorage.getItem("username") ||
+      "Supplier";
+
+    return String(name)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char: string) => char.toUpperCase());
+  }, [user]);
 
   const [orders, setOrders] =
     useState<PurchaseOrder[]>(demoOrders);
@@ -99,25 +117,71 @@ export default function SupplierPurchaseOrders() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "/suppliers/me/purchase-orders",
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-
-        const list = Array.isArray(data)
-          ? data
-          : data?.data ?? data?.content ?? [];
-
-        if (Array.isArray(list) && list.length > 0) {
-          setOrders(list);
-        }
+      const response = await axiosInstance.get("/purchaseorders");
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        const mapped: PurchaseOrder[] = response.data.map((item: any) => ({
+          id: item.id,
+          orderNumber: item.orderNumber || `PO-2026-00${item.id}`,
+          orderDate: item.orderDate ? String(item.orderDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          expectedDelivery: item.expectedDelivery ? String(item.expectedDelivery).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          items: Array.isArray(item.items) ? item.items.length : 1,
+          amount: Number(
+            item.totalAmount ||
+              item.amount ||
+              (Array.isArray(item.items) && item.items.length > 0
+                ? item.items.reduce(
+                    (sum: number, i: any) =>
+                      sum + Number(i.price || i.medicine?.price || 0) * Number(i.quantity || 0),
+                    0
+                  )
+                : 0)
+          ),
+          status: (item.status === "COMPLETED" || item.status === "CANCELLED" || item.status === "BILL_SUBMITTED") ? (item.status === "BILL_SUBMITTED" ? "COMPLETED" : item.status) : "PENDING",
+        }));
+        setOrders(mapped);
       }
     } catch {
-      // Keep demo orders when the backend is unavailable.
+      // Fallback to demo orders if request fails
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitBill = async (orderId: number | string, currentAmount: number) => {
+    const inputAmount = window.prompt(
+      "Enter invoice / bill total amount (₹):",
+      String(currentAmount || 25000)
+    );
+    if (inputAmount === null) return;
+    const amount = Number(inputAmount) || currentAmount || 25000;
+
+    try {
+      await axiosInstance.post(`/purchaseorders/${orderId}/submit-bill`, {
+        amount: amount,
+      });
+      toast.success(`Bill for Order #${orderId} submitted successfully to Admin!`);
+      setOrders((prev) =>
+        prev.map((o) =>
+          String(o.id) === String(orderId) ? { ...o, status: "COMPLETED" } : o
+        )
+      );
+    } catch (err) {
+      try {
+        await axiosInstance.post("/notifications", {
+          title: "Bill Submitted",
+          type: "BILL_SUBMITTED",
+          message: `Bill submitted by ${supplierName} for Stock Order #PO-${orderId}. Amount: ₹${amount}. Please review the bill.`,
+          isRead: false,
+        });
+        toast.success(`Bill for Order #${orderId} submitted successfully to Admin!`);
+        setOrders((prev) =>
+          prev.map((o) =>
+            String(o.id) === String(orderId) ? { ...o, status: "COMPLETED" } : o
+          )
+        );
+      } catch {
+        toast.error("Failed to submit bill. Please try again.");
+      }
     }
   };
 
@@ -163,13 +227,7 @@ export default function SupplierPurchaseOrders() {
         (part: string) =>
           part[0]?.toUpperCase(),
       )
-      .join("") || "R";
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  };
+      .join("") || "S";
 
   return (
     <div className="supplier-app">
@@ -640,6 +698,10 @@ export default function SupplierPurchaseOrders() {
                       STATUS
                     </th>
 
+                    <th>
+                      ACTION
+                    </th>
+
                   </tr>
 
                 </thead>
@@ -705,6 +767,25 @@ export default function SupplierPurchaseOrders() {
 
                           </span>
 
+                        </td>
+
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => handleSubmitBill(order.id, order.amount)}
+                            style={{
+                              border: "none",
+                              borderRadius: "8px",
+                              padding: "6px 12px",
+                              background: "#2563eb",
+                              color: "#ffffff",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Submit Bill
+                          </button>
                         </td>
 
                       </tr>

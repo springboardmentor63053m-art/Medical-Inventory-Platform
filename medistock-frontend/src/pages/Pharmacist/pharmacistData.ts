@@ -84,29 +84,7 @@ export const pharmacistMedicines: PharmacistMedicine[] = [
    SAMPLE PENDING ORDER
    ========================================================= */
 
-const sampleOrders: PharmacistOrder[] = [
-  {
-    id: "ORD-1025",
-    customerName: "arun",
-    customerId: "USR-001",
-    medicines: [
-      {
-        name: "Paracetamol 500mg",
-        quantity: 2,
-        price: 25,
-      },
-      {
-        name: "Amoxicillin 250mg",
-        quantity: 1,
-        price: 80,
-      },
-    ],
-    prescription: true,
-    prescriptionName: "prescription_arun.jpg",
-    status: "PENDING",
-    createdAt: "Today, 10:35 AM",
-  },
-];
+const sampleOrders: PharmacistOrder[] = [];
 
 /* =========================================================
    LOCAL STORAGE
@@ -128,7 +106,12 @@ export const getPharmacistOrders = (): PharmacistOrder[] => {
   }
 
   try {
-    return JSON.parse(stored);
+    const orders: PharmacistOrder[] = JSON.parse(stored);
+    return orders.filter(
+      (order) =>
+        order.customerName?.toLowerCase() !== "arun" &&
+        order.customerName?.toLowerCase() !== "arun-user"
+    );
   } catch {
     return sampleOrders;
   }
@@ -137,10 +120,21 @@ export const getPharmacistOrders = (): PharmacistOrder[] => {
 export const savePharmacistOrders = (
   orders: PharmacistOrder[]
 ): void => {
+  const cleanOrders = orders.filter(
+    (order) =>
+      order.customerName?.toLowerCase() !== "arun" &&
+      order.customerName?.toLowerCase() !== "arun-user"
+  );
   localStorage.setItem(
     ORDER_STORAGE_KEY,
-    JSON.stringify(orders)
+    JSON.stringify(cleanOrders)
   );
+};
+
+export const addPharmacistOrder = (order: PharmacistOrder): void => {
+  const orders = getPharmacistOrders();
+  const updated = [order, ...orders.filter((o) => o.id !== order.id)];
+  savePharmacistOrders(updated);
 };
 
 /* =========================================================
@@ -180,44 +174,27 @@ export const getPharmacistActivities =
     );
 
     if (!stored) {
-      const activities: PharmacistActivity[] = [
-        {
-          id: 1,
-          type: "ORDER",
-          message: "New order received from arun",
-          time: "Today, 10:35 AM",
-        },
-        {
-          id: 2,
-          type: "PRESCRIPTION",
-          message: "Prescription uploaded by arun",
-          time: "Today, 10:34 AM",
-        },
-        {
-          id: 3,
-          type: "APPROVAL",
-          message: "Order ORD-1021 approved",
-          time: "Today, 09:50 AM",
-        },
-        {
-          id: 4,
-          type: "DISPENSED",
-          message: "Order ORD-1018 marked as dispensed",
-          time: "Yesterday, 04:15 PM",
-        },
-      ];
-
-      localStorage.setItem(
-        ACTIVITY_STORAGE_KEY,
-        JSON.stringify(activities)
-      );
-
-      return activities;
+      return [];
     }
 
     try {
-      return JSON.parse(stored);
+      const activities: PharmacistActivity[] = JSON.parse(stored);
+      return activities.filter(
+        (activity) => !activity.message?.toLowerCase().includes("arun")
+      );
     } catch {
       return [];
     }
   };
+
+export const addPharmacistActivity = (
+  activity: Omit<PharmacistActivity, "id">
+): void => {
+  const activities = getPharmacistActivities();
+  const newActivity = { ...activity, id: Date.now() };
+  const updated = [newActivity, ...activities];
+  localStorage.setItem(
+    ACTIVITY_STORAGE_KEY,
+    JSON.stringify(updated)
+  );
+};

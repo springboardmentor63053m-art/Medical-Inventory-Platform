@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axiosInstance from "@/api/axios";
 import {
   Activity,
   ArrowDownToLine,
@@ -24,63 +25,6 @@ type StockActivityRecord = {
   time: string;
 };
 
-const initialActivities: StockActivityRecord[] = [
-  {
-    id: 1,
-    medicine: "Vitamin C 500mg",
-    batchNo: "MED-0017",
-    user: "Admin",
-    action: "STOCK_IN",
-    quantity: 100,
-    time: "20 Aug 2026, 10:30 AM",
-  },
-  {
-    id: 2,
-    medicine: "Ibuprofen 400mg",
-    batchNo: "MED-0018",
-    user: "Admin",
-    action: "STOCK_IN",
-    quantity: 75,
-    time: "20 Aug 2026, 09:45 AM",
-  },
-  {
-    id: 3,
-    medicine: "Azithromycin 500mg",
-    batchNo: "MED-0019",
-    user: "Pharmacist",
-    action: "STOCK_OUT",
-    quantity: 20,
-    time: "19 Aug 2026, 04:20 PM",
-  },
-  {
-    id: 4,
-    medicine: "Paracetamol 500mg",
-    batchNo: "MED-0020",
-    user: "Admin",
-    action: "STOCK_OUT",
-    quantity: 10,
-    time: "19 Aug 2026, 02:15 PM",
-  },
-  {
-    id: 5,
-    medicine: "Amoxicillin 500mg",
-    batchNo: "MED-0021",
-    user: "Admin",
-    action: "ADJUSTMENT",
-    quantity: 5,
-    time: "18 Aug 2026, 11:10 AM",
-  },
-  {
-    id: 6,
-    medicine: "Cetirizine 10mg",
-    batchNo: "MED-0022",
-    user: "Pharmacist",
-    action: "STOCK_IN",
-    quantity: 50,
-    time: "18 Aug 2026, 09:30 AM",
-  },
-];
-
 const actionLabels: Record<ActivityType, string> = {
   STOCK_IN: "Stock In",
   STOCK_OUT: "Stock Out",
@@ -88,8 +32,7 @@ const actionLabels: Record<ActivityType, string> = {
 };
 
 export default function StockActivity() {
-  const [activities, setActivities] =
-    useState<StockActivityRecord[]>(initialActivities);
+  const [activities, setActivities] = useState<StockActivityRecord[]>([]);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"ALL" | ActivityType>("ALL");
@@ -101,6 +44,30 @@ export default function StockActivity() {
   const [action, setAction] = useState<ActivityType>("STOCK_IN");
   const [quantity, setQuantity] = useState("");
   const [user, setUser] = useState("Admin");
+
+  useEffect(() => {
+    fetchStockLogs();
+  }, []);
+
+  const fetchStockLogs = async () => {
+    try {
+      const response = await axiosInstance.get("/stocklogs");
+      if (Array.isArray(response.data)) {
+        const mapped: StockActivityRecord[] = response.data.map((item: any) => ({
+          id: item.id,
+          medicine: item.medicine?.name || item.medicineName || "Medicine",
+          batchNo: item.inventory?.batchNumber || item.batchNo || item.batchNumber || `MED-${String(item.id).padStart(4, "0")}`,
+          user: item.user?.username || item.performedBy || "Admin",
+          action: (item.actionType || item.action || "STOCK_IN").toUpperCase() as ActivityType,
+          quantity: item.quantityChanged || item.quantity || 0,
+          time: item.timestamp ? new Date(item.timestamp).toLocaleString("en-IN") : "Just now",
+        }));
+        setActivities(mapped);
+      }
+    } catch (err) {
+      console.warn("Could not fetch stock logs:", err);
+    }
+  };
 
   const filteredActivities = useMemo(() => {
     const keyword = search.toLowerCase().trim();
@@ -160,7 +127,7 @@ export default function StockActivity() {
     setShowModal(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!medicine.trim()) {
@@ -180,6 +147,18 @@ export default function StockActivity() {
       return;
     }
 
+    try {
+      await axiosInstance.post("/stocklogs", {
+        medicineName: medicine.trim(),
+        batchNumber: batchNo.trim(),
+        actionType: action,
+        quantityChanged: numericQuantity,
+        performedBy: user.trim() || "Admin",
+      });
+    } catch (err) {
+      console.warn("Posting to backend stocklogs failed, adding locally:", err);
+    }
+
     const newActivity: StockActivityRecord = {
       id: Date.now(),
       medicine: medicine.trim(),
@@ -197,13 +176,13 @@ export default function StockActivity() {
     };
 
     setActivities((previous) => [newActivity, ...previous]);
-
     handleCloseModal();
   };
 
   const handleRefresh = () => {
     setSearch("");
     setFilter("ALL");
+    fetchStockLogs();
   };
 
   return (

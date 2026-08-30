@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axiosInstance from "@/api/axios";
 import "./expiry-tracking.css";
 import {
   Search,
@@ -24,72 +25,7 @@ type MedicineExpiry = {
   expiryDate: string;
 };
 
-const expiryData: MedicineExpiry[] = [
-  {
-    id: 1,
-    medicine: "Paracetamol 500mg",
-    batchNo: "MED-0017",
-    supplier: "Apollo Pharma",
-    quantity: 120,
-    expiryDate: "2026-08-10",
-  },
-  {
-    id: 2,
-    medicine: "Amoxicillin 250mg",
-    batchNo: "MED-0018",
-    supplier: "MedPlus Distributors",
-    quantity: 80,
-    expiryDate: "2026-08-28",
-  },
-  {
-    id: 3,
-    medicine: "Cetirizine 10mg",
-    batchNo: "MED-0019",
-    supplier: "Sun Pharma",
-    quantity: 50,
-    expiryDate: "2026-09-15",
-  },
-  {
-    id: 4,
-    medicine: "Azithromycin 500mg",
-    batchNo: "MED-0020",
-    supplier: "LifeLine Suppliers",
-    quantity: 35,
-    expiryDate: "2026-10-05",
-  },
-  {
-    id: 5,
-    medicine: "Vitamin C 500mg",
-    batchNo: "MED-0021",
-    supplier: "Apollo Pharma",
-    quantity: 200,
-    expiryDate: "2026-10-20",
-  },
-  {
-    id: 6,
-    medicine: "Ibuprofen 400mg",
-    batchNo: "MED-0022",
-    supplier: "MedPlus Distributors",
-    quantity: 90,
-    expiryDate: "2026-11-15",
-  },
-  {
-    id: 7,
-    medicine: "Metformin 500mg",
-    batchNo: "MED-0023",
-    supplier: "CareWell Pharma",
-    quantity: 150,
-    expiryDate: "2027-01-20",
-  },
-  {
-    id: 8,
-    medicine: "Omeprazole 20mg",
-    batchNo: "MED-0024",
-    supplier: "Sun Pharma",
-    quantity: 75,
-    expiryDate: "2027-04-10",
-  },
-];
+
 
 const getToday = () => {
   const today = new Date();
@@ -204,9 +140,32 @@ export const ExpiryTracking = () => {
   const [filter, setFilter] = useState<
     "All" | ExpiryStatus
   >("All");
+  const [realExpiryData, setRealExpiryData] = useState<MedicineExpiry[]>([]);
+
+  useEffect(() => {
+    const fetchExpiryData = async () => {
+      try {
+        const response = await axiosInstance.get("/expirys/upcoming");
+        if (Array.isArray(response.data)) {
+          const mapped: MedicineExpiry[] = response.data.map((item: any) => ({
+            id: item.id,
+            medicine: item.medicineName || item.medicine || "Unknown Medicine",
+            batchNo: item.batchNo || item.batchNumber || `BATCH-${item.id}`,
+            supplier: item.supplier || "Standard Supplier",
+            quantity: item.quantity ?? 100,
+            expiryDate: item.expiryDate || new Date().toISOString().split("T")[0],
+          }));
+          setRealExpiryData(mapped);
+        }
+      } catch (err) {
+        console.warn("Could not fetch expiry data:", err);
+      }
+    };
+    fetchExpiryData();
+  }, []);
 
   const processedData = useMemo(() => {
-    return expiryData.map((item) => {
+    return realExpiryData.map((item) => {
       const daysRemaining = getDaysRemaining(
         item.expiryDate
       );
@@ -221,7 +180,7 @@ export const ExpiryTracking = () => {
         status,
       };
     });
-  }, []);
+  }, [realExpiryData]);
 
   const filteredData = useMemo(() => {
     return processedData.filter((item) => {

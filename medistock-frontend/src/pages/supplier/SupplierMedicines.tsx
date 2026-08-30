@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import "../../styles/supplier-dashboard.css";
 
 type Medicine = {
@@ -56,14 +57,28 @@ const getUser = () => {
 
 export default function SupplierMedicines() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-  const user = getUser();
+  const supplierName = useMemo(() => {
+    const rawUser = user || (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        return null;
+      }
+    })();
 
-  const supplierName = String(
-    user?.username || user?.name || user?.fullName || "Rahul",
-  )
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char: string) => char.toUpperCase());
+    const name =
+      rawUser?.username ||
+      rawUser?.name ||
+      rawUser?.fullName ||
+      localStorage.getItem("username") ||
+      "Supplier";
+
+    return String(name)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char: string) => char.toUpperCase());
+  }, [user]);
 
   const [medicines, setMedicines] = useState<Medicine[]>(demoMedicines);
   const [search, setSearch] = useState("");
@@ -118,13 +133,7 @@ export default function SupplierMedicines() {
       .filter(Boolean)
       .slice(0, 2)
       .map((part: string) => part[0]?.toUpperCase())
-      .join("") || "R";
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  };
+      .join("") || "S";
 
   return (
     <div className="supplier-app">

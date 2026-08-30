@@ -15,9 +15,12 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
 
     List<Medicine> findBySupplierId(Long supplierId);
 
-    @Query("SELECT m FROM Medicine m JOIN m.inventories i GROUP BY m.id HAVING SUM(i.quantity) >= MAX(i.minimumStock)")
+    @Query("SELECT m FROM Medicine m LEFT JOIN m.inventories i GROUP BY m.id HAVING COALESCE(SUM(i.quantity), m.stockQuantity, 0) > COALESCE(MAX(i.minimumStock), 10)")
     List<Medicine> findAvailableMedicines();
 
-    @Query("SELECT m FROM Medicine m JOIN m.inventories i GROUP BY m.id HAVING SUM(i.quantity) > 0 AND SUM(i.quantity) < MAX(i.minimumStock)")
+    @Query("SELECT m FROM Medicine m LEFT JOIN m.inventories i GROUP BY m.id HAVING COALESCE(SUM(i.quantity), m.stockQuantity, 0) > 0 AND COALESCE(SUM(i.quantity), m.stockQuantity, 0) <= COALESCE(MAX(i.minimumStock), 10)")
     List<Medicine> findLowStockMedicines();
+
+    @Query("SELECT m FROM Medicine m LEFT JOIN m.inventories i GROUP BY m.id HAVING COALESCE(SUM(i.quantity), m.stockQuantity, 0) <= 0")
+    List<Medicine> findOutOfStockMedicines();
 }

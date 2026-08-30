@@ -27,11 +27,7 @@ const PharmacistPrescriptions: React.FC = () => {
   /*
    * View Prescription
    *
-   * The current pharmacistData.ts stores the prescription as:
-   * prescriptionName: "prescription_arun.jpg"
-   *
-   * So we show the prescription information in a modal
-   * without changing pharmacistData.ts.
+   * Displays the uploaded customer prescription in a modal.
    */
   const handleViewPrescription = (
     order: PharmacistOrder

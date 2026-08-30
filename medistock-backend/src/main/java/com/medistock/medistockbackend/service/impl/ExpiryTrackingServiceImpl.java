@@ -36,7 +36,7 @@ public class ExpiryTrackingServiceImpl implements ExpiryTrackingService {
     @Override
     public List<ExpiryTracking> getUpcomingExpirys() {
         java.time.LocalDate today = java.time.LocalDate.now();
-        java.time.LocalDate threshold = today.plusDays(30);
+        java.time.LocalDate threshold = today.plusYears(5);
         
         return inventoryRepository.findUpcomingExpiries(threshold).stream().map(inv -> {
             ExpiryTracking mock = new ExpiryTracking();

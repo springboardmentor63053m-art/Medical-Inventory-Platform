@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axiosInstance from "@/api/axios";
 
 import "./PharmacistDashboard.css";
 
@@ -15,6 +16,9 @@ const PharmacistDashboard: React.FC = () => {
 
   const [orders, setOrders] =
     useState<PharmacistOrder[]>([]);
+  const [lowStockMeds, setLowStockMeds] = useState<any[]>([]);
+  const [outOfStockMeds, setOutOfStockMeds] = useState<any[]>([]);
+  const [expiringMeds, setExpiringMeds] = useState<any[]>([]);
 
 
   useEffect(() => {
@@ -22,6 +26,23 @@ const PharmacistDashboard: React.FC = () => {
     setOrders(
       getPharmacistOrders()
     );
+
+    const fetchInventoryAlerts = async () => {
+      try {
+        const [lowRes, outRes, expiryRes] = await Promise.all([
+          axiosInstance.get("/medicines/filter/stock?status=low").catch(() => ({ data: [] })),
+          axiosInstance.get("/medicines/filter/stock?status=out").catch(() => ({ data: [] })),
+          axiosInstance.get("/expirys/upcoming").catch(() => ({ data: [] })),
+        ]);
+        if (Array.isArray(lowRes.data)) setLowStockMeds(lowRes.data);
+        if (Array.isArray(outRes.data)) setOutOfStockMeds(outRes.data);
+        if (Array.isArray(expiryRes.data)) setExpiringMeds(expiryRes.data);
+      } catch (err) {
+        console.warn("Could not fetch pharmacist dashboard alerts:", err);
+      }
+    };
+
+    fetchInventoryAlerts();
 
   }, []);
 
@@ -124,6 +145,54 @@ const PharmacistDashboard: React.FC = () => {
 
         </div>
 
+
+        <div className="pharmacist-card">
+
+          <div className="pharmacist-card-icon orange">
+            ⚠️
+          </div>
+
+          <div>
+            <p>Low Stock Items</p>
+            <h2>
+              {lowStockMeds.length}
+            </h2>
+          </div>
+
+        </div>
+
+
+        <div className="pharmacist-card">
+
+          <div className="pharmacist-card-icon blue">
+            🚫
+          </div>
+
+          <div>
+            <p>Out of Stock</p>
+            <h2>
+              {outOfStockMeds.length}
+            </h2>
+          </div>
+
+        </div>
+
+
+        <div className="pharmacist-card">
+
+          <div className="pharmacist-card-icon purple">
+            ⏳
+          </div>
+
+          <div>
+            <p>Expiring Medicines</p>
+            <h2>
+              {expiringMeds.length}
+            </h2>
+          </div>
+
+        </div>
+
       </section>
 
 
@@ -161,6 +230,37 @@ const PharmacistDashboard: React.FC = () => {
             className="notification-button"
           >
             Review Orders
+          </a>
+
+        </section>
+
+      )}
+
+      {(lowStockMeds.length > 0 || outOfStockMeds.length > 0 || expiringMeds.length > 0) && (
+
+        <section className="pharmacist-notification">
+
+          <div className="notification-icon">
+            ⚠️
+          </div>
+
+          <div className="notification-content">
+
+            <strong>
+              Inventory & Expiry Alerts
+            </strong>
+
+            <p>
+              {lowStockMeds.length} low stock, {outOfStockMeds.length} out of stock, and {expiringMeds.length} upcoming expiry medicines logged.
+            </p>
+
+          </div>
+
+          <a
+            href="/pharmacist/medicines"
+            className="notification-button"
+          >
+            View Inventory
           </a>
 
         </section>

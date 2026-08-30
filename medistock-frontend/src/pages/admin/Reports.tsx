@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import axiosInstance from "@/api/axios";
 import {
   BarChart3,
   Package,
@@ -22,83 +23,38 @@ interface MedicineReport {
   price: number;
 }
 
-const medicineData: MedicineReport[] = [
-  {
-    id: 1,
-    name: "Paracetamol 500mg",
-    category: "Tablet",
-    quantity: 450,
-    reorderLevel: 50,
-    expiryDate: "2027-06-15",
-    price: 25,
-  },
-  {
-    id: 2,
-    name: "Amoxicillin 250mg",
-    category: "Capsule",
-    quantity: 32,
-    reorderLevel: 50,
-    expiryDate: "2026-09-20",
-    price: 80,
-  },
-  {
-    id: 3,
-    name: "Azithromycin 500mg",
-    category: "Tablet",
-    quantity: 120,
-    reorderLevel: 40,
-    expiryDate: "2027-01-12",
-    price: 95,
-  },
-  {
-    id: 4,
-    name: "Cough Syrup",
-    category: "Syrup",
-    quantity: 85,
-    reorderLevel: 30,
-    expiryDate: "2026-10-18",
-    price: 65,
-  },
-  {
-    id: 5,
-    name: "Cetirizine 10mg",
-    category: "Tablet",
-    quantity: 8,
-    reorderLevel: 25,
-    expiryDate: "2026-08-10",
-    price: 35,
-  },
-  {
-    id: 6,
-    name: "Insulin 10ml",
-    category: "Injection",
-    quantity: 0,
-    reorderLevel: 20,
-    expiryDate: "2027-03-20",
-    price: 450,
-  },
-  {
-    id: 7,
-    name: "Vitamin C 500mg",
-    category: "Tablet",
-    quantity: 75,
-    reorderLevel: 30,
-    expiryDate: "2026-10-05",
-    price: 55,
-  },
-  {
-    id: 8,
-    name: "Metformin 500mg",
-    category: "Tablet",
-    quantity: 18,
-    reorderLevel: 30,
-    expiryDate: "2027-02-25",
-    price: 40,
-  },
-];
+
 
 const Reports = () => {
   const today = new Date();
+  const [medicineData, setMedicineData] = useState<MedicineReport[]>([]);
+
+  useEffect(() => {
+    fetchReportData();
+  }, []);
+
+  const fetchReportData = async () => {
+    try {
+      const response = await axiosInstance.get("/reports/data");
+      if (Array.isArray(response.data)) {
+        const mapped: MedicineReport[] = response.data.map((item: any) => {
+          const qty = Number(item.stockQuantity ?? item.quantity ?? 0);
+          return {
+            id: item.id,
+            name: item.name,
+            category: item.category || "General",
+            quantity: qty,
+            reorderLevel: 10,
+            expiryDate: item.expiryDate || "2027-12-31",
+            price: Number(item.price) || 0,
+          };
+        });
+        setMedicineData(mapped);
+      }
+    } catch (err) {
+      console.warn("Could not fetch backend report data:", err);
+    }
+  };
 
   const getExpiryStatus = (expiryDate: string) => {
     const expiry = new Date(expiryDate);
@@ -170,7 +126,7 @@ const Reports = () => {
     });
 
     return Object.entries(categories);
-  }, []);
+  }, [medicineData]);
 
   const stockChartData = [
     {
@@ -207,7 +163,13 @@ const Reports = () => {
     },
   ];
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    try {
+      await axiosInstance.post("/reports/generate?type=INVENTORY");
+    } catch (e) {
+      console.warn("Could not log report generation to backend:", e);
+    }
+
     const headers = [
       "Medicine",
       "Category",
