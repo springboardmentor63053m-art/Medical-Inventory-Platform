@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
@@ -31,6 +31,26 @@ const Layout = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    setDropdownOpen(false);
+    logout();
+  };
 
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('medistock_theme') || 'dark';
@@ -102,7 +122,7 @@ const Layout = () => {
       path: '/suppliers',
       label: 'Suppliers',
       icon: <Truck size={18} />,
-      roles: ['ROLE_ADMIN']
+      roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST']
     },
     {
       path: '/stock-movements',
@@ -145,6 +165,12 @@ const Layout = () => {
       label: 'Notifications',
       icon: <Bell size={18} />,
       roles: ['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF', 'ROLE_SUPPLIER']
+    },
+    {
+      path: '/profile',
+      label: 'Profile',
+      icon: <User size={18} />,
+      roles: ['ROLE_SUPPLIER']
     }
   ];
 
@@ -153,6 +179,8 @@ const Layout = () => {
     item.roles.some(role => user?.roles?.includes(role))
   );
 
+  const isStaff = user?.roles?.includes('ROLE_STAFF');
+
   const getPageTitle = () => {
     const isSupplier = user?.roles?.includes('ROLE_SUPPLIER');
     const currentItem = menuItems.find(item => item.path === location.pathname);
@@ -160,7 +188,16 @@ const Layout = () => {
       if (isSupplier && currentItem.path === '/purchase-orders') {
         return 'Orders From MediStock';
       }
-      return currentItem.label === 'Dashboard' ? 'Admin Dashboard' : currentItem.label;
+      if (currentItem.label === 'Dashboard') {
+        if (user?.roles?.includes('ROLE_ADMIN')) {
+          return 'Admin Dashboard';
+        } else if (user?.roles?.includes('ROLE_PHARMACIST')) {
+          return 'Pharmacist Dashboard';
+        } else if (user?.roles?.includes('ROLE_STAFF')) {
+          return 'Staff Dashboard';
+        }
+      }
+      return currentItem.label;
     }
     return 'MediStock Inventory';
   };
@@ -192,7 +229,7 @@ const Layout = () => {
           <span className="logo-text">MEDISTOCK</span>
         </div>
 
-        <nav className="sidebar-menu">
+        <nav className={`sidebar-menu ${isStaff ? 'no-scroll' : ''}`}>
           {filteredMenuItems.map((item) => {
             const isSupplier = user?.roles?.includes('ROLE_SUPPLIER');
             const isActive = location.pathname === item.path || (isSupplier && item.path === '/' && location.pathname === '/supplier/dashboard');
@@ -227,26 +264,6 @@ const Layout = () => {
             );
           })}
         </nav>
-
-        <div className="sidebar-footer">
-          <div className="user-profile-badge" style={{ marginBottom: '10px' }}>
-            <div className="avatar" style={{ background: 'var(--primary)', color: '#ffffff', fontWeight: 700 }}>
-              {user?.username ? user.username.substring(0, 2).toUpperCase() : 'AD'}
-            </div>
-            <div className="user-details">
-              <div className="user-name" style={{ color: 'var(--text-main)' }}>{user?.username || 'User'}</div>
-              <div className="user-role" style={{ color: 'var(--text-secondary)' }}>{getUserRoleLabel()}</div>
-            </div>
-          </div>
-          <button
-            onClick={logout}
-            className="btn btn-secondary"
-            style={{ width: '100%', gap: '8px' }}
-          >
-            <LogOut size={16} />
-            <span>Logout</span>
-          </button>
-        </div>
       </aside>
 
       {/* Main Content Area */}
@@ -346,34 +363,111 @@ const Layout = () => {
               )}
             </Link>
 
-            {/* User Avatar Badge */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: 'var(--bg-subtle)',
-              padding: '4px 10px',
-              borderRadius: '20px',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div style={{
-                width: '26px',
-                height: '26px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--primary)',
-                color: '#ffffff',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {user?.username ? user.username.substring(0, 2).toUpperCase() : 'AD'}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.1 }}>{user?.username || 'User'}</span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', lineHeight: 1.1 }}>{getUserRoleLabel()}</span>
-              </div>
+            {/* User Avatar Badge Dropdown */}
+            <div 
+              ref={dropdownRef}
+              style={{ position: 'relative' }}
+            >
+              <button
+                onClick={() => setDropdownOpen(prev => !prev)}
+                className="user-profile-badge-btn"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: 'var(--bg-subtle)',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  border: '1px solid var(--border-color)',
+                  cursor: 'pointer',
+                  color: 'inherit',
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
+                  transition: 'background-color 0.2s ease',
+                }}
+              >
+                <div style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--primary)',
+                  color: '#ffffff',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {user?.username ? user.username.substring(0, 2).toUpperCase() : 'AD'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {user?.username || 'User'} <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>▼</span>
+                  </span>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', lineHeight: 1.1 }}>{getUserRoleLabel()}</span>
+                </div>
+              </button>
+
+              {dropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '100%',
+                  marginTop: '8px',
+                  width: '160px',
+                  backgroundColor: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+                  zIndex: 200,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  padding: '6px 0',
+                }}>
+                  <Link
+                    to="/profile"
+                    onClick={() => setDropdownOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 16px',
+                      color: 'var(--text-secondary)',
+                      textDecoration: 'none',
+                      fontSize: '0.85rem',
+                      fontWeight: 500,
+                      transition: 'background-color 0.2s ease, color 0.2s ease',
+                    }}
+                    className="dropdown-item"
+                  >
+                    <User size={15} style={{ color: 'var(--primary)' }} />
+                    <span>My Profile</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 16px',
+                      color: 'var(--text-secondary)',
+                      background: 'none',
+                      border: 'none',
+                      width: '100%',
+                      textAlign: 'left',
+                      fontFamily: 'inherit',
+                      fontSize: '0.85rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s ease, color 0.2s ease',
+                    }}
+                    className="dropdown-item"
+                  >
+                    <LogOut size={15} style={{ color: '#ef4444' }} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

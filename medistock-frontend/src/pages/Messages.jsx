@@ -58,20 +58,22 @@ const Messages = () => {
     return ['ADMIN'];
   };
 
-  useEffect(() => {
-    // Load stored messages or seed defaults
-    const stored = localStorage.getItem('medistock_chat_conversations');
-    if (stored) {
-      try {
-        setMessages(JSON.parse(stored));
-      } catch (err) {
-        setMessages(defaultConversations);
+  const fetchMessagesForContact = async (contactId) => {
+    if (!contactId) return;
+    try {
+      const response = await api.get('/messages', { params: { contactId } });
+      if (response.data && response.data.success) {
+        setMessages(prev => ({
+          ...prev,
+          [contactId]: response.data.data
+        }));
       }
-    } else {
-      setMessages(defaultConversations);
-      localStorage.setItem('medistock_chat_conversations', JSON.stringify(defaultConversations));
+    } catch (err) {
+      console.error('Error fetching messages:', err);
     }
+  };
 
+  useEffect(() => {
     const fetchContacts = async () => {
       try {
         const [usersRes, suppliersRes] = await Promise.all([
@@ -156,30 +158,44 @@ const Messages = () => {
   }, [user]);
 
   useEffect(() => {
+    if (!selectedContact) return;
+
+    fetchMessagesForContact(selectedContact.id);
+
+    const interval = setInterval(() => {
+      fetchMessagesForContact(selectedContact.id);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [selectedContact]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, selectedContact]);
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessageText.trim() || !selectedContact) return;
 
     const contactId = selectedContact.id;
-    const newMsg = {
-      id: Date.now(),
-      sender: user?.username || 'admin',
-      senderName: user?.username || 'Admin',
-      text: newMessageText.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    const updated = {
-      ...messages,
-      [contactId]: [...(messages[contactId] || []), newMsg]
-    };
-
-    setMessages(updated);
-    localStorage.setItem('medistock_chat_conversations', JSON.stringify(updated));
+    const textToSend = newMessageText.trim();
     setNewMessageText('');
+
+    try {
+      const response = await api.post('/messages', {
+        receiverId: contactId,
+        text: textToSend
+      });
+      if (response.data && response.data.success) {
+        const newMsg = response.data.data;
+        setMessages(prev => ({
+          ...prev,
+          [contactId]: [...(prev[contactId] || []), newMsg]
+        }));
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
   };
 
   const filteredContacts = contacts.filter(c => {
@@ -409,7 +425,7 @@ const Messages = () => {
                 </div>
               ) : (
                 activeMessages.map((msg, index) => {
-                  const isMe = msg.sender === user?.username || msg.sender === 'admin';
+                  const isMe = msg.sender === user?.username;
 
                   return (
                     <div

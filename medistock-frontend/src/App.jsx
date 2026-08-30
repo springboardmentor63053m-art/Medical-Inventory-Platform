@@ -46,8 +46,10 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['ROLE_SUPPLIER']} />}>
                 <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
                 <Route path="/supplier/profile" element={<SupplierProfile />} />
-                <Route path="/profile" element={<Profile />} />
               </Route>
+
+              {/* Profile accessible by all authenticated roles */}
+              <Route path="/profile" element={<Profile />} />
 
               {/* Notifications accessible by Admin, Pharmacist, Staff, and Supplier */}
               <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST', 'ROLE_STAFF', 'ROLE_SUPPLIER']} />}>
@@ -68,8 +70,8 @@ function App() {
                 <Route path="/sales" element={<SalesHistory />} />
               </Route>
 
-              {/* Suppliers accessible by Admin, Staff */}
-              <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN']} />}>
+              {/* Suppliers accessible by Admin, Pharmacist */}
+              <Route element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_PHARMACIST']} />}>
                 <Route path="/suppliers" element={<Suppliers />} />
               </Route>
 

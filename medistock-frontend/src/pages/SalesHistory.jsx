@@ -250,7 +250,7 @@ const SalesHistory = () => {
                   Medical Inventory Platform
                 </p>
               </div>
-              <button className="btn-icon" onClick={() => setSelectedSale(null)} style={{ padding: '6px' }}>
+              <button className="btn-icon no-print" onClick={() => setSelectedSale(null)} style={{ padding: '6px' }}>
                 <X size={18} />
               </button>
             </div>
@@ -368,7 +368,15 @@ const SalesHistory = () => {
             </div>
 
             {/* Footer: Fixed */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '16px', flexShrink: 0 }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '16px', flexShrink: 0 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => window.print()}
+                style={{ padding: '10px 24px', fontSize: '0.9rem', marginRight: '10px' }}
+              >
+                Print Invoice
+              </button>
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -390,6 +398,39 @@ const SalesHistory = () => {
         }
         .spin {
           animation: spin 1s linear infinite;
+        }
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .modal-overlay,
+          .modal-overlay * {
+            visibility: visible;
+          }
+          .no-print,
+          .no-print * {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          .modal-overlay {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .modal-content {
+            box-shadow: none !important;
+            border: none !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+          }
         }
       `}</style>
     </div>
