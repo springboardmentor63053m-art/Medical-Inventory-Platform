@@ -57,6 +57,20 @@
   /* Layout Dimensions */
   --sidebar-width: 260px;
   --header-height: 70px;
+
+  /* Sidebar Specific (Dark Theme) */
+  --sidebar-text: #9ca3af;
+  --sidebar-text-active: #3b82f6;
+  --sidebar-text-hover: #f9fafb;
+  --sidebar-active-bg: rgba(59, 130, 246, 0.25);
+  --sidebar-active-border: #3b82f6;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
+  --sidebar-logo-color: #3b82f6;
+  --sidebar-logo-text-gradient-start: #ffffff;
+  --sidebar-logo-text-gradient-end: #3b82f6;
+
+  --border-hover: rgba(255, 255, 255, 0.12);
 }
 
 [data-theme="light"] {
@@ -99,7 +113,22 @@
   --table-td-bg: #ffffff;
   --table-tr-hover: #f1f5f9;
 
-  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --card-shadow: 0 4px 18px 0 rgba(15, 23, 42, 0.05), 0 1px 3px 0 rgba(15, 23, 42, 0.03);
+
+  /* Sidebar Specific (Light Theme Override for dark-blue sidebar) */
+  --bg-sidebar: #0B3B6E; /* Deep professional blue/navy */
+  --sidebar-text: #b9d5f7;
+  --sidebar-text-active: #ffffff;
+  --sidebar-text-hover: #ffffff;
+  --sidebar-active-bg: #154e8e;
+  --sidebar-active-border: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-logo-color: #ffffff;
+  --sidebar-logo-text-gradient-start: #ffffff;
+  --sidebar-logo-text-gradient-end: #60a5fa;
+
+  --border-hover: #cbd5e1;
 }
 
 /* ==========================================
@@ -152,7 +181,7 @@ body {
 .sidebar {
   width: var(--sidebar-width);
   background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -164,16 +193,17 @@ body {
 }
 
 .sidebar-logo {
-  padding: 24px;
+  height: var(--header-height);
+  padding: 0 24px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .sidebar-logo svg {
-  color: var(--primary);
-  filter: drop-shadow(0 0 6px var(--primary));
+  color: var(--sidebar-logo-color);
+  filter: drop-shadow(0 0 6px var(--sidebar-logo-color));
 }
 
 .logo-text {
@@ -181,7 +211,7 @@ body {
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: 0.5px;
-  background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+  background: linear-gradient(135deg, var(--sidebar-logo-text-gradient-start) 0%, var(--sidebar-logo-text-gradient-end) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -196,12 +226,16 @@ body {
   overflow-y: auto;
 }
 
+.sidebar-menu.no-scroll {
+  overflow-y: hidden;
+}
+
 .menu-item {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  color: var(--text-secondary);
+  color: var(--sidebar-text);
   text-decoration: none;
   border-radius: var(--border-radius-md);
   transition: all 0.2s ease;
@@ -217,8 +251,8 @@ body {
 }
 
 .menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.04);
-  color: var(--text-main);
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-text-hover);
 }
 
 .menu-item:hover svg {
@@ -226,16 +260,16 @@ body {
 }
 
 .menu-item.active {
-  background-color: var(--primary-glow);
-  color: var(--primary);
-  border-left: 3px solid var(--primary);
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-text-active);
+  border-left: 3px solid var(--sidebar-active-border);
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
 
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--sidebar-border);
 }
 
 .user-profile-badge {
@@ -243,7 +277,7 @@ body {
   align-items: center;
   gap: 10px;
   padding: 10px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--sidebar-hover-bg);
   border-radius: var(--border-radius-md);
 }
 
@@ -269,7 +303,7 @@ body {
 .user-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--sidebar-text-hover);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -277,7 +311,7 @@ body {
 
 .user-role {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--sidebar-text);
   text-transform: lowercase;
 }
 
@@ -343,7 +377,7 @@ body {
 
 .card:hover {
   background: var(--bg-card-hover);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-hover);
 }
 
 .card-header-flex {
@@ -555,7 +589,7 @@ textarea:focus {
 }
 
 select option {
-  background-color: var(--bg-sidebar);
+  background-color: var(--bg-card);
   color: var(--text-main);
 }
 
@@ -1103,4 +1137,14 @@ tr:hover td {
 
 .col-actions {
   width: 90px;
+}
+
+/* User Profile Header Dropdown Custom Styling */
+.user-profile-badge-btn:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--text-main) !important;
 }

@@ -16,10 +16,10 @@ const Profile = () => {
   const { user } = useAuth();
   
   // Personal Info Form State
-  const fullNameParts = user?.fullName ? user.fullName.split(' ') : [user?.username || 'Glenmark', ''];
-  const [firstName, setFirstName] = useState(fullNameParts[0]);
-  const [lastName, setLastName] = useState(fullNameParts.slice(1).join(' ') || 'Supplier');
-  const [phone, setPhone] = useState(user?.phone || '+1 800-555-0105');
+  const fullNameParts = user?.fullName ? user.fullName.split(' ') : [];
+  const [firstName, setFirstName] = useState(fullNameParts[0] || user?.username || '');
+  const [lastName, setLastName] = useState(fullNameParts.slice(1).join(' ') || '');
+  const [phone, setPhone] = useState(user?.phone || '');
   
   // Password Form State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -100,10 +100,18 @@ const Profile = () => {
     }
   };
 
+  const getUserRoleLabel = () => {
+    if (!user?.roles || user.roles.length === 0) return 'USER';
+    return user.roles.map(role => role.replace(/^ROLE_/i, '').toUpperCase()).join(', ');
+  };
+
   const getInitials = () => {
     const fn = firstName || '';
     const ln = lastName || '';
-    return (fn.charAt(0) + ln.charAt(0)).toUpperCase() || 'G';
+    if (fn || ln) {
+      return (fn.charAt(0) + ln.charAt(0)).toUpperCase();
+    }
+    return user?.username?.substring(0, 2).toUpperCase() || 'U';
   };
 
   return (
@@ -147,23 +155,23 @@ const Profile = () => {
               padding: '3px 8px',
               fontWeight: 600
             }}>
-              {user?.username || 'SUP001'}
+              {user?.username || 'N/A'}
             </span>
           </h2>
           
           <div style={{ display: 'flex', gap: '16px', marginTop: '8px', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Mail size={14} style={{ color: 'var(--primary)' }} /> {user?.email || 'supplier@medistock.com'}
+              <Mail size={14} style={{ color: 'var(--primary)' }} /> {user?.email || 'N/A'}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Phone size={14} style={{ color: 'var(--primary)' }} /> {phone}
+              <Phone size={14} style={{ color: 'var(--primary)' }} /> {phone || 'N/A'}
             </span>
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
           <span className="badge" style={{ background: 'rgba(147, 51, 234, 0.2)', color: '#c084fc', border: '1px solid rgba(147, 51, 234, 0.3)', fontWeight: 650, fontSize: '0.75rem', padding: '4px 10px' }}>
-            SUPPLIER ROLE
+            {getUserRoleLabel()} ROLE
           </span>
           <span className="badge badge-success" style={{ fontWeight: 650, fontSize: '0.75rem', padding: '4px 10px' }}>
             ● Verified & Active
@@ -221,7 +229,7 @@ const Profile = () => {
               <label>Official Email Address</label>
               <input 
                 type="email" 
-                value={user?.email || 'supplier@medistock.com'} 
+                value={user?.email || ''} 
                 disabled
                 style={{ opacity: 0.65, cursor: 'not-allowed' }}
               />

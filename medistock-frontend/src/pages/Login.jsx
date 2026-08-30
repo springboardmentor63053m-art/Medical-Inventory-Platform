@@ -135,7 +135,7 @@ const Login = () => {
         <div className="login-divider">OR</div>
 
         <div className="register-section">
-          Need a Staff or Pharmacist account?
+          Need an account?
           <br />
           <Link to="/register" className="register-link">
             Create one here →
