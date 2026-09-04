@@ -1,0 +1,204 @@
+.dispensing-page {
+  width: 100%;
+}
+
+.dispensing-section {
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 14px;
+
+  padding: 25px;
+}
+
+.dispensing-header {
+  margin-bottom: 22px;
+}
+
+.dispensing-header h2 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 21px;
+}
+
+.dispensing-header p {
+  margin: 6px 0 0;
+
+  color: #64748b;
+
+  font-size: 14px;
+}
+
+
+/* LIST */
+
+.dispensing-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 15px;
+}
+
+
+/* CARD */
+
+.dispensing-card {
+  border: 1px solid #e2e8f0;
+
+  border-radius: 12px;
+
+  padding: 18px;
+
+  display: grid;
+
+  grid-template-columns:
+    1.2fr 2fr 1fr;
+
+  align-items: center;
+
+  gap: 20px;
+}
+
+
+/* CUSTOMER */
+
+.dispensing-customer {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+}
+
+.dispensing-avatar {
+  width: 44px;
+
+  height: 44px;
+
+  border-radius: 50%;
+
+  background: #eff6ff;
+
+  color: #2563eb;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-weight: 800;
+}
+
+.dispensing-customer strong {
+  display: block;
+
+  color: #172033;
+
+  font-size: 14px;
+}
+
+.dispensing-customer span {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #94a3b8;
+
+  font-size: 11px;
+}
+
+
+/* MEDICINES */
+
+.dispensing-medicines {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.dispensing-medicine {
+  display: flex;
+
+  justify-content: space-between;
+
+  color: #475569;
+
+  font-size: 13px;
+}
+
+.dispensing-medicine strong {
+  color: #172033;
+}
+
+
+/* STATUS */
+
+.dispensing-status {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  gap: 10px;
+}
+
+.dispensing-badge {
+  padding: 5px 10px;
+
+  border-radius: 20px;
+
+  font-size: 11px;
+
+  font-weight: 700;
+}
+
+.dispensing-badge.approved {
+  background: #ecfdf5;
+
+  color: #059669;
+}
+
+.dispensing-badge.dispensed {
+  background: #eff6ff;
+
+  color: #2563eb;
+}
+
+.dispensing-status button {
+  border: none;
+
+  background: #2563eb;
+
+  color: #ffffff;
+
+  padding: 9px 13px;
+
+  border-radius: 8px;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+@media (max-width: 850px) {
+
+  .dispensing-card {
+    grid-template-columns: 1fr;
+  }
+
+  .dispensing-status {
+    align-items: flex-start;
+  }
+
+}

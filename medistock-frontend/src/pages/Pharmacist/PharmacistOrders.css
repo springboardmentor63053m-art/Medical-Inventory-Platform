@@ -1,0 +1,490 @@
+.pharmacist-orders-page {
+  width: 100%;
+}
+
+.orders-container {
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+
+  border-radius: 14px;
+
+  padding: 25px;
+}
+
+.orders-page-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 22px;
+}
+
+.orders-page-header h2 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 21px;
+}
+
+.orders-page-header p {
+  margin: 6px 0 0;
+
+  color: #64748b;
+
+  font-size: 14px;
+}
+
+.pending-count {
+  background: #eff6ff;
+
+  color: #2563eb;
+
+  padding: 9px 13px;
+
+  border-radius: 20px;
+
+  font-size: 13px;
+
+  font-weight: 700;
+}
+
+
+/* TABLE */
+
+.orders-table-wrapper {
+  overflow-x: auto;
+}
+
+.orders-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  min-width: 950px;
+}
+
+.orders-table th,
+.orders-table td {
+  text-align: left;
+
+  padding: 15px;
+
+  border-bottom: 1px solid #eef2f7;
+}
+
+.orders-table th {
+  background: #f8fafc;
+
+  color: #475569;
+
+  font-size: 12px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.4px;
+}
+
+.orders-table td {
+  color: #334155;
+
+  font-size: 13px;
+}
+
+.orders-table td strong {
+  display: block;
+
+  color: #172033;
+}
+
+.orders-table td span {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #94a3b8;
+
+  font-size: 11px;
+}
+
+
+/* MEDICINES */
+
+.order-medicine-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.order-medicine-list span {
+  color: #475569 !important;
+}
+
+
+/* PRESCRIPTION */
+
+.prescription-yes {
+  background: #eff6ff;
+
+  color: #2563eb !important;
+
+  display: inline-block !important;
+
+  padding: 5px 8px;
+
+  border-radius: 15px;
+
+  font-weight: 700;
+}
+
+.prescription-no {
+  color: #94a3b8 !important;
+}
+
+
+/* STATUS */
+
+.order-status {
+  display: inline-block !important;
+
+  padding: 5px 9px;
+
+  border-radius: 15px;
+
+  font-size: 10px !important;
+
+  font-weight: 700;
+}
+
+.order-status.pending {
+  background: #fff7ed;
+
+  color: #c2410c !important;
+}
+
+.order-status.approved {
+  background: #ecfdf5;
+
+  color: #059669 !important;
+}
+
+.order-status.rejected {
+  background: #fff1f2;
+
+  color: #dc2626 !important;
+}
+
+.order-status.dispensed {
+  background: #eff6ff;
+
+  color: #2563eb !important;
+}
+
+
+/* BUTTONS */
+
+.review-order-button,
+.view-order-button {
+  border: none;
+
+  border-radius: 7px;
+
+  padding: 8px 12px;
+
+  cursor: pointer;
+
+  font-weight: 700;
+
+  font-size: 12px;
+}
+
+.review-order-button {
+  background: #2563eb;
+
+  color: #ffffff;
+}
+
+.view-order-button {
+  background: #eff6ff;
+
+  color: #2563eb;
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.order-modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  background: rgba(15, 23, 42, 0.45);
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 20px;
+
+  z-index: 1000;
+}
+
+.order-modal {
+  width: 100%;
+
+  max-width: 620px;
+
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  background: #ffffff;
+
+  border-radius: 16px;
+
+  padding: 25px;
+
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.2);
+}
+
+
+/* MODAL HEADER */
+
+.modal-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: flex-start;
+
+  padding-bottom: 18px;
+
+  border-bottom: 1px solid #eef2f7;
+}
+
+.modal-header h2 {
+  margin: 0;
+
+  color: #172033;
+}
+
+.modal-header p {
+  margin: 5px 0 0;
+
+  color: #94a3b8;
+
+  font-size: 13px;
+}
+
+.modal-header button {
+  border: none;
+
+  background: #f8fafc;
+
+  width: 35px;
+
+  height: 35px;
+
+  border-radius: 50%;
+
+  font-size: 22px;
+
+  cursor: pointer;
+
+  color: #64748b;
+}
+
+
+/* CUSTOMER */
+
+.customer-information {
+  padding: 18px 0;
+
+  border-bottom: 1px solid #eef2f7;
+}
+
+.customer-information h3,
+.modal-medicines h3 {
+  margin: 0 0 12px;
+
+  color: #172033;
+
+  font-size: 15px;
+}
+
+.customer-information p {
+  margin: 5px 0;
+
+  color: #64748b;
+
+  font-size: 13px;
+}
+
+
+/* MEDICINES */
+
+.modal-medicines {
+  padding: 18px 0;
+}
+
+.modal-medicine {
+  display: grid;
+
+  grid-template-columns: 1fr 70px 80px;
+
+  gap: 10px;
+
+  padding: 10px 0;
+
+  border-bottom: 1px solid #f1f5f9;
+
+  color: #475569;
+
+  font-size: 13px;
+}
+
+.modal-medicine strong {
+  text-align: right;
+
+  color: #172033;
+}
+
+
+/* TOTAL */
+
+.modal-total {
+  display: flex;
+
+  justify-content: space-between;
+
+  padding: 16px 0;
+
+  color: #475569;
+}
+
+.modal-total strong {
+  color: #172033;
+
+  font-size: 18px;
+}
+
+
+/* PRESCRIPTION */
+
+.prescription-box {
+  background: #eff6ff;
+
+  border: 1px solid #bfdbfe;
+
+  border-radius: 10px;
+
+  padding: 13px;
+
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+}
+
+.prescription-box > div {
+  display: flex;
+
+  gap: 10px;
+
+  align-items: center;
+}
+
+.document-icon {
+  width: 38px;
+
+  height: 38px;
+
+  background: #ffffff;
+
+  border-radius: 8px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+.prescription-box strong {
+  color: #172033;
+
+  font-size: 13px;
+}
+
+.prescription-box p {
+  margin: 3px 0 0;
+
+  color: #64748b;
+
+  font-size: 11px;
+}
+
+.prescription-box button {
+  border: none;
+
+  background: #2563eb;
+
+  color: #ffffff;
+
+  padding: 7px 12px;
+
+  border-radius: 7px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+/* ACTIONS */
+
+.modal-actions {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  margin-top: 22px;
+}
+
+.reject-button,
+.approve-button {
+  border: none;
+
+  padding: 11px 17px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font-weight: 700;
+}
+
+.reject-button {
+  background: #fff1f2;
+
+  color: #dc2626;
+}
+
+.approve-button {
+  background: #2563eb;
+
+  color: #ffffff;
+}

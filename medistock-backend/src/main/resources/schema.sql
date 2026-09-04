@@ -1,0 +1,8 @@
+DROP TABLE IF EXISTS expiry_trackings CASCADE;
+
+-- Add missing columns to users table safely without data loss
+ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status VARCHAR(255) DEFAULT 'APPROVED';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_by BIGINT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
