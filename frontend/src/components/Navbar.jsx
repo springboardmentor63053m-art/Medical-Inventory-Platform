@@ -65,10 +65,10 @@ export default function Navbar({ onMenuClick, onOpenArch }) {
   return (
     <header className="
       h-16 flex-shrink-0 z-30 relative
-      bg-white/90 dark:bg-slate-950/90
+      bg-white/95 dark:bg-[#080e1d]/95
       backdrop-blur-xl
-      border-b border-slate-100 dark:border-slate-800/70
-      shadow-[0_1px_0_rgba(0,0,0,0.04)] dark:shadow-[0_1px_0_rgba(0,0,0,0.4)]
+      border-b border-slate-100 dark:border-slate-800/60
+      shadow-[0_1px_0_rgba(0,0,0,0.04)] dark:shadow-[0_2px_16px_rgba(0,0,0,0.35)]
       flex items-center justify-between px-5
       transition-all duration-300
     ">
@@ -85,14 +85,37 @@ export default function Navbar({ onMenuClick, onOpenArch }) {
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Welcome Text */}
-        <div className="hidden sm:block">
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-none">
-            MediStock Platform
-          </p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
-              {user?.role?.replace('_', ' ')}
+        {/* MedStock Brand + Status */}
+        <div className="hidden sm:flex items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-black text-slate-800 dark:text-white leading-none tracking-tight">
+                MedStock AI
+              </p>
+              {/* AI Engine Active pill */}
+              <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                               bg-blue-600/10 dark:bg-blue-500/15 border border-blue-400/30
+                               text-blue-600 dark:text-blue-400 text-[9px] font-black tracking-widest uppercase">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500" />
+                </span>
+                AI Engine Active
+              </span>
+            </div>
+            <p className="text-[10px] text-blue-500 dark:text-blue-500 font-bold tracking-widest uppercase leading-none mt-0.5">
+              Pharmacy Platform
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="w-px h-7 bg-slate-200 dark:bg-slate-800" />
+
+          {/* System status */}
+          <div className="hidden xl:flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              System Status // Optimal
             </span>
           </div>
         </div>

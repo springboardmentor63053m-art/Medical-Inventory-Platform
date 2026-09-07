@@ -106,13 +106,13 @@ export default function Sidebar({ open, onClose }) {
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-white font-extrabold text-base leading-tight tracking-wide font-display">
-                  MediStock
+                  MedStock
                 </p>
-                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-black text-[9px] tracking-wider uppercase shadow-xs">
+                <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-black text-[9px] tracking-wider uppercase shadow-xs ring-1 ring-white/20">
                   AI
                 </span>
               </div>
-              <p className="text-blue-400 text-[10px] font-semibold tracking-wider uppercase">Pharmacy Platform</p>
+              <p className="text-blue-400/80 text-[10px] font-bold tracking-widest uppercase">Pharmacy Platform</p>
             </div>
           </div>
           <button
@@ -203,10 +203,13 @@ export default function Sidebar({ open, onClose }) {
         <div className="px-4 py-3.5 border-t border-white/[0.06]">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <p className="text-slate-400 text-[11px] font-semibold">MediStock AI v3.0</p>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+              <p className="text-slate-400 text-[11px] font-semibold">MedStock AI v3.0</p>
             </div>
-            <span className="text-[10px] text-blue-400 font-mono font-bold">AI Active</span>
+            <span className="text-[10px] text-blue-400 font-mono font-black tracking-wider">AI Active</span>
           </div>
         </div>
       </aside>
