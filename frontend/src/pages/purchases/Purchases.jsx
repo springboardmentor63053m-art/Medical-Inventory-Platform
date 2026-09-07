@@ -322,7 +322,7 @@ export default function Purchases() {
           className="btn-primary !text-xs !py-2 !px-4 flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/20 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>+ New Purchase Order</span>
+          <span>New Purchase Order</span>
         </button>
       </div>
 

@@ -301,7 +301,7 @@ export default function Sales() {
           className="btn-primary !text-xs !py-2 !px-4 flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/20 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>+ New POS Sale / Checkout</span>
+          <span>New POS Sale / Checkout</span>
         </button>
       </div>
 
