@@ -1,0 +1,139 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50:  '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+        },
+        medical: {
+          blue:  '#1a56db',
+          teal:  '#0694a2',
+          green: '#057a55',
+          red:   '#c81e1e',
+          amber: '#b45309',
+        },
+        dark: {
+          950: '#020617',
+          900: '#0f172a',
+          800: '#1e293b',
+          700: '#334155',
+          600: '#475569',
+        },
+        command: {
+          bg: '#0B101B',
+          surface: '#111827',
+          card: '#111827',
+          border: '#1F293D',
+          hover: '#182338',
+          orange: '#FF5B04',
+          'orange-hover': '#E04E00',
+          teal: '#10B981',
+          cyan: '#06B6D4',
+        },
+        surface: {
+          DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+          elevated: 'rgb(var(--surface-elevated) / <alpha-value>)',
+          muted: 'rgb(var(--surface-muted) / <alpha-value>)',
+        },
+      },
+      fontFamily: {
+        sans:    ['Inter', 'Outfit', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
+      },
+      boxShadow: {
+        'glass':          '0 8px 32px 0 rgba(31,38,135,0.37)',
+        'card':           '0 4px 24px -4px rgba(16,24,40,0.07)',
+        'card-dark':      '0 4px 32px -4px rgba(0,0,0,0.55)',
+        'glow':           '0 0 20px -5px rgba(59,130,246,0.4)',
+        'glow-dark':      '0 0 28px -4px rgba(96,165,250,0.3)',
+        'glow-teal':      '0 0 20px -5px rgba(6,148,162,0.4)',
+        'glow-strong':    '0 0 40px -4px rgba(59,130,246,0.6)',
+        'sidebar':        '4px 0 32px rgba(0,0,0,0.4)',
+        'navbar':         '0 4px 24px -4px rgba(0,0,0,0.07)',
+        'elevated':       '0 20px 60px -10px rgba(0,0,0,0.15)',
+        'inner-glow':     'inset 0 1px 0 rgba(255,255,255,0.12)',
+      },
+      backgroundImage: {
+        'gradient-radial':    'radial-gradient(var(--tw-gradient-stops))',
+        'hero-gradient':      'linear-gradient(135deg, #0d1425 0%, #112248 40%, #0d2d4a 70%, #093040 100%)',
+        'hero-gradient-dark': 'linear-gradient(135deg, #020617 0%, #0a1428 40%, #060e1d 100%)',
+        'sidebar-gradient':   'linear-gradient(170deg, #0d1425 0%, #0f1b35 40%, #0a1220 100%)',
+        'mesh-light':
+          'radial-gradient(at 40% 20%, rgba(59,130,246,0.07) 0px, transparent 50%), ' +
+          'radial-gradient(at 80% 0%,  rgba(6,148,162,0.05) 0px, transparent 50%), ' +
+          'radial-gradient(at 0% 50%,  rgba(37,99,235,0.04) 0px, transparent 50%), ' +
+          'radial-gradient(at 60% 80%, rgba(99,102,241,0.04) 0px, transparent 50%)',
+        'mesh-dark':
+          'radial-gradient(at 40% 20%, rgba(59,130,246,0.12) 0px, transparent 50%), ' +
+          'radial-gradient(at 80% 0%,  rgba(6,148,162,0.08) 0px, transparent 50%), ' +
+          'radial-gradient(at 0% 80%,  rgba(99,102,241,0.07) 0px, transparent 50%), ' +
+          'radial-gradient(at 70% 60%, rgba(45,212,191,0.05) 0px, transparent 40%)',
+        'card-gradient':   'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%)',
+        'card-gradient-dark': 'linear-gradient(135deg, rgba(17,24,39,0.9) 0%, rgba(10,15,28,0.85) 100%)',
+        'glow-gradient':   'radial-gradient(circle at center, rgba(59,130,246,0.15) 0%, transparent 70%)',
+      },
+      animation: {
+        'fade-in':       'fadeIn 0.35s ease-out both',
+        'slide-up':      'slideUp 0.3s ease-out both',
+        'slide-down':    'slideDown 0.25s ease-out both',
+        'scale-in':      'scaleIn 0.2s ease-out both',
+        'pulse-slow':    'pulse 4s cubic-bezier(0.4,0,0.6,1) infinite',
+        'shimmer':       'shimmer 2s linear infinite',
+        'float':         'float 4s ease-in-out infinite',
+        'bounce-soft':   'bounceSoft 2s ease-in-out infinite',
+        'spin-slow':     'spinSlow 8s linear infinite',
+        'gradient':      'gradientShift 6s ease infinite',
+        'glow-pulse':    'glowPulse 3s ease-in-out infinite',
+        'sidebar-reveal':'sidebarReveal 0.3s ease-out both',
+      },
+      keyframes: {
+        fadeIn:     { from: { opacity: 0, transform: 'translateY(6px)' },   to: { opacity: 1, transform: 'translateY(0)' } },
+        slideUp:    { from: { opacity: 0, transform: 'translateY(12px)' },  to: { opacity: 1, transform: 'translateY(0)' } },
+        slideDown:  { from: { opacity: 0, transform: 'translateY(-8px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+        scaleIn:    { from: { opacity: 0, transform: 'scale(0.94)' },       to: { opacity: 1, transform: 'scale(1)' } },
+        shimmer:    { from: { backgroundPosition: '-200% 0' }, to: { backgroundPosition: '200% 0' } },
+        float:      { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
+        bounceSoft: { '0%,100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(1.12)' } },
+        spinSlow:   { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } },
+        gradientShift: {
+          '0%':   { backgroundPosition: '0% 50%' },
+          '50%':  { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' },
+        },
+        glowPulse: {
+          '0%,100%': { boxShadow: '0 0 20px -4px rgba(59,130,246,0.4)' },
+          '50%':      { boxShadow: '0 0 40px -4px rgba(59,130,246,0.65)' },
+        },
+        sidebarReveal: {
+          from: { opacity: 0, transform: 'translateX(-16px)' },
+          to:   { opacity: 1, transform: 'translateX(0)' },
+        },
+      },
+      transitionTimingFunction: {
+        'spring':   'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        'smooth':   'cubic-bezier(0.4, 0, 0.2, 1)',
+        'bounce':   'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
+      borderRadius: {
+        '3xl': '1.5rem',
+        '4xl': '2rem',
+      },
+    },
+  },
+  plugins: [],
+}

@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: medical-inventory-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:medical_inventory_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      pool-name: MedInvHikariPool
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:MedicalInventoryManagementPlatformSecretKey2024BtechProjectSecure256BitKey}
+  expiration: ${JWT_EXPIRATION:2592000000}  # 30 days in milliseconds
+
+# CORS
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+# Logging
+logging:
+  level:
+    com.medicalinventory: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Alert Scheduler (cron expressions)
+app:
+  scheduler:
+    alert-check-cron: "0 0 6 * * ?"  # Run daily at 6 AM
+  alert:
+    expiry-warning-days: 90
