@@ -89,8 +89,18 @@ public class DashboardService {
         if (monthlySales.isEmpty()) {
             monthlySales = saleRepository.allMonthlySalesRevenue();
         }
-        stats.put("monthlySalesTrend", monthlySales.stream()
-                .map(row -> Map.of("month", row[0], "revenue", row[1]))
+
+        // Build a complete Jan–Dec map: months with no sales default to 0
+        Map<Integer, Object> revenueByMonth = new HashMap<>();
+        for (int m = 1; m <= 12; m++) revenueByMonth.put(m, 0);
+        for (Object[] row : monthlySales) {
+            int monthNum = ((Number) row[0]).intValue();
+            revenueByMonth.put(monthNum, row[1]);   // real revenue value
+        }
+
+        stats.put("monthlySalesTrend", revenueByMonth.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> Map.of("month", e.getKey(), "revenue", e.getValue()))
                 .collect(Collectors.toList()));
 
         return stats;
