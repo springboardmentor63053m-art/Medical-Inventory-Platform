@@ -6,7 +6,7 @@ build/
 *.jar
 *.war
 
-# Environment & IDE
+# Environqment & IDE
 .env
 .env.local
 .vscode/
@@ -17,3 +17,15 @@ build/
 # Logs
 logs/
 *.log
+
+
+# Database backups
+*.backup
+*.dump
+
+# Local project inspection files
+project-structure.txt
+
+# Additional environment files
+.env.*
+!.env.example
