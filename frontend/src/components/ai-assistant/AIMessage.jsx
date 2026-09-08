@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ShoppingCart, Package, Clock, AlertTriangle, BarChart2,
   Receipt, Truck, AlertCircle, Zap, Sparkles, TrendingUp,
-  Copy, Check, ChevronRight
+  Copy, Check, ChevronRight, HelpCircle
 } from 'lucide-react'
 
 // Icon map for dynamic action buttons
@@ -19,6 +19,7 @@ const ACTION_ICONS = {
   Zap,
   Sparkles,
   TrendingUp,
+  HelpCircle
 }
 
 export default function AIMessage({ message, onActionClick }) {
@@ -33,10 +34,16 @@ export default function AIMessage({ message, onActionClick }) {
   }
 
   const handleAction = (action) => {
-    if (onActionClick) {
-      onActionClick(action)
+    if (action.prompt || action.query) {
+      if (onActionClick) {
+        onActionClick(action)
+      }
+      return
     }
     if (action.route) {
+      if (onActionClick) {
+        onActionClick(action)
+      }
       navigate(action.route)
     }
   }
@@ -47,27 +54,35 @@ export default function AIMessage({ message, onActionClick }) {
 
     // Priority badge highlighting
     if (typeof text === 'string') {
-      if (text.includes('🔴 CRITICAL')) {
+      if (text.includes('🔴 Critical') || text.includes('🔴 CRITICAL')) {
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold text-[11px]">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold text-[11.5px]">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-            CRITICAL
+            Critical
           </span>
         )
       }
-      if (text.includes('🟡 HIGH RISK') || text.includes('🟡 WARNING') || text.includes('🟡 MONITOR')) {
+      if (text.includes('🟠 Reorder now') || text.includes('🟠 HIGH RISK')) {
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-[11px]">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-orange-500/20 border border-orange-500/40 text-orange-300 font-bold text-[11.5px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+            Reorder now
+          </span>
+        )
+      }
+      if (text.includes('🟡 Low stock') || text.includes('🟡 WARNING') || text.includes('🟡 MONITOR')) {
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-[11.5px]">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-            {text.replace('🟡', '').trim()}
+            Low stock
           </span>
         )
       }
-      if (text.includes('🟢 OPTIMAL') || text.includes('🟢 HEALTHY') || text.includes('🟢 REMAINING')) {
+      if (text.includes('🔵 Below threshold') || text.includes('🔵 INFO')) {
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            {text.replace('🟢', '').trim()}
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold text-[11.5px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+            Below threshold
           </span>
         )
       }
@@ -141,7 +156,6 @@ export default function AIMessage({ message, onActionClick }) {
         if (tableLines.length >= 2) {
           const parseRow = (r) => r.split('|').slice(1, -1).map(c => c.trim())
           const headerCells = parseRow(tableLines[0])
-          // tableLines[1] is separator |:---|:---|
           const bodyRows = tableLines.slice(2).map(parseRow)
 
           elements.push(
@@ -229,7 +243,31 @@ export default function AIMessage({ message, onActionClick }) {
         continue
       }
 
-      // 8. Regular paragraph / empty line
+      // 8. Highlighted item lines (e.g. 🔴 Paracetamol 650mg — 45 units remaining — Critical)
+      if (line.trim().startsWith('🔴') || line.trim().startsWith('🟠') || line.trim().startsWith('🟡') || line.trim().startsWith('🔵') || line.trim().startsWith('🟢')) {
+        const dot = line.trim().slice(0, 2)
+        const content = line.trim().slice(2).trim()
+        const parts = content.split('—').map(p => p.trim())
+
+        elements.push(
+          <div key={`badge-item-${i}`} className="my-2 p-3 rounded-xl bg-[#09152b] border border-slate-800/80 hover:border-cyan-500/40 flex items-center justify-between transition-colors">
+            <div className="flex items-center gap-2.5">
+              <span className="text-base">{dot}</span>
+              <span className="text-[13px] font-bold text-white">{parts[0]}</span>
+              {parts[1] && <span className="text-xs text-slate-400">({parts[1]})</span>}
+            </div>
+            {parts[2] && (
+              <div>
+                {formatInlineStyles(`${dot} ${parts[2]}`)}
+              </div>
+            )}
+          </div>
+        )
+        i++
+        continue
+      }
+
+      // 9. Regular paragraph / empty line
       if (line.trim() === '') {
         elements.push(<div key={`sp-${i}`} className="h-1.5" />)
       } else {
@@ -260,7 +298,7 @@ export default function AIMessage({ message, onActionClick }) {
       </div>
 
       {/* Message Content Bubble */}
-      <div className="max-w-[90%] min-w-0 flex-1">
+      <div className="max-w-[92%] min-w-0 flex-1">
         <div className="relative px-4 py-3.5 rounded-2xl rounded-tl-sm bg-[#0a1428] border border-cyan-900/40 shadow-xl shadow-black/30 text-slate-200">
           {/* Top Metadata Header */}
           <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-800/80">

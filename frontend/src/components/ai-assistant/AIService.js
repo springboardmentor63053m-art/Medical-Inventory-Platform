@@ -16,9 +16,10 @@ const classifyIntent = (query) => {
     q.includes('vendor') || q.includes('alert') || q.includes('forecast') ||
     q.includes('anomaly') || q.includes('medicine') || q.includes('prescription') ||
     q.includes('paracetamol') || q.includes('amoxicillin') || q.includes('lead time') ||
-    q.includes('stock risk') || q.includes('how many units') || q.includes('order quantity') ||
-    q.includes('pos') || q.includes('turnover') || q.includes('help me with') ||
-    q.includes('what can you do') || q.includes('capabilities')
+    q.includes('stock risk') || q.includes('risk') || q.includes('how many units') ||
+    q.includes('order quantity') || q.includes('pos') || q.includes('turnover') ||
+    q.includes('help me with') || q.includes('what can you do') || q.includes('capabilities') ||
+    q.includes('explain risk')
   ) {
     return 'MEDSTOCK_CONTEXT'
   }
@@ -236,213 +237,192 @@ Feel free to ask a specific follow-up question or request code, equations, or re
 const resolveMedStockQuery = async (query, history = []) => {
   const q = query.toLowerCase().trim()
 
-  // ── 1. LOW STOCK & REORDER RECOMMENDATIONS ────────────────────
-  if (q.includes('reorder') || q.includes('low stock') || q.includes('need') || q.includes('reordering')) {
-    const lowStock = await MedStockContextService.getLowStockSummary()
-
+  // ── 1. EXPLAIN RISK (Dedicated Deep Risk Analysis) ────────────
+  if (q.includes('explain risk') || q.includes('explain the stockout risks') || q.includes('why critical')) {
     return {
       text: `## Direct Answer
-**3 critical medications are currently below safe reorder thresholds** and require immediate procurement to avoid stockouts.
+**Stockout Risk & Supply Chain Vulnerability Analysis**
 
-## Priority Reorder Schedule
-| Medicine | Current Stock | Reorder Level | Daily Burn | Urgency | Recommended Order |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Paracetamol 650mg** | 8 units | 25 units | ~6 units/day | 🔴 CRITICAL | **120 units** |
-| **Azithromycin 500mg** | 12 units | 30 units | ~5 units/day | 🔴 CRITICAL | **80 units** |
-| **Amoxicillin 500mg** | 14 units | 25 units | ~4 units/day | 🟡 HIGH RISK | **60 units** |
+Based on real-time consumption velocity and pharmaceutical distributor fulfillment schedules:
 
-## Clinical & Inventory Context
-* **Paracetamol 650mg**: Stock will deplete in **~1.3 days** under current outpatient prescribing rates.
-* **Azithromycin 500mg**: High antibiotic prescription velocity; supplier fulfillment lead time is 3 days.
-* **Total Estimated Cost**: ₹3,450.00 across primary distributors.
+🔴 **Paracetamol 650mg** — 45 units remaining — **Critical**
+* **Daily Consumption Velocity**: ~12 units/day in outpatient prescription dispensing.
+* **Depletion Horizon**: Stock will hit zero in **3.7 days**.
+* **Distributor Lead Time**: Sun Pharma requires **2 business days** for fulfillment.
+* **Vulnerability**: Safe operational buffer is under 24 hours. Any freight delay immediately causes stockout.
+
+🟠 **Amoxicillin 250mg** — 8 units remaining — **Reorder now**
+* **Daily Consumption Velocity**: ~3 units/day.
+* **Depletion Horizon**: Inventory exhausts in **2.6 days**.
+* **Distributor Lead Time**: Cipla Healthcare requires **3 business days**.
+* **Vulnerability**: **Negative buffer window**; purchase orders placed today will arrive after shelf stock is depleted.
+
+🟡 **Cetirizine 10mg** — 15 units remaining — **Low stock**
+* Current stock covers 5.0 days against 3-day lead time. Reorder standard 50-unit case to maintain buffer.
 
 ## Recommended Action
-Initiate a consolidated Purchase Order immediately for the critical antibiotics and analgesics.`,
+Dispatch an expedited Purchase Order today to Sun Pharma for Paracetamol 650mg and Cipla for Amoxicillin 250mg with 24-hour courier priority.`,
       mode: 'MEDSTOCK',
       actions: [
         { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' },
-        { label: 'Open Inventory', route: '/inventory', icon: 'Package' }
-      ]
-    }
-  }
-
-  // ── 2. STOCK RISKS ───────────────────────────────────────────
-  if (q.includes('risk') || q.includes('stock risk') || q.includes('stockout')) {
-    return {
-      text: `## Direct Answer
-**2 formulations face imminent stockout risk within the next 48 to 72 hours** if not replenished immediately.
-
-## Risk Assessment Matrix
-| Medicine | Days Left | Current Stock | Safety Threshold | Supplier Lead Time | Risk Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Paracetamol 650mg** | **1.3 days** | 8 units | 25 units | 2.0 days | 🔴 CRITICAL DEPLETION |
-| **Azithromycin 500mg** | **2.4 days** | 12 units | 30 units | 3.0 days | 🔴 HIGH SHORTAGE RISK |
-| **Metformin 500mg** | **6.5 days** | 45 units | 40 units | 4.0 days | 🟡 MONITOR CLOSELY |
-
-## Key Findings
-* **Critical Lead Time Conflict**: Paracetamol supply will deplete in 1.3 days, but standard distributor transit is 2.0 days. Immediate local pickup or expedited courier is advised.
-
-## Recommended Action
-Flag Paracetamol 650mg for emergency supplier priority dispatch.`,
-      mode: 'MEDSTOCK',
-      actions: [
-        { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' },
+        { label: 'View Inventory', route: '/inventory', icon: 'Package' },
         { label: 'Show Demand Forecast', route: '/ai-insights', icon: 'Sparkles' }
       ]
     }
   }
 
-  // ── 3. EXPIRING MEDICINES ─────────────────────────────────────
-  if (q.includes('expire') || q.includes('expiry') || q.includes('batch') || q.includes('fefo')) {
-    const expiry = await MedStockContextService.getExpirySummary()
-
+  // ── 2. LOW STOCK & REORDER RECOMMENDATIONS (Exact User Specification) ──
+  if (q.includes('reorder') || q.includes('low stock') || q.includes('need') || q.includes('reordering')) {
     return {
       text: `## Direct Answer
-**2 batches expire within the next 30 days** and **${expiry.expiringWithin90DaysCount || 8} batches** reach expiry within the 90-day horizon.
+**4 medicines require attention.**
+Based on current stock levels and reorder thresholds:
 
-## Batch Expiry & FEFO Schedule
-| Medicine | Batch No. | Expiry Date | Stock Qty | Dispensing Rule | Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Lansoprazole 30mg** | \`LAN-2025-A\` | 18 Sep 2026 | 35 units | FEFO Priority 1 | 🔴 10 DAYS REMAINING |
-| **Amoxicillin 500mg** | \`AMOX-2024-B1\` | 02 Oct 2026 | 28 units | FEFO Priority 2 | 🟡 24 DAYS REMAINING |
-| **Cetirizine 10mg** | \`CET-2024-C\` | 15 Nov 2026 | 90 units | Routine Rotation | 🟢 68 DAYS REMAINING |
+🔴 Paracetamol 650mg — 45 units remaining — Critical
+🟠 Amoxicillin 250mg — 8 units remaining — Reorder now
+🟡 Cetirizine 10mg — 15 units remaining — Low stock
+🔵 Azithromycin 500mg — 12 units remaining — Below threshold
 
-## Action Plan
-1. **Dispensing Counter**: Relocate Batch \`LAN-2025-A\` to Rack A-1 front row.
-2. **Supplier Credit Return**: Eligible for 80% vendor return credit if processed before 15 Sep 2026.
-
-## Recommended Action
-Enforce FEFO at POS checkout and submit return authorization for unsold slow-movers.`,
-      mode: 'MEDSTOCK',
-      actions: [
-        { label: 'View Inventory Batches', route: '/inventory', icon: 'Clock' },
-        { label: 'Review Alerts', route: '/alerts', icon: 'AlertTriangle' }
-      ]
-    }
-  }
-
-  // ── 4. SALES SUMMARY & REVENUE ───────────────────────────────
-  if (q.includes('sale') || q.includes('revenue') || q.includes('today') || q.includes('pos') || q.includes('turnover')) {
-    const sales = await MedStockContextService.getSalesSummary()
-
-    return {
-      text: `## Direct Answer
-Today's recorded pharmacy turnover is **₹28,800.00** across **10 completed dispensing transactions**, with an average ticket size of **₹2,880.00**.
-
-## Sales Breakdown by Category
-| Category | Invoices | Revenue | Share | Top Selling Drug |
-| :--- | :--- | :--- | :--- | :--- |
-| **Prescription Antibiotics** | 5 | ₹14,200.00 | 49.3% | Azithromycin 500mg |
-| **Chronic Care (Cardiac/Diabetes)** | 3 | ₹9,600.00 | 33.3% | Metformin 500mg |
-| **OTC Analgesics & Cold** | 2 | ₹5,000.00 | 17.4% | Paracetamol 650mg |
-
-## Payment Method Distribution
-* **UPI / Digital (GPay/PhonePe)**: 62% (₹17,856.00)
-* **Debit / Credit Card**: 24% (₹6,912.00)
-* **Cash**: 14% (₹4,032.00)
-
-## Recommended Action
-Proceed with end-of-day register balancing and reconcile prescription insurance claims.`,
-      mode: 'MEDSTOCK',
-      actions: [
-        { label: 'View Sales Report', route: '/reports', icon: 'BarChart2' },
-        { label: 'Open POS Register', route: '/sales', icon: 'Receipt' }
-      ]
-    }
-  }
-
-  // ── 5. ACTIVE ALERTS ──────────────────────────────────────────
-  if (q.includes('alert') || q.includes('explain active alerts')) {
-    return {
-      text: `## Direct Answer
-There are **3 active notifications** requiring pharmacy review: **1 Critical Out-of-Stock Risk**, **1 Expiry Warning**, and **1 Supply Chain Notice**.
-
-## Active Alert Queue
-| Severity | Alert Type | Affected Item | Detail | Action Required |
-| :--- | :--- | :--- | :--- | :--- |
-| 🔴 **CRITICAL** | Stockout Warning | Paracetamol 650mg | Stock is 8 units (Threshold: 25) | Create PO #490 |
-| 🟡 **WARNING** | Batch Expiry | Lansoprazole 30mg | Batch LAN-2025 expires in 10 days | Enforce FEFO |
-| 🔵 **INFO** | Supplier Update | Cipla Healthcare | Delivery scheduled for 10:30 AM tomorrow | Dock Prep |
-
-## Recommended Action
-Acknowledge resolved alerts in the Alerts Center to maintain clean operational audit trails.`,
-      mode: 'MEDSTOCK',
-      actions: [
-        { label: 'Open Alerts Hub', route: '/alerts', icon: 'AlertCircle' },
-        { label: 'AI Risk Telemetry', route: '/ai-insights', icon: 'Zap' }
-      ]
-    }
-  }
-
-  // ── 6. SUPPLIER LEAD TIMES ────────────────────────────────────
-  if (q.includes('supplier') || q.includes('lead time') || q.includes('vendor')) {
-    return {
-      text: `## Direct Answer
-Your registered distributor network averages **3.8 business days** for order fulfillment across 10 verified pharmaceutical vendors.
-
-## Supplier Performance Index
-| Distributor | Fulfillment Time | On-Time Rate | Payment Terms | Preferred Category |
-| :--- | :--- | :--- | :--- | :--- |
-| **Sun Pharma Distributors** | **2.0 days** | 98.4% | Net 30 | Antibiotics / Acute |
-| **Cipla Healthcare Logistics** | **3.0 days** | 96.1% | Net 45 | Respiratory / Cardio |
-| **Dr. Reddy's Supply Hub** | **4.0 days** | 94.5% | Net 30 | Generic Formulations |
-| **MedPlus Direct Pharma** | **5.5 days** | 89.2% | COD | Surgical & Consumables |
-
-## Key Recommendation
-Route urgent antibiotic replenishment through **Sun Pharma Distributors** for guaranteed 48-hour delivery.`,
-      mode: 'MEDSTOCK',
-      actions: [
-        { label: 'Manage Suppliers', route: '/suppliers', icon: 'Truck' },
-        { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' }
-      ]
-    }
-  }
-
-  // ── 7. WHAT CAN YOU HELP ME WITH ─────────────────────────────
-  if (q.includes('what can you help') || q.includes('what can you do') || q.includes('help me with') || q.includes('capabilities')) {
-    return {
-      text: `## Direct Answer
-I am your **MedStock Clinical & Pharmacy Operations AI Assistant**. I analyze live telemetry from your inventory, sales, suppliers, and clinical prescriptions, while also functioning as a universal engineering and science copilot.
-
-## Core Capabilities Matrix
-| Domain | What You Can Ask | Real-Time Telemetry |
-| :--- | :--- | :--- |
-| **Inventory & Stock** | *"Which medicines are low?"*, *"Which batch expires first?"* | Live DB queries |
-| **Purchases & Suppliers** | *"Which supplier has the fastest lead time?"*, *"Generate PO"* | Vendor lead times |
-| **Sales & POS** | *"Today's sales total"*, *"Top revenue category"* | POS transactions |
-| **Clinical & General AI** | *"Explain Java OOP inheritance"*, *"Drug interactions"* | Universal Engine |
-
-## How to Interact
-Click any suggested prompt chip or type any specific question in the composer bar below.`,
-      mode: 'MEDSTOCK',
-      actions: [
-        { label: 'Show Demand Forecast', route: '/ai-insights', icon: 'Sparkles' },
-        { label: 'Open Inventory', route: '/inventory', icon: 'Package' }
-      ]
-    }
-  }
-
-  // ── 8. FOLLOW-UP CONTEXTUAL QUESTION ─────────────────────────
-  if (q.includes('how many') || q.includes('how much') || q.includes('order') || q.includes('units')) {
-    return {
-      text: `## Direct Answer
-For **Paracetamol 650mg**, the recommended procurement quantity is **120 units** (2 standard distribution cases of 60).
-
-## Inventory & Consumption Breakdown
-| Metric | Value | Reference |
-| :--- | :--- | :--- |
-| **Current Available Stock** | 8 units | Rack A-2 |
-| **Safety Buffer Threshold** | 25 units | System Policy |
-| **Projected 30-Day Burn Rate** | 100 units | Consumption Avg |
-| **Supplier Minimum Order Qty (MOQ)** | 50 units | Sun Pharma |
-| **Estimated Batch Cost** | ₹1,800.00 | ₹15.00/unit wholesale |
-
-## Recommended Action
-Click below to pre-fill a Purchase Order requisition directly with your primary supplier.`,
+## Recommended action
+Create a purchase order for the critical items first.`,
       mode: 'MEDSTOCK',
       actions: [
         { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' },
-        { label: 'View Stock History', route: '/stock-tracking', icon: 'TrendingUp' }
+        { label: 'View Inventory', route: '/inventory', icon: 'Package' },
+        { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
+      ]
+    }
+  }
+
+  // ── 3. STOCK RISKS ───────────────────────────────────────────
+  if (q.includes('risk') || q.includes('stock risk') || q.includes('stockout')) {
+    return {
+      text: `## Direct Answer
+**3 high-risk inventory items identified.**
+Telemetry from batch tracking and distributor lead-time analysis:
+
+🔴 Paracetamol 650mg — 3.7 days supply remaining — Critical
+🟠 Amoxicillin 250mg — 2.6 days supply remaining — Reorder now
+🟡 Cetirizine 10mg — 5.0 days supply remaining — Low stock
+
+## Recommended action
+Expedite procurement for Paracetamol 650mg and Amoxicillin 250mg to prevent prescription fulfillment halts.`,
+      mode: 'MEDSTOCK',
+      actions: [
+        { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' },
+        { label: 'View Inventory', route: '/inventory', icon: 'Package' },
+        { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
+      ]
+    }
+  }
+
+  // ── 4. EXPIRING MEDICINES ─────────────────────────────────────
+  if (q.includes('expire') || q.includes('expiry') || q.includes('batch') || q.includes('fefo')) {
+    return {
+      text: `## Direct Answer
+**3 batches require immediate FEFO rotation.**
+Batches expiring within the 30–90 day warning horizon:
+
+🔴 Lansoprazole 30mg — Batch LAN-2025 (35 units) — Critical (Expires in 10 days)
+🟠 Amoxicillin 500mg — Batch AMOX-2024-B1 (28 units) — Reorder now (Expires in 24 days)
+🟡 Cetirizine 10mg — Batch CET-2024-C (90 units) — Low stock (Expires in 68 days)
+
+## Recommended action
+Move Lansoprazole to the front dispensing rack immediately and issue vendor return authorization before the 15-day supplier credit cutoff.`,
+      mode: 'MEDSTOCK',
+      actions: [
+        { label: 'View Inventory', route: '/inventory', icon: 'Clock' },
+        { label: 'Review Alerts', route: '/alerts', icon: 'AlertTriangle' },
+        { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
+      ]
+    }
+  }
+
+  // ── 5. SALES SUMMARY & REVENUE ───────────────────────────────
+  if (q.includes('sale') || q.includes('revenue') || q.includes('today') || q.includes('pos') || q.includes('turnover')) {
+    return {
+      text: `## Direct Answer
+**Today's pharmacy turnover: ₹28,800.00 across 10 fulfilled orders.**
+Key revenue indicators:
+
+🔴 Paracetamol 650mg — ₹5,000.00 (17.4% share) — High OTC volume
+🟠 Amoxicillin 250mg — ₹7,200.00 (25.0% share) — Acute prescription demand
+🔵 Azithromycin 500mg — ₹16,600.00 (57.6% share) — Top revenue generator
+
+## Recommended action
+Complete register cash balancing and verify pending insurance claims before 8:00 PM.`,
+      mode: 'MEDSTOCK',
+      actions: [
+        { label: 'View Sales Report', route: '/reports', icon: 'BarChart2' },
+        { label: 'Open POS Register', route: '/sales', icon: 'Receipt' },
+        { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
+      ]
+    }
+  }
+
+  // ── 6. ACTIVE ALERTS ──────────────────────────────────────────
+  if (q.includes('alert') || q.includes('explain active alerts')) {
+    return {
+      text: `## Direct Answer
+**3 active operational alerts logged.**
+Overview of current pharmacy notifications:
+
+🔴 Paracetamol 650mg — Stock is 45 units (Threshold: 60) — Critical
+🟠 Amoxicillin 250mg — Batch expires in 24 days — Reorder now
+🔵 Supplier Delivery — Cipla shipment arriving tomorrow at 10:30 AM — Scheduled
+
+## Recommended action
+Create a purchase order for the critical items and acknowledge resolved alert tickets.`,
+      mode: 'MEDSTOCK',
+      actions: [
+        { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' },
+        { label: 'View Alerts', route: '/alerts', icon: 'AlertCircle' },
+        { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
+      ]
+    }
+  }
+
+  // ── 7. SUPPLIER LEAD TIMES ────────────────────────────────────
+  if (q.includes('supplier') || q.includes('lead time') || q.includes('vendor')) {
+    return {
+      text: `## Direct Answer
+**Supplier fulfillment index across verified distributors:**
+
+🟢 Sun Pharma Distributors — 2.0 days lead time — Fastest delivery
+🟢 Cipla Healthcare Logistics — 3.0 days lead time — 96.1% on-time rate
+🟡 Dr. Reddy's Supply Hub — 4.0 days lead time — Standard transit
+🟡 MedPlus Direct Pharma — 5.5 days lead time — Secondary supplier
+
+## Recommended action
+Route urgent replenishment for Paracetamol 650mg through Sun Pharma for 48-hour delivery.`,
+      mode: 'MEDSTOCK',
+      actions: [
+        { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' },
+        { label: 'Manage Suppliers', route: '/suppliers', icon: 'Truck' },
+        { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
+      ]
+    }
+  }
+
+  // ── 8. WHAT CAN YOU HELP ME WITH ─────────────────────────────
+  if (q.includes('what can you help') || q.includes('what can you do') || q.includes('help me with') || q.includes('capabilities')) {
+    return {
+      text: `## Direct Answer
+**I am your MedStock Clinical & Pharmacy Operations Assistant.**
+I can assist you across four key operational areas:
+
+* 📦 **Live Inventory & Stock**: Low stock alerts, reorder thresholds, and batch tracking.
+* 📅 **FEFO Expiry Management**: Expiring batch schedules and vendor credit returns.
+* 📊 **Sales & Financial Analytics**: Daily POS turnover, revenue trends, and payment modes.
+* 🌐 **Universal Knowledge**: Java OOP, Spring Boot, React, Python, pharmacology, and business writing.
+
+## Recommended action
+Click any prompt button below or type your custom pharmacy question.`,
+      mode: 'MEDSTOCK',
+      actions: [
+        { label: 'Which medicines need reordering?', query: 'Which medicines need reordering?', icon: 'ShoppingCart' },
+        { label: 'Show Demand Forecast', route: '/ai-insights', icon: 'Sparkles' },
+        { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
       ]
     }
   }
@@ -457,12 +437,13 @@ Here is the current operational status for **"${query}"** in MedStock Pharmacy P
 - **Inventory Integration**: All dispense and receipt transactions are automatically synced with stock ledgers.
 - **Audit Trails**: Security audits and dispensing logs are stored with timestamped user IDs.
 
-## Recommended Action
+## Recommended action
 You can inspect the relevant section from the quick action buttons below.`,
     mode: 'MEDSTOCK',
     actions: [
-      { label: 'Open Inventory', route: '/inventory', icon: 'Package' },
-      { label: 'View Dashboard', route: '/dashboard', icon: 'BarChart2' }
+      { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' },
+      { label: 'View Inventory', route: '/inventory', icon: 'Package' },
+      { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
     ]
   }
 }

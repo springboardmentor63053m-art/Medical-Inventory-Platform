@@ -4,32 +4,62 @@ import {
   Sparkles, TrendingUp, AlertTriangle, AlertCircle, ShoppingCart, Send,
   Bot, Clock, ShieldCheck, CheckCircle2, RefreshCw, ArrowRight, Zap,
   BarChart2, Activity, Truck, Calendar, Layers, Check, User, ChevronRight,
-  HelpCircle, MessageSquare, Plus
+  HelpCircle, MessageSquare, Plus, Paperclip
 } from 'lucide-react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend
 } from 'recharts'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useTheme } from '../../context/ThemeContext'
+import { AIService } from '../../components/ai-assistant/AIService'
+import AIMessage from '../../components/ai-assistant/AIMessage'
+import UserMessage from '../../components/ai-assistant/UserMessage'
+import TypingIndicator from '../../components/ai-assistant/TypingIndicator'
 
 export default function AIInsights() {
   const { isDark } = useTheme()
+  const navigate = useNavigate()
 
+  // Tabs: 'workspace' (Dedicated Conversational AI) | 'telemetry' (Predictive Analytics & Charts)
+  const [activeTab, setActiveTab] = useState('workspace')
+
+  // Telemetry data
   const [forecast,        setForecast]        = useState([])
   const [risks,           setRisks]           = useState([])
   const [recommendations, setRecommendations] = useState([])
   const [anomalies,       setAnomalies]       = useState([])
   const [loading,         setLoading]         = useState(true)
 
-  // AI Assistant Chat state
-  const [query,            setQuery]            = useState('')
-  const [chatLog,          setChatLog]          = useState([
+  // Dedicated Conversational Workspace state
+  const [query, setQuery] = useState('')
+  const [chatLog, setChatLog] = useState([
+    {
+      sender: 'user',
+      text: 'Which medicines need reordering?',
+      timestamp: '10:42 AM'
+    },
     {
       sender: 'ai',
-      text: 'Hello! I am MediStock AI Assistant. I can analyze inventory demand projections, stockout risks, batch expiry rotations, sales analytics, or supplier lead times. What would you like to inspect?',
-      type: 'WELCOME'
+      text: `## Direct Answer
+**4 medicines require attention.**
+Based on current stock levels and reorder thresholds:
+
+🔴 Paracetamol 650mg — 45 units remaining — Critical
+🟠 Amoxicillin 250mg — 8 units remaining — Reorder now
+🟡 Cetirizine 10mg — 15 units remaining — Low stock
+🔵 Azithromycin 500mg — 12 units remaining — Below threshold
+
+## Recommended action
+Create a purchase order for the critical items first.`,
+      mode: 'MEDSTOCK',
+      actions: [
+        { label: 'Create Purchase Order', route: '/purchases', icon: 'ShoppingCart' },
+        { label: 'View Inventory', route: '/inventory', icon: 'Package' },
+        { label: 'Explain Risk', query: 'Explain the stockout risks in detail', icon: 'Zap' }
+      ],
+      timestamp: '10:42 AM'
     }
   ])
   const [assistantLoading, setAssistantLoading] = useState(false)
@@ -61,24 +91,31 @@ export default function AIInsights() {
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatLog, assistantLoading])
+  }, [chatLog, assistantLoading, activeTab])
 
   const handleAsk = async (textToAsk) => {
-    const q = textToAsk || query
-    if (!q || !q.trim()) return
+    const q = (textToAsk || query).trim()
+    if (!q || assistantLoading) return
 
-    const userMsg = { sender: 'user', text: q }
-    setChatLog(prev => [...prev, userMsg])
+    const userMsg = {
+      sender: 'user',
+      text: q,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+
+    const updatedLog = [...chatLog, userMsg]
+    setChatLog(updatedLog)
     setQuery('')
     setAssistantLoading(true)
 
     try {
-      const res = await aiAPI.askAssistant(q)
+      const response = await AIService.sendMessage(q, updatedLog)
       const aiMsg = {
         sender: 'ai',
-        text: res.data?.answer || 'Response computed from neural telemetry.',
-        type: res.data?.type || 'GENERAL_INFO',
-        data: res.data?.data || null
+        text: response.text,
+        mode: response.mode || 'MEDSTOCK',
+        actions: response.actions || [],
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
       setChatLog(prev => [...prev, aiMsg])
     } catch (err) {
@@ -86,8 +123,9 @@ export default function AIInsights() {
         ...prev,
         {
           sender: 'ai',
-          text: 'Unable to retrieve real-time data from neural engine. Please check backend connection.',
-          type: 'ERROR'
+          text: "I'm sorry, I couldn't process that request right now. Please try again.",
+          mode: 'GENERAL',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ])
     } finally {
@@ -111,447 +149,351 @@ export default function AIInsights() {
     padding: '8px 14px',
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 skeleton rounded-2xl" />
-          <div className="space-y-2">
-            <div className="h-6 skeleton rounded-xl w-64" />
-            <div className="h-3.5 skeleton rounded-lg w-96" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 skeleton rounded-2xl" />
-          ))}
-        </div>
-        <div className="h-80 skeleton rounded-3xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-64 skeleton rounded-2xl" />
-          <div className="h-64 skeleton rounded-2xl" />
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      {/* ── HEADER WITH DEDICATED WORKSPACE TABS ── */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-3 border-b border-slate-200 dark:border-slate-800/80">
         <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 flex items-center justify-center shadow-md shadow-amber-500/25">
-              <Sparkles className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-3 mb-1">
+            <div className="relative w-10 h-10 rounded-2xl p-[2px] bg-gradient-to-br from-cyan-400 via-blue-500 to-teal-400 shadow-md shadow-cyan-500/20">
+              <img
+                src="/ai-robot.png"
+                alt="MedStock AI Bot"
+                className="w-full h-full object-cover rounded-2xl bg-slate-950"
+              />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-slate-900 shadow-xs" />
             </div>
+
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white font-display">
-                AI Pharmacy Intelligence & Analytics
+              <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white font-display tracking-tight">
+                MedStock AI Assistant
               </h1>
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[10px] font-black uppercase border border-amber-200/50">
-                Neural Engine v3.0
+              <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-500 dark:text-cyan-400 text-[10px] font-extrabold uppercase border border-cyan-500/30">
+                Clinical Copilot
               </span>
             </div>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 ml-11">
-            Predictive demand forecasting, stockout risk radar, automated reorders & conversational assistant
+          <p className="text-xs text-slate-500 dark:text-slate-400 ml-13">
+            Dedicated conversational clinical operations workspace & live predictive telemetry
           </p>
         </div>
 
-        <button
-          onClick={fetchAIData}
-          className="btn-secondary !text-xs !py-2 !px-3.5 flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh AI Telemetry</span>
-        </button>
-      </div>
+        {/* Workspace Tab Switcher */}
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 self-start md:self-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('workspace')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'workspace'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md shadow-cyan-950/40'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Conversational Workspace</span>
+          </button>
 
-      {/* ── SECTION 1: AI KPI CARDS ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card !p-5 border-l-4 border-l-red-500">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase">Stockout Risk</span>
-            <AlertTriangle className="w-4 h-4 text-red-500" />
-          </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white">{criticalRisksCount}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Formulations under 7 days supply</p>
-        </div>
-
-        <div className="card !p-5 border-l-4 border-l-amber-500">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase">AI Reorder Suggestions</span>
-            <ShoppingCart className="w-4 h-4 text-amber-500" />
-          </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white">{(recommendations || []).length}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Replenishment orders ready to generate</p>
-        </div>
-
-        <div className="card !p-5 border-l-4 border-l-blue-500">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">30-Day Demand Projection</span>
-            <TrendingUp className="w-4 h-4 text-blue-500" />
-          </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white">
-            {total30DayDemand} units
-          </p>
-          <p className="text-xs text-slate-400 mt-0.5">Calculated across active SKUs</p>
-        </div>
-
-        <div className="card !p-5 border-l-4 border-l-purple-500">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase">Anomaly Alerts</span>
-            <Zap className="w-4 h-4 text-purple-500" />
-          </div>
-          <p className="text-3xl font-black text-slate-900 dark:text-white">{(anomalies || []).length}</p>
-          <p className="text-xs text-slate-400 mt-0.5">Variance patterns detected by model</p>
+          <button
+            type="button"
+            onClick={() => setActiveTab('telemetry')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'telemetry'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md shadow-cyan-950/40'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>Predictive Telemetry</span>
+          </button>
         </div>
       </div>
 
-      {/* ── SECTION 2: DEMAND FORECAST BAR CHART ── */}
-      <div className="card space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-blue-500" />
-              AI Demand Forecast vs. Current Stock (30-Day Horizon)
-            </h2>
-            <p className="text-xs text-slate-400">
-              Machine learning consumption estimation vs existing physical warehouse balance
-            </p>
-          </div>
-          <span className="badge badge-blue text-[11px] self-start sm:self-auto">94.8% Confidence</span>
-        </div>
-
-        <div className="w-full">
-          {(forecast || []).length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-slate-400 text-xs">
-              No demand projection data available.
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={340}>
-              <BarChart data={forecast} margin={{ top: 15, right: 15, left: -10, bottom: 55 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
-                <XAxis
-                  dataKey="medicineName"
-                  tick={{ fontSize: 10, fill: tickColor, fontWeight: 500 }}
-                  angle={-30}
-                  textAnchor="end"
-                  interval={0}
-                  height={60}
-                />
-                <YAxis tick={{ fontSize: 11, fill: tickColor }} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend
-                  verticalAlign="top"
-                  align="right"
-                  wrapperStyle={{ fontSize: 12, paddingBottom: 15 }}
-                />
-                <Bar dataKey="projected30DayDemand" name="Projected 30-Day Demand" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="currentStock" name="Current Stock Balance" fill="#10b981" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
-      {/* ── SECTION 3 & 4: STOCK RISK MATRIX & AI REORDER RECOMMENDATIONS ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Stock Risk Matrix */}
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-rose-500" />
-                AI Stockout Risk Radar
-              </h3>
-              <p className="text-xs text-slate-400">Days of supply remaining before complete depletion</p>
-            </div>
-            <span className="badge badge-red">{criticalRisksCount} Critical</span>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
-            <table className="table w-full text-xs">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-900/80">
-                  <th>Medicine</th>
-                  <th>Stock</th>
-                  <th>Days Left</th>
-                  <th>Risk Level</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {(risks || []).slice(0, 6).map((r, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                    <td className="font-bold text-slate-800 dark:text-slate-200">{r.medicineName}</td>
-                    <td className="font-mono">{r.currentStock} units</td>
-                    <td>
-                      <span className={`font-bold font-mono ${r.daysRemaining <= 3 ? 'text-red-600' : 'text-slate-700 dark:text-slate-300'}`}>
-                        {r.daysRemaining} days
-                      </span>
-                    </td>
-                    <td>
-                      <span className={
-                        r.riskLevel === 'CRITICAL' ? 'badge badge-red' :
-                        r.riskLevel === 'HIGH' ? 'badge badge-yellow' : 'badge badge-green'
-                      }>
-                        {r.riskLevel}
-                      </span>
-                    </td>
-                    <td>
-                      <Link
-                        to="/purchases"
-                        className="text-[11px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1"
-                      >
-                        Create PO <ArrowRight className="w-3 h-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* AI Reorder Recommendations */}
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-emerald-500" />
-                AI Reorder Decision Support
-              </h3>
-              <p className="text-xs text-slate-400">Automated purchase order quantities and cost estimates</p>
-            </div>
-            <span className="badge badge-green">Live Engine</span>
-          </div>
-
-          <div className="space-y-3">
-            {(recommendations || []).slice(0, 4).map((rec, idx) => (
-              <div
-                key={idx}
-                className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-2 text-xs"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-slate-900 dark:text-white text-sm">{rec.medicineName}</p>
-                    <span className="badge badge-blue text-[10px]">{rec.category}</span>
-                  </div>
-                  <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
-                    {rec.confidence} Confidence
-                  </span>
+      {/* ── TAB 1: DEDICATED CONVERSATIONAL AI WORKSPACE ── */}
+      {activeTab === 'workspace' && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Main Conversational Canvas */}
+          <div className="card !p-0 border border-cyan-900/40 bg-[#070f22]/98 shadow-2xl rounded-3xl overflow-hidden flex flex-col min-h-[620px]">
+            {/* Top Workspace Bar */}
+            <div className="px-6 py-4 bg-gradient-to-r from-[#071022] via-[#0a1733] to-[#071022] border-b border-cyan-950/70 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50" />
+                <div>
+                  <h2 className="text-sm font-bold text-white tracking-wide">
+                    Live Pharmacy Intelligence Session
+                  </h2>
+                  <p className="text-[11px] text-slate-400">
+                    Real-time stock validation, batch expiry schedules & universal reasoning
+                  </p>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-3 gap-2 text-slate-500 dark:text-slate-400 pt-1">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Stock / Safety</span>
-                    <span className="font-mono text-slate-800 dark:text-slate-200">{rec.currentStock} / {rec.safetyStock}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Lead Time</span>
-                    <span className="font-mono text-slate-800 dark:text-slate-200">{rec.supplierLeadTime}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Est. Cost</span>
-                    <span className="font-mono font-bold text-slate-900 dark:text-white">₹{rec.estimatedCost}</span>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatLog([
+                      {
+                        sender: 'ai',
+                        text: "Conversation reset. How can I assist you with MedStock pharmacy operations or general reasoning today?",
+                        mode: 'MEDSTOCK',
+                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      }
+                    ])
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white font-medium flex items-center gap-1.5 border border-slate-700 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3 text-cyan-400" />
+                  <span>Reset Conversation</span>
+                </button>
+              </div>
+            </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-800">
-                  <span className="text-slate-500">Supplier: <strong className="text-slate-700 dark:text-slate-300">{rec.supplierName}</strong></span>
-                  <Link
-                    to="/purchases"
-                    className="btn-primary !text-[11px] !py-1 !px-3 flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+            {/* Quick Suggested Prompt Chips */}
+            <div className="px-6 py-3 bg-[#081329]/90 border-b border-slate-800/80">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+                <span className="text-cyan-400 font-bold text-[11px] uppercase tracking-wider flex items-center gap-1 shrink-0">
+                  <Sparkles className="w-3 h-3 text-cyan-400" />
+                  Prompts:
+                </span>
+                {[
+                  { icon: '💊', label: 'Which medicines need reordering?', q: 'Which medicines need reordering?' },
+                  { icon: '📉', label: 'Show current stock risks', q: 'Show current stock risks' },
+                  { icon: '📅', label: 'Which medicines expire soon?', q: 'Which medicines expire soon?' },
+                  { icon: '📊', label: "Show today's sales summary", q: "Show today's sales summary" },
+                  { icon: '🚨', label: 'Explain active alerts', q: 'Explain active alerts' },
+                  { icon: '🚚', label: 'Show supplier lead times', q: 'Show supplier lead times' },
+                  { icon: '❓', label: 'What can you help me with?', q: 'What can you help me with?' },
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleAsk(chip.q)}
+                    className="px-3 py-1.5 rounded-xl bg-[#0e1d3d] hover:bg-cyan-950/60 text-slate-200 hover:text-cyan-300
+                               font-semibold border border-slate-800 hover:border-cyan-500/40 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center gap-1.5"
                   >
-                    <Plus className="w-3 h-3" /> Order {rec.recommendedOrderQty} Units
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── SECTION 5: ANOMALY DETECTION ── */}
-      <div className="card space-y-4">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-purple-500" />
-              AI Inventory & Sales Anomaly Radar
-            </h2>
-            <p className="text-xs text-slate-400">Statistical deviation detection across POS volumes, inventory adjustments & procurement</p>
-          </div>
-          <span className="badge badge-purple">{(anomalies || []).length} Events Detected</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(anomalies || []).map(anom => (
-            <div
-              key={anom.id}
-              className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-2.5 text-xs flex flex-col justify-between"
-            >
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-[10px] text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 rounded-md">
-                    {anom.id}
-                  </span>
-                  <span className={anom.severity === 'HIGH' ? 'badge badge-red' : anom.severity === 'MEDIUM' ? 'badge badge-yellow' : 'badge badge-gray'}>
-                    {anom.severity} RISK
-                  </span>
-                </div>
-
-                <h3 className="font-bold text-slate-900 dark:text-white text-sm">{anom.title}</h3>
-                <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">{anom.description}</p>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-1 text-[11px]">
-                <p className="text-slate-400">Target SKU: <strong className="text-slate-700 dark:text-slate-300">{anom.medicineName}</strong></p>
-                <p className="text-blue-600 dark:text-blue-400 font-medium">💡 Recommendation: {anom.recommendation}</p>
+                    <span>{chip.icon}</span>
+                    <span>{chip.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* ── SECTION 6: CONVERSATIONAL AI PHARMACY ASSISTANT ── */}
-      <div className="card space-y-4 border border-blue-500/20 shadow-md">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25">
-              <Bot className="w-5 h-5" />
+            {/* Messages Stream */}
+            <div className="flex-1 p-6 overflow-y-auto max-h-[500px] scrollbar-thin space-y-4">
+              {chatLog.map((msg, idx) => {
+                if (msg.sender === 'user') {
+                  return <UserMessage key={idx} message={msg} />
+                }
+                return (
+                  <AIMessage
+                    key={idx}
+                    message={msg}
+                    onActionClick={(action) => {
+                      if (action?.query || action?.prompt) {
+                        handleAsk(action.query || action.prompt)
+                      } else if (action?.route) {
+                        navigate(action.route)
+                      }
+                    }}
+                  />
+                )
+              })}
+
+              {assistantLoading && <TypingIndicator />}
+              <div ref={chatBottomRef} />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                MediStock AI Pharmacy Assistant
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              </h2>
-              <p className="text-xs text-slate-400">Natural language inventory query & decision support agent</p>
-            </div>
-          </div>
-        </div>
 
-        {/* Quick query chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
-          <span className="text-slate-400 font-semibold text-[11px] whitespace-nowrap">Suggested:</span>
-          <button
-            onClick={() => handleAsk("Which medicines need to be reordered?")}
-            className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/40 whitespace-nowrap transition-colors border border-blue-200/50 dark:border-blue-800/40"
-          >
-            🛒 Which medicines need reorder?
-          </button>
-          <button
-            onClick={() => handleAsk("Which medicines expire next month?")}
-            className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40 whitespace-nowrap transition-colors border border-amber-200/50 dark:border-amber-800/40"
-          >
-            📅 Which medicines expire next month?
-          </button>
-          <button
-            onClick={() => handleAsk("Show today's sales and revenue summary")}
-            className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 whitespace-nowrap transition-colors border border-emerald-200/50 dark:border-emerald-800/40"
-          >
-            💰 Show today's sales summary
-          </button>
-          <button
-            onClick={() => handleAsk("Which suppliers have fastest delivery times?")}
-            className="px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 font-semibold hover:bg-purple-100 dark:hover:bg-purple-900/40 whitespace-nowrap transition-colors border border-purple-200/50 dark:border-purple-800/40"
-          >
-            🚚 Supplier lead times & delays
-          </button>
-        </div>
-
-        {/* Chat History Box */}
-        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 max-h-96 overflow-y-auto space-y-3.5 text-xs">
-          {chatLog.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {msg.sender === 'ai' && (
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <Bot className="w-4 h-4" />
-                </div>
-              )}
-
-              <div
-                className={`p-3.5 rounded-2xl max-w-[85%] leading-relaxed ${
-                  msg.sender === 'user'
-                    ? 'bg-blue-600 text-white rounded-tr-none'
-                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-tl-none shadow-xs'
-                }`}
+            {/* Conversational Composer Bar */}
+            <div className="p-4 bg-[#060c1c]/98 border-t border-slate-800/80">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  handleAsk(query)
+                }}
+                className="relative flex items-center bg-[#050b18] border border-cyan-900/60 focus-within:border-cyan-400/80 focus-within:ring-1 focus-within:ring-cyan-500/30 rounded-2xl px-4 py-2.5 transition-all shadow-inner"
               >
-                <p className="font-medium">{msg.text}</p>
+                <button
+                  type="button"
+                  onClick={() => alert('Document analysis attachment feature is ready.')}
+                  title="Attach prescription or inventory report"
+                  className="p-1.5 text-slate-400 hover:text-cyan-300 transition-colors mr-1"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
 
-                {/* Structured data table if returned by AI query */}
-                {msg.data && Array.isArray(msg.data) && msg.data.length > 0 && (
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700 overflow-x-auto">
-                    <table className="w-full text-[11px] text-left">
-                      <thead>
-                        <tr className="text-slate-400 font-bold uppercase text-[9px]">
-                          <th className="pb-1">Medicine</th>
-                          <th className="pb-1">Current Stock</th>
-                          <th className="pb-1">Suggested Order</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                        {msg.data.slice(0, 3).map((d, i) => (
-                          <tr key={i}>
-                            <td className="py-1 font-bold">{d.medicineName}</td>
-                            <td className="py-1 font-mono">{d.currentStock}</td>
-                            <td className="py-1 font-bold text-emerald-600">{d.recommendedOrderQty || d.recommendedReorder} units</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Ask me anything about your pharmacy..."
+                  className="flex-1 bg-transparent border-none text-xs sm:text-[13px] text-white placeholder-slate-500 px-2 focus:outline-none"
+                />
+
+                <button
+                  type="submit"
+                  disabled={!query.trim() || assistantLoading}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-600 to-cyan-500 text-white font-bold text-xs flex items-center gap-1.5
+                             disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 active:scale-95 transition-all shadow-md shadow-cyan-950/40"
+                >
+                  <span>Send</span>
+                  <Send className="w-3.5 h-3.5 fill-current" />
+                </button>
+              </form>
+
+              <div className="flex items-center justify-between mt-2.5 px-2 text-[11px] text-slate-500">
+                <span className="flex items-center gap-1.5 text-slate-400">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Universal AI • MedStock Database Connected</span>
+                </span>
+                <span className="hidden sm:inline text-slate-500">
+                  Enter ↵ to send • Shift + Enter for new line
+                </span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {msg.sender === 'user' && (
-                <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4" />
+      {/* ── TAB 2: PREDICTIVE TELEMETRY & MODELS ── */}
+      {activeTab === 'telemetry' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* AI KPI CARDS */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="card !p-5 border-l-4 border-l-red-500">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase">Stockout Risk</span>
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+              </div>
+              <p className="text-3xl font-black text-slate-900 dark:text-white">{criticalRisksCount}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Formulations under 7 days supply</p>
+            </div>
+
+            <div className="card !p-5 border-l-4 border-l-amber-500">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase">AI Reorder Suggestions</span>
+                <ShoppingCart className="w-4 h-4 text-amber-500" />
+              </div>
+              <p className="text-3xl font-black text-slate-900 dark:text-white">{(recommendations || []).length}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Replenishment orders ready to generate</p>
+            </div>
+
+            <div className="card !p-5 border-l-4 border-l-blue-500">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">30-Day Demand Projection</span>
+                <TrendingUp className="w-4 h-4 text-blue-500" />
+              </div>
+              <p className="text-3xl font-black text-slate-900 dark:text-white">
+                {total30DayDemand} units
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">Calculated across active SKUs</p>
+            </div>
+
+            <div className="card !p-5 border-l-4 border-l-purple-500">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase">Anomaly Alerts</span>
+                <Zap className="w-4 h-4 text-purple-500" />
+              </div>
+              <p className="text-3xl font-black text-slate-900 dark:text-white">{(anomalies || []).length}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Variance patterns detected by model</p>
+            </div>
+          </div>
+
+          {/* DEMAND FORECAST BAR CHART */}
+          <div className="card space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-blue-500" />
+                  AI Demand Forecast vs. Current Stock (30-Day Horizon)
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Machine learning consumption estimation vs existing physical warehouse balance
+                </p>
+              </div>
+              <span className="badge badge-blue text-[11px] self-start sm:self-auto">94.8% Confidence</span>
+            </div>
+
+            <div className="w-full">
+              {(forecast || []).length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-slate-400 text-xs">
+                  No demand projection data available.
                 </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={340}>
+                  <BarChart data={forecast} margin={{ top: 15, right: 15, left: -10, bottom: 55 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
+                    <XAxis
+                      dataKey="medicineName"
+                      tick={{ fontSize: 10, fill: tickColor, fontWeight: 500 }}
+                      angle={-30}
+                      textAnchor="end"
+                      interval={0}
+                      height={60}
+                    />
+                    <YAxis tick={{ fontSize: 11, fill: tickColor }} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend
+                      verticalAlign="top"
+                      align="right"
+                      wrapperStyle={{ fontSize: 12, paddingBottom: 15 }}
+                    />
+                    <Bar dataKey="projected30DayDemand" name="Projected 30-Day Demand" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="currentStock" name="Current Stock" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
-          ))}
+          </div>
 
-          {assistantLoading && (
-            <div className="flex gap-3 justify-start items-center text-slate-400 text-xs py-2">
-              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 animate-pulse">
-                <Bot className="w-4 h-4" />
-              </div>
-              <div className="p-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                <span className="font-medium text-slate-500">Querying neural knowledge base & calculating parameters...</span>
+          {/* STOCK RISK ASSESSMENT TABLE */}
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-500" />
+                  Stockout Risk Assessment
+                </h2>
+                <p className="text-xs text-slate-400">Inventory depletion timelines based on daily velocity</p>
               </div>
             </div>
-          )}
-          <div ref={chatBottomRef} />
-        </div>
 
-        {/* Input Bar */}
-        <form
-          onSubmit={e => { e.preventDefault(); handleAsk(query); }}
-          className="flex items-center gap-2"
-        >
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Ask anything about inventory forecasts, stock risks, expiry batches, or suppliers..."
-            className="input !text-xs w-full flex-1"
-          />
-          <button
-            type="submit"
-            disabled={!query.trim() || assistantLoading}
-            className="btn-primary !text-xs !py-2.5 !px-5 flex items-center gap-1.5"
-          >
-            <Send className="w-4 h-4" />
-            <span>Send</span>
-          </button>
-        </form>
-      </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Medicine</th>
+                    <th className="py-3 px-4">Current Stock</th>
+                    <th className="py-3 px-4">Daily Demand</th>
+                    <th className="py-3 px-4">Days Remaining</th>
+                    <th className="py-3 px-4">Lead Time</th>
+                    <th className="py-3 px-4">Risk Level</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {risks.map((r, i) => (
+                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">{r.medicineName}</td>
+                      <td className="py-3 px-4 font-mono">{r.currentStock} units</td>
+                      <td className="py-3 px-4 font-mono">{r.dailyDemand} / day</td>
+                      <td className="py-3 px-4 font-bold text-red-500">{r.daysRemaining} days</td>
+                      <td className="py-3 px-4 text-slate-400">{r.supplierLeadTime}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          r.riskLevel === 'CRITICAL' ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400' :
+                          r.riskLevel === 'HIGH' ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-400' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/60 dark:text-yellow-400'
+                        }`}>
+                          {r.riskLevel}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
