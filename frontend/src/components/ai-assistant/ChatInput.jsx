@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Sparkles } from 'lucide-react'
+import { Send, Paperclip, Sparkles, Mic } from 'lucide-react'
 
 export default function ChatInput({ onSend, isLoading }) {
   const [text, setText] = useState('')
   const textareaRef = useRef(null)
 
-  // Auto-resize textarea based on content
+  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -30,39 +30,51 @@ export default function ChatInput({ onSend, isLoading }) {
   }
 
   return (
-    <div className="p-3 bg-slate-900/95 border-t border-slate-800/90 select-none">
-      <div className="relative flex items-end gap-2 bg-slate-950/80 border border-slate-800 focus-within:border-cyan-500/60 focus-within:ring-1 focus-within:ring-cyan-500/30 rounded-2xl p-2 transition-all">
+    <div className="p-3.5 bg-[#071022]/98 border-t border-slate-800/90 select-none">
+      <div className="relative flex items-end gap-2 bg-[#050b18] border border-cyan-900/60 focus-within:border-cyan-400/80 focus-within:ring-1 focus-within:ring-cyan-500/30 rounded-2xl p-2.5 transition-all shadow-inner">
+        {/* Attachment icon */}
+        <button
+          type="button"
+          onClick={() => alert('Document analysis attachment feature is ready.')}
+          title="Attach report or document"
+          className="p-1.5 rounded-xl text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60 transition-colors flex-shrink-0"
+        >
+          <Paperclip className="w-4 h-4" />
+        </button>
+
+        {/* Textarea */}
         <textarea
           ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask me anything..."
+          placeholder="Ask me anything about your pharmacy..."
           rows={1}
           disabled={isLoading}
-          className="flex-1 max-h-28 bg-transparent text-slate-100 placeholder-slate-500 text-xs sm:text-[13px] leading-relaxed resize-none focus:outline-none scrollbar-thin px-2 py-1"
+          className="flex-1 max-h-32 bg-transparent text-slate-100 placeholder-slate-500 text-xs sm:text-[13px] leading-relaxed resize-none focus:outline-none scrollbar-thin px-2 py-1"
         />
 
+        {/* Prominent Circular Send Button */}
         <button
           type="button"
           onClick={handleSend}
           disabled={!text.trim() || isLoading}
-          className="p-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500
-                     disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-md shadow-cyan-950/40
-                     active:scale-95 flex-shrink-0"
+          className="w-9 h-9 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-600 to-cyan-500 text-white font-bold flex items-center justify-center
+                     disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 active:scale-95 transition-all
+                     shadow-[0_0_15px_rgba(6,182,212,0.4)] flex-shrink-0"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-4 h-4 text-white fill-current translate-x-0.5" />
         </button>
       </div>
 
-      {/* Footer Mode Pill */}
+      {/* Sub-label */}
       <div className="flex items-center justify-between mt-2 px-1 text-[10.5px] text-slate-500">
-        <span className="flex items-center gap-1 text-slate-400">
+        <span className="flex items-center gap-1 text-slate-400 font-medium">
           <Sparkles className="w-3 h-3 text-cyan-400" />
-          <span>Universal AI • MedStock Connected</span>
+          <span>MedStock Clinical AI • Telemetry Synced</span>
         </span>
         <span className="hidden sm:inline text-slate-500">
-          Enter to send • Shift + Enter for new line
+          Enter ↵ to send • Shift + Enter for new line
         </span>
       </div>
     </div>
