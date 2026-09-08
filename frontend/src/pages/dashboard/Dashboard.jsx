@@ -61,6 +61,8 @@ function TabBtn({ active, onClick, children }) {
 // ── Custom chart tooltip ─────────────────────────────────────────
 function CustomTooltip({ active, payload, label, isDark }) {
   if (!active || !payload?.length) return null
+  const validPayload = payload.filter(p => p.value !== null && p.value !== undefined)
+  if (!validPayload.length) return null
   return (
     <div
       style={{
@@ -73,7 +75,7 @@ function CustomTooltip({ active, payload, label, isDark }) {
       }}
     >
       <p style={{ color: isDark ? '#94a3b8' : '#64748b', marginBottom: 6, fontWeight: 700 }}>{label}</p>
-      {payload.map((p, i) => (
+      {validPayload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, display: 'inline-block' }} />
           <span style={{ color: isDark ? '#e2e8f0' : '#334155', fontWeight: 600 }}>{p.name}:</span>
@@ -125,34 +127,37 @@ export default function Dashboard() {
     )
   }
 
-  // ── Inventory Movement Chart Data ────────────────────────────
-  const RECEIVED_DATA  = [3200, 5400, 4800, 6100, 7200, 5900, 8400, 7100, 6800, 9200, 8100, 7600]
-  const DISPENSED_DATA = [2800, 4100, 4500, 5200, 6800, 5400, 7600, 6900, 6200, 8100, 7400, 7000]
+  // ── Inventory Analytics Chart Data (Jan–Sep populated, Oct–Dec empty across all graphs) ──
+  // Month indices: 0..8 = Jan–Sep, 9..11 = Oct–Dec
+  const RECEIVED_DATA  = [3200, 5400, 4800, 6100, 7200, 5900, 8400, 7100, 6800, null, null, null]
+  const DISPENSED_DATA = [2800, 4100, 4500, 5200, 6800, 5400, 7600, 6900, 6200, null, null, null]
 
-  const stockMovementData = MONTHS.map((month, i) => ({
-    month,
-    received:  (stats?.monthlyReceived?.[i]  ?? RECEIVED_DATA[i]),
-    dispensed: (stats?.monthlyDispensed?.[i] ?? DISPENSED_DATA[i]),
-  }))
+  const stockMovementData = MONTHS.map((month, i) => {
+    if (i > 8) return { month, received: null, dispensed: null }
+    return {
+      month,
+      received:  stats?.monthlyReceived?.[i]  ?? RECEIVED_DATA[i],
+      dispensed: stats?.monthlyDispensed?.[i] ?? DISPENSED_DATA[i],
+    }
+  })
 
-  // ── Revenue Chart Data ───────────────────────────────────────
+  // ── Revenue Chart Data (Jan–Sep populated, Oct–Dec empty) ──
   const WAVE_SPLIT = [600, 4200, 4500, 1200, 9000, 1500, 4500, 1800, 1500, null, null, null]
   const revenueData = MONTHS.map((month, idx) => {
+    if (idx > 8) return { month, revenue: null }
     const found = stats?.monthlySalesTrend?.find(d => Number(d.month) === idx + 1)
     const apiVal = found ? Number(found.revenue) : 0
     return { month, revenue: apiVal > 0 ? apiVal : WAVE_SPLIT[idx] }
   })
 
-  // ── Expiry Trend Data ────────────────────────────────────────
-  const expiryData = MONTHS.slice(0, 9).map((month, i) => ({
+  // ── Expiry Trend Data (Jan–Sep populated, Oct–Dec empty) ──
+  const CRITICAL_EXPIRY = [0, 1, 0, 2, 1, 3, 0, 1, 2, null, null, null]
+  const WARNING_EXPIRY  = [2, 1, 3, 1, 2, 1, 4, 2, 1, null, null, null]
+  const expiryData = MONTHS.map((month, i) => ({
     month,
-    critical: [0, 1, 0, 2, 1, 3, 0, 1, 2][i],
-    warning:  [2, 1, 3, 1, 2, 1, 4, 2, 1][i],
+    critical: i > 8 ? null : CRITICAL_EXPIRY[i],
+    warning:  i > 8 ? null : WARNING_EXPIRY[i],
   }))
-
-  const chartData = activeTab === 'stock'   ? stockMovementData
-                  : activeTab === 'revenue' ? revenueData
-                  : expiryData
 
   const totalMeds   = stats?.totalMedicines     ?? 10
   const invValue    = stats?.totalInventoryValue ?? 28800
@@ -569,8 +574,8 @@ export default function Dashboard() {
                   <YAxis tick={{ fontSize: 11, fill: tickColor }} tickFormatter={v => (v/1000).toFixed(0) + 'k'} axisLine={false} tickLine={false} width={38} />
                   <Tooltip content={<CustomTooltip isDark={isDark} />} />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 8 }} />
-                  <Line type="monotone" dataKey="received"  name="Received Units"  stroke="#3b82f6" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: '#3b82f6' }} />
-                  <Line type="monotone" dataKey="dispensed" name="Dispensed Units" stroke="#10b981" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: '#10b981' }} />
+                  <Line type="monotone" dataKey="received"  name="Received Units"  stroke="#3b82f6" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: '#3b82f6' }} connectNulls={false} />
+                  <Line type="monotone" dataKey="dispensed" name="Dispensed Units" stroke="#10b981" strokeWidth={2.5} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: '#10b981' }} connectNulls={false} />
                 </LineChart>
               ) : activeTab === 'revenue' ? (
                 <AreaChart data={revenueData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -583,7 +588,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: tickColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: tickColor }} tickFormatter={v => '₹' + (v/1000).toFixed(0) + 'k'} axisLine={false} tickLine={false} width={46} />
-                  <Tooltip formatter={v => formatCurrency(v)} contentStyle={{ borderRadius: 12, fontSize: 12, fontWeight: 600, background: isDark ? '#0f1827' : '#fff', border: `1px solid ${isDark ? '#1e293b' : '#e2e8f0'}` }} />
+                  <Tooltip filterNull={true} formatter={v => (v !== null && v !== undefined ? formatCurrency(v) : null)} contentStyle={{ borderRadius: 12, fontSize: 12, fontWeight: 600, background: isDark ? '#0f1827' : '#fff', border: `1px solid ${isDark ? '#1e293b' : '#e2e8f0'}` }} />
                   <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={2.5} fill="url(#revGrad)" connectNulls={false} dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
                 </AreaChart>
               ) : (
@@ -591,7 +596,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: tickColor, fontWeight: 600 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: tickColor }} axisLine={false} tickLine={false} width={28} />
-                  <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, fontWeight: 600, background: isDark ? '#0f1827' : '#fff', border: `1px solid ${isDark ? '#1e293b' : '#e2e8f0'}` }} />
+                  <Tooltip filterNull={true} formatter={(v, name) => (v !== null && v !== undefined ? [v, name] : null)} contentStyle={{ borderRadius: 12, fontSize: 12, fontWeight: 600, background: isDark ? '#0f1827' : '#fff', border: `1px solid ${isDark ? '#1e293b' : '#e2e8f0'}` }} />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 8 }} />
                   <Bar dataKey="critical" name="Critical Expiry" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={20} />
                   <Bar dataKey="warning"  name="Expiry Warning"  fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={20} />
