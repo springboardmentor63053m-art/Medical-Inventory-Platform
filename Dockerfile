@@ -16,4 +16,4 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=backend-build /app/backend/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-Dspring.datasource.url=jdbc:postgresql://postgresdb:5432/medistock_db", "-Dspring.datasource.username=postgres", "-Dspring.datasource.password=12345", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
