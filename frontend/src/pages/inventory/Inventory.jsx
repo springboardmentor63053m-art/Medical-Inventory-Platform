@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { inventoryAPI, medicineAPI } from '../../api/services'
+import { supplierAPI } from '../../api/services'
 import {
   Boxes, AlertTriangle, Calendar, TrendingDown, X, Plus, Pencil,
   Trash2, MapPin, RefreshCw, Search, CheckCircle2,
