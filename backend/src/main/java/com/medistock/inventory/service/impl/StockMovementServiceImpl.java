@@ -2,6 +2,7 @@ package com.medistock.inventory.service.impl;
 
 import com.medistock.inventory.dto.response.StockMovementResponse;
 import com.medistock.inventory.entity.StockMovement;
+import com.medistock.inventory.entity.StockMovementType;
 import com.medistock.inventory.repository.StockMovementRepository;
 import com.medistock.inventory.service.StockMovementService;
 import com.medistock.medicine.entity.Medicine;
@@ -36,12 +37,19 @@ public class StockMovementServiceImpl implements StockMovementService {
             }
         }
 
+        StockMovementType typeEnum;
+        try {
+            typeEnum = StockMovementType.valueOf(movementType.toUpperCase());
+        } catch (Exception e) {
+            typeEnum = StockMovementType.ADJUSTMENT;
+        }
+
         StockMovement movement = StockMovement.builder()
                 .medicine(medicine)
                 .medicineCode(medicine != null ? medicine.getMedicineCode() : null)
                 .medicineName(medicine != null ? medicine.getName() : null)
                 .batchNumber(batchNumber)
-                .movementType(movementType.toUpperCase())
+                .movementType(typeEnum)
                 .quantity(quantity)
                 .previousQuantity(previousQuantity)
                 .newQuantity(newQuantity)
@@ -78,7 +86,7 @@ public class StockMovementServiceImpl implements StockMovementService {
                 .medicineCode(sm.getMedicineCode() != null ? sm.getMedicineCode() : (sm.getMedicine() != null ? sm.getMedicine().getMedicineCode() : ""))
                 .medicineName(sm.getMedicineName() != null ? sm.getMedicineName() : (sm.getMedicine() != null ? sm.getMedicine().getName() : ""))
                 .batchNumber(sm.getBatchNumber())
-                .movementType(sm.getMovementType())
+                .movementType(sm.getMovementType() != null ? sm.getMovementType().name() : "ADJUSTMENT")
                 .quantity(sm.getQuantity())
                 .previousQuantity(sm.getPreviousQuantity())
                 .newQuantity(sm.getNewQuantity())

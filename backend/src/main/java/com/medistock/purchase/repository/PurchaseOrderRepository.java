@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 @Repository
 public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Long> {
     Optional<PurchaseOrder> findByOrderNumber(String orderNumber);
+    boolean existsByOrderNumber(String orderNumber);
     List<PurchaseOrder> findByStatus(String status);
     List<PurchaseOrder> findBySupplierId(Long supplierId);
 

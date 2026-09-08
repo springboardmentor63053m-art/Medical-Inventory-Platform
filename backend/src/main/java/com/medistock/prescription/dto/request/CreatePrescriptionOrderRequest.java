@@ -34,5 +34,5 @@ public class CreatePrescriptionOrderRequest {
     private String contactPhone;
 
     @NotEmpty(message = "Order must contain at least one medicine item")
-    private List<OrderItemRequest> items;
+    private List<PrescriptionOrderItemRequest> items;
 }

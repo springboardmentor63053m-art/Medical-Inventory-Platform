@@ -491,7 +491,7 @@ public class DataSeeder implements CommandLineRunner {
                         .medicineCode(inv.getMedicine().getMedicineCode())
                         .medicineName(inv.getMedicine().getName())
                         .batchNumber(inv.getBatchNumber())
-                        .movementType("ADD")
+                        .movementType(com.medistock.inventory.entity.StockMovementType.PURCHASE)
                         .quantity(inv.getQuantity())
                         .previousQuantity(prevStock)
                         .newQuantity(newStock)

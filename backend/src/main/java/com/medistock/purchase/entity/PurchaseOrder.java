@@ -35,13 +35,14 @@ public class PurchaseOrder {
     @Column(name = "expected_delivery")
     private LocalDate expectedDelivery;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String status;
+    private PurchaseOrderStatus status;
 
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
-        @Column(name = "created_by", length = 150)
+    @Column(name = "created_by", length = 150)
     private String createdBy;
 
     @Column(name = "approved_by", length = 150)
@@ -98,7 +99,7 @@ public class PurchaseOrder {
             this.orderDate = LocalDate.now();
         }
         if (this.status == null) {
-            this.status = "PENDING";
+            this.status = PurchaseOrderStatus.PENDING;
         }
         if (this.totalAmount == null) {
             this.totalAmount = BigDecimal.ZERO;

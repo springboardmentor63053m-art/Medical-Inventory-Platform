@@ -37,8 +37,9 @@ public class PrescriptionOrder {
     private BigDecimal totalAmount;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private String status = "PENDING_REVIEW";
+    private PrescriptionOrderStatus status = PrescriptionOrderStatus.PENDING;
 
     @Column(name = "delivery_address", columnDefinition = "TEXT")
     private String deliveryAddress;

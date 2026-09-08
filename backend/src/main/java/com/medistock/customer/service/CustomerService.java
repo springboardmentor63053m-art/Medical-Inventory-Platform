@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 public interface CustomerService {
     String normalizePhone(String rawPhone);
@@ -19,5 +20,6 @@ public interface CustomerService {
     CustomerDTO getCustomerDetails(Long id);
     List<StorePurchaseResponse> getCustomerPurchases(Long customerId);
     CustomerDTO updateCustomerStatus(Long id, String status);
+    CustomerDTO patchCustomer(Long id, Map<String, Object> patchFields);
     Customer recordCustomerSale(String name, String phone, BigDecimal saleAmount);
 }

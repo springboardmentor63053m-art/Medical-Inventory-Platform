@@ -1,6 +1,8 @@
 package com.medistock.prescription.service.impl;
 
+import com.medistock.common.exception.InvalidStateTransitionException;
 import com.medistock.common.exception.ResourceNotFoundException;
+import com.medistock.common.exception.InsufficientStockException;
 import com.medistock.inventory.entity.Inventory;
 import com.medistock.inventory.repository.InventoryRepository;
 import com.medistock.medicine.entity.Medicine;
@@ -26,8 +28,6 @@ import java.util.stream.Collectors;
 
 import com.medistock.inventory.service.StockMovementService;
 import com.medistock.customer.entity.Customer;
-import com.medistock.customer.dto.CreateCustomerRequest;
-import com.medistock.customer.dto.CustomerDTO;
 import com.medistock.customer.repository.CustomerRepository;
 import com.medistock.customer.service.CustomerService;
 
@@ -80,7 +80,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         boolean hasRxItem = false;
         List<String> rxItemNames = new ArrayList<>();
 
-        for (OrderItemRequest itemReq : request.getItems()) {
+        for (PrescriptionOrderItemRequest itemReq : request.getItems()) {
             if (itemReq.getQuantity() == null || itemReq.getQuantity() <= 0) {
                 throw new IllegalArgumentException("Item quantity must be greater than 0");
             }
@@ -96,7 +96,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
             long availableQuantity = Optional.ofNullable(inventoryRepository.sumQuantityByMedicineId(medicine.getId())).orElse(0L);
             if (itemReq.getQuantity() > availableQuantity) {
-                throw new IllegalArgumentException("Insufficient stock for '" + medicine.getName()
+                throw new InsufficientStockException("Insufficient stock for '" + medicine.getName()
                         + "'. Requested: " + itemReq.getQuantity() + ", Available: " + availableQuantity);
             }
 
@@ -163,7 +163,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
         String orderPrefix = hasRxItem ? "RX-ORD-" : "OTC-ORD-";
         String orderNum = orderPrefix + System.currentTimeMillis() % 1000000;
-        String initialStatus = hasRxItem ? "PENDING_REVIEW" : "COMPLETED";
+        PrescriptionOrderStatus initialStatus = hasRxItem ? PrescriptionOrderStatus.PENDING : PrescriptionOrderStatus.FULFILLED;
 
         PrescriptionOrder order = PrescriptionOrder.builder()
                 .orderNumber(orderNum)
@@ -217,6 +217,14 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     }
 
     @Override
+    @Transactional
+    public PrescriptionOrderResponse createPrescriptionOrderForEmail(String userEmail, CreatePrescriptionOrderRequest request, MultipartFile prescriptionFile) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + userEmail));
+        return createPrescriptionOrder(user.getId(), request, prescriptionFile);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<PrescriptionOrderResponse> getUserOrders(Long userId) {
         return prescriptionOrderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
@@ -226,14 +234,22 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<PrescriptionOrderResponse> getUserOrdersByEmail(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + userEmail));
+        return getUserOrders(user.getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PrescriptionOrderResponse> getAllOrders(String statusFilter) {
         List<PrescriptionOrder> orders;
         if (statusFilter != null && !statusFilter.trim().isEmpty() && !"ALL".equalsIgnoreCase(statusFilter)) {
-            String filterUpper = statusFilter.toUpperCase();
-            if ("PENDING_REVIEW".equals(filterUpper) || "PENDING_VERIFICATION".equals(filterUpper)) {
-                orders = prescriptionOrderRepository.findByStatusInOrderByCreatedAtDesc(List.of("PENDING_REVIEW", "PENDING_VERIFICATION"));
-            } else {
-                orders = prescriptionOrderRepository.findByStatusOrderByCreatedAtDesc(filterUpper);
+            try {
+                PrescriptionOrderStatus statusEnum = PrescriptionOrderStatus.valueOf(statusFilter.trim().toUpperCase());
+                orders = prescriptionOrderRepository.findByStatusOrderByCreatedAtDesc(statusEnum);
+            } catch (Exception e) {
+                orders = prescriptionOrderRepository.findAllByOrderByCreatedAtDesc();
             }
         } else {
             orders = prescriptionOrderRepository.findAllByOrderByCreatedAtDesc();
@@ -250,14 +266,76 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PrescriptionOrderResponse getOrderByIdForUser(Long orderId, String userEmail, boolean isStaff) {
+        PrescriptionOrder order = prescriptionOrderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prescription order not found with id: " + orderId));
+        boolean isOwner = order.getUser() != null && order.getUser().getEmail().equals(userEmail);
+        if (!isOwner && !isStaff) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied to order with id: " + orderId);
+        }
+        return mapToOrderResponse(order);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PrescriptionDocument getPrescriptionDocument(Long orderId, String userEmail, boolean isStaff) {
+        PrescriptionOrder order = prescriptionOrderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Prescription order not found with id: " + orderId));
+
+        boolean isOwner = order.getUser() != null && order.getUser().getEmail().equals(userEmail);
+        if (!isOwner && !isStaff) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied to prescription document for order: " + orderId);
+        }
+
+        if (order.getPrescription() == null || order.getPrescription().getPrescriptionFile() == null || order.getPrescription().getPrescriptionFile().length == 0) {
+            throw new ResourceNotFoundException("Prescription document not found for order id: " + orderId);
+        }
+
+        byte[] fileBytes = order.getPrescription().getPrescriptionFile();
+        String contentType = order.getPrescription().getPrescriptionContentType();
+        String fileName = order.getPrescription().getPrescriptionFileName();
+        String lowerFileName = fileName != null ? fileName.toLowerCase() : "";
+
+        if (contentType == null || contentType.isEmpty() || "application/octet-stream".equals(contentType)) {
+            if (lowerFileName.endsWith(".jpg") || lowerFileName.endsWith(".jpeg")) {
+                contentType = "image/jpeg";
+            } else if (lowerFileName.endsWith(".png")) {
+                contentType = "image/png";
+            } else if (lowerFileName.endsWith(".pdf")) {
+                contentType = "application/pdf";
+            } else {
+                contentType = "application/octet-stream";
+            }
+        }
+
+        if (fileName == null || fileName.isEmpty()) {
+            fileName = "prescription-document";
+        }
+
+        return PrescriptionDocument.builder()
+                .fileBytes(fileBytes)
+                .contentType(contentType)
+                .fileName(fileName)
+                .build();
+    }
+
+    @Override
     @Transactional
     public PrescriptionOrderResponse verifyPrescriptionOrder(Long orderId, String pharmacistEmail, VerifyPrescriptionRequest request) {
         PrescriptionOrder order = prescriptionOrderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Prescription order not found with id: " + orderId));
 
-        String newStatus = request.getStatus().toUpperCase();
-        if (!"APPROVED".equals(newStatus) && !"VERIFIED".equals(newStatus) && !"REJECTED".equals(newStatus) && !"DISPATCHED".equals(newStatus) && !"COMPLETED".equals(newStatus)) {
-            throw new IllegalArgumentException("Invalid verification status: " + request.getStatus());
+        PrescriptionOrderStatus newStatus;
+        try {
+            String reqStatus = request.getStatus().trim().toUpperCase();
+            if ("APPROVED".equals(reqStatus)) {
+                newStatus = PrescriptionOrderStatus.VERIFIED;
+            } else {
+                newStatus = PrescriptionOrderStatus.valueOf(reqStatus);
+            }
+        } catch (Exception e) {
+            throw new InvalidStateTransitionException("Invalid verification status: " + request.getStatus());
         }
 
         order.setStatus(newStatus);
@@ -265,12 +343,12 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         order.setVerifiedBy(pharmacistEmail);
 
         if (order.getPrescription() != null) {
-            order.getPrescription().setStatus(newStatus);
+            order.getPrescription().setStatus(newStatus.name());
             prescriptionRepository.save(order.getPrescription());
         }
 
-        // Deduct inventory when approved, verified or dispatched
-        if ("APPROVED".equals(newStatus) || "VERIFIED".equals(newStatus) || "DISPATCHED".equals(newStatus)) {
+        // Deduct inventory when verified or fulfilled
+        if (newStatus == PrescriptionOrderStatus.VERIFIED || newStatus == PrescriptionOrderStatus.FULFILLED) {
             for (PrescriptionOrderItem item : order.getItems()) {
                 deductInventoryForMedicine(item.getMedicine(), item.getQuantity());
             }
@@ -295,7 +373,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         List<StorePurchaseItem> purchaseItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        for (OrderItemRequest itemReq : request.getItems()) {
+        for (StorePurchaseItemRequest itemReq : request.getItems()) {
             Medicine medicine = medicineRepository.findById(itemReq.getMedicineId())
                     .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + itemReq.getMedicineId()));
 
@@ -329,6 +407,13 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         String custName = customer != null ? customer.getName() : (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty() ? request.getCustomerName().trim() : "Walk-in Customer");
         String custPhone = customer != null ? customer.getPhone() : (request.getCustomerPhone() != null ? request.getCustomerPhone().trim() : "");
 
+        PaymentMethod pmEnum;
+        try {
+            pmEnum = PaymentMethod.valueOf(request.getPaymentMethod().trim().toUpperCase());
+        } catch (Exception e) {
+            pmEnum = PaymentMethod.CASH;
+        }
+
         StorePurchase purchase = StorePurchase.builder()
                 .receiptNumber(receiptNum)
                 .customer(customer)
@@ -336,7 +421,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .customerPhone(custPhone)
                 .pharmacist(pharmacist)
                 .totalAmount(totalAmount)
-                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "CASH")
+                .paymentMethod(pmEnum)
                 .build();
 
         for (StorePurchaseItem item : purchaseItems) {
@@ -363,7 +448,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         long totalAvailable = inventories.stream().mapToLong(Inventory::getQuantity).sum();
 
         if (quantityToDeduct > totalAvailable) {
-            throw new IllegalArgumentException("Insufficient inventory stock for '" + medicine.getName()
+            throw new InsufficientStockException("Insufficient inventory stock for '" + medicine.getName()
                     + "'. Requested: " + quantityToDeduct + ", Available: " + totalAvailable);
         }
 
@@ -386,7 +471,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 stockMovementService.recordMovement(
                         medicine,
                         inv.getBatchNumber(),
-                        "ISSUE",
+                        "SALE",
                         -deductAmount,
                         previousStock,
                         newStock,
@@ -397,7 +482,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         }
 
         if (remainingToDeduct > 0) {
-            throw new IllegalArgumentException("Failed to fulfill requested stock for '" + medicine.getName() + "'");
+            throw new InsufficientStockException("Failed to fulfill requested stock for '" + medicine.getName() + "'");
         }
     }
 
@@ -463,7 +548,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .prescriptionFileSize(fileSize)
                 .uploadDate(uploadDate != null ? uploadDate : order.getCreatedAt())
                 .totalAmount(order.getTotalAmount())
-                .status(order.getStatus())
+                .status(order.getStatus() != null ? order.getStatus().name() : "PENDING")
                 .deliveryAddress(order.getDeliveryAddress())
                 .contactPhone(order.getContactPhone())
                 .pharmacistNotes(order.getPharmacistNotes())
@@ -503,7 +588,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .previousPurchasesCount(purchasesCount)
                 .pharmacistName(pharmacistName)
                 .totalAmount(purchase.getTotalAmount())
-                .paymentMethod(purchase.getPaymentMethod())
+                .paymentMethod(purchase.getPaymentMethod() != null ? purchase.getPaymentMethod().name() : "CASH")
                 .createdAt(purchase.getCreatedAt())
                 .items(itemResponses)
                 .build();

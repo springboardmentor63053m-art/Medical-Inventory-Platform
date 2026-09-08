@@ -45,8 +45,9 @@ public class Customer {
     private LocalDateTime lastPurchaseAt;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private String status = "ACTIVE";
+    private CustomerStatus status = CustomerStatus.ACTIVE;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -60,7 +61,7 @@ public class Customer {
         updatedAt = LocalDateTime.now();
         if (totalPurchases == null) totalPurchases = 0L;
         if (lifetimeSpend == null) lifetimeSpend = BigDecimal.ZERO;
-        if (status == null) status = "ACTIVE";
+        if (status == null) status = CustomerStatus.ACTIVE;
     }
 
     @PreUpdate

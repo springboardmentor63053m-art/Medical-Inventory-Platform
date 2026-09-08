@@ -4,6 +4,7 @@ import com.medistock.common.exception.ResourceNotFoundException;
 import com.medistock.customer.dto.CreateCustomerRequest;
 import com.medistock.customer.dto.CustomerDTO;
 import com.medistock.customer.entity.Customer;
+import com.medistock.customer.entity.CustomerStatus;
 import com.medistock.customer.repository.CustomerRepository;
 import com.medistock.customer.service.CustomerService;
 import com.medistock.prescription.dto.response.StorePurchaseItemResponse;
@@ -21,8 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -108,7 +109,7 @@ public class CustomerServiceImpl implements CustomerService {
                     .normalizedPhone(normalized)
                     .totalPurchases(0L)
                     .lifetimeSpend(BigDecimal.ZERO)
-                    .status("ACTIVE")
+                    .status(CustomerStatus.ACTIVE)
                     .build();
             Customer saved = customerRepository.save(newCustomer);
             log.info("Created new POS customer '{}' with normalized phone '{}'", saved.getName(), saved.getNormalizedPhone());
@@ -142,10 +143,10 @@ public class CustomerServiceImpl implements CustomerService {
                         .name(custName)
                         .phone(phone.trim())
                         .normalizedPhone(normalized)
-                        .totalPurchases(1L)
-                        .lifetimeSpend(saleAmount != null ? saleAmount : BigDecimal.ZERO)
+                        .totalPurchases(0L)
+                        .lifetimeSpend(BigDecimal.ZERO)
                         .lastPurchaseAt(LocalDateTime.now())
-                        .status("ACTIVE")
+                        .status(CustomerStatus.ACTIVE)
                         .build();
                 customer = customerRepository.save(customer);
                 log.info("Created new customer record on POS checkout: '{}' ({})", customer.getName(), customer.getNormalizedPhone());
@@ -185,12 +186,21 @@ public class CustomerServiceImpl implements CustomerService {
         boolean hasSearch = search != null && !search.trim().isEmpty();
         boolean hasStatus = status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase("ALL");
 
-        if (hasSearch && hasStatus) {
+        CustomerStatus statusEnum = null;
+        if (hasStatus) {
+            try {
+                statusEnum = CustomerStatus.valueOf(status.trim().toUpperCase());
+            } catch (Exception e) {
+                statusEnum = CustomerStatus.ACTIVE;
+            }
+        }
+
+        if (hasSearch && statusEnum != null) {
             String q = search.trim();
             String norm = normalizePhone(q);
-            customersPage = customerRepository.findByStatusAndNameContainingIgnoreCaseOrStatusAndNormalizedPhoneContaining(status.toUpperCase(), q, status.toUpperCase(), norm.isEmpty() ? q : norm, pageable);
-        } else if (hasStatus) {
-            customersPage = customerRepository.findByStatus(status.toUpperCase(), pageable);
+            customersPage = customerRepository.findByStatusAndNameContainingIgnoreCaseOrStatusAndNormalizedPhoneContaining(statusEnum, q, statusEnum, norm.isEmpty() ? q : norm, pageable);
+        } else if (statusEnum != null) {
+            customersPage = customerRepository.findByStatus(statusEnum, pageable);
         } else if (hasSearch) {
             String q = search.trim();
             String norm = normalizePhone(q);
@@ -229,11 +239,71 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
 
-        String newStatus = status != null && status.equalsIgnoreCase("INACTIVE") ? "INACTIVE" : "ACTIVE";
+        CustomerStatus newStatus;
+        try {
+            newStatus = CustomerStatus.valueOf(status.trim().toUpperCase());
+        } catch (Exception e) {
+            newStatus = CustomerStatus.ACTIVE;
+        }
         customer.setStatus(newStatus);
         Customer updated = customerRepository.save(customer);
         log.info("Updated customer id {} status to {}", id, newStatus);
         return mapToDTO(updated, false);
+    }
+
+    @Override
+    @Transactional
+    public CustomerDTO patchCustomer(Long id, Map<String, Object> patchFields) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + id));
+
+        if (patchFields == null || patchFields.isEmpty()) {
+            return mapToDTO(customer, false);
+        }
+
+        if (patchFields.containsKey("name") && patchFields.get("name") != null) {
+            String name = patchFields.get("name").toString().trim();
+            if (!name.isEmpty()) {
+                customer.setName(name);
+            }
+        }
+
+        if (patchFields.containsKey("phone") && patchFields.get("phone") != null) {
+            String phone = patchFields.get("phone").toString().trim();
+            if (!phone.isEmpty()) {
+                String normalized = normalizePhone(phone);
+                customerRepository.findByNormalizedPhone(normalized).ifPresent(existing -> {
+                    if (!existing.getId().equals(customer.getId())) {
+                        throw new IllegalArgumentException("Phone number already registered to another customer: " + phone);
+                    }
+                });
+                customer.setPhone(phone);
+                customer.setNormalizedPhone(normalized);
+            }
+        }
+
+        if (patchFields.containsKey("email")) {
+            Object emailObj = patchFields.get("email");
+            customer.setEmail(emailObj != null ? emailObj.toString().trim() : null);
+        }
+
+        if (patchFields.containsKey("address")) {
+            Object addrObj = patchFields.get("address");
+            customer.setAddress(addrObj != null ? addrObj.toString().trim() : null);
+        }
+
+        if (patchFields.containsKey("status") && patchFields.get("status") != null) {
+            String status = patchFields.get("status").toString().trim();
+            try {
+                customer.setStatus(CustomerStatus.valueOf(status.toUpperCase()));
+            } catch (Exception e) {
+                customer.setStatus(CustomerStatus.ACTIVE);
+            }
+        }
+
+        Customer saved = customerRepository.save(customer);
+        log.info("Partially updated customer id {}: {}", id, patchFields.keySet());
+        return mapToDTO(saved, false);
     }
 
     private CustomerDTO mapToDTO(Customer customer, boolean includePurchaseHistory) {
@@ -246,7 +316,6 @@ public class CustomerServiceImpl implements CustomerService {
                 .map(StorePurchase::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Fallback to aggregated stats if customer.getTotalPurchases() is null/0
         long finalCount = Math.max(customer.getTotalPurchases() != null ? customer.getTotalPurchases() : 0L, count);
         BigDecimal finalSpent = (customer.getLifetimeSpend() != null && customer.getLifetimeSpend().compareTo(BigDecimal.ZERO) > 0)
                 ? customer.getLifetimeSpend()
@@ -255,6 +324,8 @@ public class CustomerServiceImpl implements CustomerService {
         LocalDateTime lastPurchase = customer.getLastPurchaseAt() != null
                 ? customer.getLastPurchaseAt()
                 : (purchases.isEmpty() ? null : purchases.get(0).getCreatedAt());
+
+        String statusStr = customer.getStatus() != null ? customer.getStatus().name() : "ACTIVE";
 
         CustomerDTO.CustomerData data = CustomerDTO.CustomerData.builder()
                 .id(customer.getId())
@@ -270,7 +341,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .lastPurchaseAt(lastPurchase)
                 .lastPurchaseDate(lastPurchase)
                 .createdAt(customer.getCreatedAt())
-                .status(customer.getStatus() != null ? customer.getStatus() : "ACTIVE")
+                .status(statusStr)
                 .build();
 
         List<StorePurchaseResponse> purchaseResponses = null;
@@ -293,7 +364,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .lastPurchaseDate(lastPurchase)
                 .createdAt(customer.getCreatedAt())
                 .updatedAt(customer.getUpdatedAt())
-                .status(customer.getStatus() != null ? customer.getStatus() : "ACTIVE")
+                .status(statusStr)
                 .found(true)
                 .exists(true)
                 .customer(data)
@@ -326,7 +397,7 @@ public class CustomerServiceImpl implements CustomerService {
                 .normalizedPhone(purchase.getCustomer() != null ? purchase.getCustomer().getNormalizedPhone() : "")
                 .pharmacistName(pharmacistName)
                 .totalAmount(purchase.getTotalAmount())
-                .paymentMethod(purchase.getPaymentMethod())
+                .paymentMethod(purchase.getPaymentMethod() != null ? purchase.getPaymentMethod().name() : "CASH")
                 .createdAt(purchase.getCreatedAt())
                 .items(itemResponses)
                 .build();

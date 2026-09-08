@@ -32,8 +32,9 @@ public class StockMovement {
     @Column(name = "batch_number", length = 50)
     private String batchNumber;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "movement_type", nullable = false, length = 30)
-    private String movementType;
+    private StockMovementType movementType;
 
     @Column(nullable = false)
     private Integer quantity;

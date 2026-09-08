@@ -9,6 +9,7 @@ import com.medistock.purchase.dto.response.PurchaseOrderItemResponse;
 import com.medistock.purchase.dto.response.PurchaseOrderResponse;
 import com.medistock.purchase.entity.PurchaseOrder;
 import com.medistock.purchase.entity.PurchaseOrderItem;
+import com.medistock.purchase.entity.PurchaseOrderStatus;
 import com.medistock.purchase.repository.PurchaseOrderRepository;
 import com.medistock.purchase.service.PurchaseOrderService;
 import com.medistock.supplier.dto.response.SupplierResponse;
@@ -34,14 +35,31 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.medistock.supplier.service.SupplierCommunicationService;
+import org.springframework.context.annotation.Lazy;
+
 @Service
-@RequiredArgsConstructor
 public class PurchaseOrderServiceImpl implements PurchaseOrderService {
 
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final SupplierRepository supplierRepository;
     private final MedicineRepository medicineRepository;
     private final InventoryService inventoryService;
+    private final SupplierCommunicationService supplierCommunicationService;
+
+    public PurchaseOrderServiceImpl(
+            PurchaseOrderRepository purchaseOrderRepository,
+            SupplierRepository supplierRepository,
+            MedicineRepository medicineRepository,
+            InventoryService inventoryService,
+            @Lazy SupplierCommunicationService supplierCommunicationService
+    ) {
+        this.purchaseOrderRepository = purchaseOrderRepository;
+        this.supplierRepository = supplierRepository;
+        this.medicineRepository = medicineRepository;
+        this.inventoryService = inventoryService;
+        this.supplierCommunicationService = supplierCommunicationService;
+    }
     private Authentication requireAuthentication() {
         Authentication authentication =
                 SecurityContextHolder
@@ -103,14 +121,19 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             throw new IllegalArgumentException("Expected delivery date cannot be in the past");
         }
 
-        String orderNumber = "PO-2026-" + String.format("%03d", (purchaseOrderRepository.count() + 1));
+        long nextIndex = purchaseOrderRepository.count() + 1;
+        String orderNumber = "PO-2026-" + String.format("%03d", nextIndex);
+        while (purchaseOrderRepository.existsByOrderNumber(orderNumber)) {
+            nextIndex++;
+            orderNumber = "PO-2026-" + String.format("%03d", nextIndex);
+        }
 
         PurchaseOrder order = PurchaseOrder.builder()
                 .supplier(supplier)
                 .orderNumber(orderNumber)
                 .orderDate(LocalDate.now())
                 .expectedDelivery(request.getExpectedDelivery() != null ? request.getExpectedDelivery() : LocalDate.now().plusDays(7))
-                .status("PENDING")
+                .status(PurchaseOrderStatus.PENDING)
                 .totalAmount(BigDecimal.ZERO)
                 .createdBy(currentActor())
                 .statusUpdatedBy(currentActor())
@@ -188,6 +211,16 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             Long id,
             String requestedStatus
     ) {
+        return updatePurchaseOrderStatus(id, requestedStatus, null);
+    }
+
+    @Override
+    @Transactional
+    public PurchaseOrderResponse updatePurchaseOrderStatus(
+            Long id,
+            String requestedStatus,
+            String note
+    ) {
         PurchaseOrder order = purchaseOrderRepository
                 .findById(id)
                 .orElseThrow(
@@ -204,11 +237,13 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             );
         }
 
-        String currentStatus =
-                order.getStatus().toUpperCase();
-
-        String targetStatus =
-                requestedStatus.trim().toUpperCase();
+        PurchaseOrderStatus currentStatus = order.getStatus();
+        PurchaseOrderStatus targetStatus;
+        try {
+            targetStatus = PurchaseOrderStatus.valueOf(requestedStatus.trim().toUpperCase());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid purchase order status: " + requestedStatus);
+        }
 
         String actor = currentActor();
 
@@ -216,105 +251,60 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         boolean isPharmacist = hasRole("PHARMACIST");
         boolean isSupplier = hasRole("SUPPLIER");
 
-        Supplier authenticatedSupplier =
-                resolveAuthenticatedSupplier();
+        Supplier authenticatedSupplier = resolveAuthenticatedSupplier();
 
         if (isSupplier) {
             if (authenticatedSupplier == null ||
                     order.getSupplier() == null ||
-                    !order.getSupplier().getId().equals(
-                            authenticatedSupplier.getId()
-                    )) {
-                throw new AccessDeniedException(
-                        "Supplier cannot update another supplier's order"
-                );
+                    !order.getSupplier().getId().equals(authenticatedSupplier.getId())) {
+                throw new AccessDeniedException("Supplier cannot update another supplier's order");
             }
         }
 
-        boolean isCreator =
-                order.getCreatedBy() != null &&
-                order.getCreatedBy()
-                        .equalsIgnoreCase(actor);
+        boolean isCreator = order.getCreatedBy() != null && order.getCreatedBy().equalsIgnoreCase(actor);
 
-        if ("PENDING".equals(currentStatus) &&
-                "APPROVED".equals(targetStatus)) {
+        if (currentStatus == PurchaseOrderStatus.PENDING && targetStatus == PurchaseOrderStatus.APPROVED) {
             if (!isAdmin) {
-                throw new AccessDeniedException(
-                        "Only an Admin can approve a purchase order"
-                );
+                throw new AccessDeniedException("Only an Admin can approve a purchase order");
             }
-
             if (isCreator) {
-                throw new IllegalArgumentException(
-                        "The creator cannot approve their own purchase order"
-                );
+                throw new IllegalArgumentException("The creator cannot approve their own purchase order");
             }
-
             order.setApprovedBy(actor);
             order.setApprovedAt(LocalDateTime.now());
-
-        } else if ("PENDING".equals(currentStatus) &&
-                "CANCELLED".equals(targetStatus)) {
-            if (!isAdmin &&
-                    !(isPharmacist && isCreator)) {
-                throw new AccessDeniedException(
-                        "Only an Admin or the creator can cancel a pending order"
-                );
+        } else if (currentStatus == PurchaseOrderStatus.PENDING && targetStatus == PurchaseOrderStatus.CANCELLED) {
+            if (!isAdmin && !(isPharmacist && isCreator)) {
+                throw new AccessDeniedException("Only an Admin or the creator can cancel a pending order");
             }
-
             order.setCancelledBy(actor);
             order.setCancelledAt(LocalDateTime.now());
-
-        } else if ("APPROVED".equals(currentStatus) &&
-                "PROCESSING".equals(targetStatus)) {
+        } else if (currentStatus == PurchaseOrderStatus.APPROVED && targetStatus == PurchaseOrderStatus.CONFIRMED) {
             if (!isSupplier) {
-                throw new AccessDeniedException(
-                        "Only the assigned Supplier can process an approved order"
-                );
+                throw new AccessDeniedException("Only the assigned Supplier can confirm an approved order");
             }
-
             order.setProcessedBy(actor);
             order.setProcessedAt(LocalDateTime.now());
-
-        } else if ("APPROVED".equals(currentStatus) &&
-                "CANCELLED".equals(targetStatus)) {
+        } else if (currentStatus == PurchaseOrderStatus.APPROVED && targetStatus == PurchaseOrderStatus.CANCELLED) {
             if (!isAdmin) {
-                throw new AccessDeniedException(
-                        "Only an Admin can cancel an approved order"
-                );
+                throw new AccessDeniedException("Only an Admin can cancel an approved order");
             }
-
             order.setCancelledBy(actor);
             order.setCancelledAt(LocalDateTime.now());
-
-        } else if ("PROCESSING".equals(currentStatus) &&
-                "SHIPPED".equals(targetStatus)) {
+        } else if (currentStatus == PurchaseOrderStatus.CONFIRMED && targetStatus == PurchaseOrderStatus.SHIPPED) {
             if (!isSupplier) {
-                throw new AccessDeniedException(
-                        "Only the assigned Supplier can ship an order"
-                );
+                throw new AccessDeniedException("Only the assigned Supplier can ship an order");
             }
-
             order.setShippedBy(actor);
             order.setShippedAt(LocalDateTime.now());
-
-        } else if ("PROCESSING".equals(currentStatus) &&
-                "CANCELLED".equals(targetStatus)) {
+        } else if (currentStatus == PurchaseOrderStatus.CONFIRMED && targetStatus == PurchaseOrderStatus.CANCELLED) {
             if (!isAdmin) {
-                throw new AccessDeniedException(
-                        "Only an Admin can cancel a processing order"
-                );
+                throw new AccessDeniedException("Only an Admin can cancel a confirmed order");
             }
-
             order.setCancelledBy(actor);
             order.setCancelledAt(LocalDateTime.now());
-
         } else {
-            throw new IllegalArgumentException(
-                    "Invalid purchase order transition: " +
-                    currentStatus +
-                    " -> " +
-                    targetStatus
+            throw new com.medistock.common.exception.InvalidStateTransitionException(
+                    "Invalid purchase order transition: " + currentStatus + " -> " + targetStatus
             );
         }
 
@@ -322,8 +312,11 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
         order.setStatusUpdatedBy(actor);
         order.setStatusUpdatedAt(LocalDateTime.now());
 
-        PurchaseOrder saved =
-                purchaseOrderRepository.save(order);
+        PurchaseOrder saved = purchaseOrderRepository.save(order);
+
+        if (supplierCommunicationService != null) {
+            supplierCommunicationService.logPurchaseOrderStatusChangeEvent(saved, currentStatus.name(), targetStatus.name(), note, actor);
+        }
 
         return mapToResponse(saved);
     }
@@ -334,83 +327,45 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
             Long id,
             PurchaseOrderReceiptRequest request
     ) {
-        if (!hasRole("ADMIN") &&
-                !hasRole("PHARMACIST")) {
-            throw new AccessDeniedException(
-                    "Only an Admin or Pharmacist can receive a shipment"
-            );
+        if (!hasRole("ADMIN") && !hasRole("PHARMACIST")) {
+            throw new AccessDeniedException("Only an Admin or Pharmacist can receive a shipment");
         }
 
-        PurchaseOrder order = purchaseOrderRepository
-                .findById(id)
-                .orElseThrow(
-                        () -> new ResourceNotFoundException(
-                                "Purchase order not found with id: " +
-                                id
-                        )
-                );
+        PurchaseOrder order = purchaseOrderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase order not found with id: " + id));
 
-        if (!"SHIPPED".equalsIgnoreCase(
-                order.getStatus()
-        )) {
-            throw new IllegalArgumentException(
-                    "Only a shipped purchase order can be received"
-            );
+        if (order.getStatus() != PurchaseOrderStatus.SHIPPED) {
+            throw new com.medistock.common.exception.InvalidStateTransitionException("Only a shipped purchase order can be received");
         }
 
-        Map<Long, PurchaseOrderReceiptItemRequest>
-                receiptByItemId =
-                request.getItems()
-                        .stream()
-                        .collect(
-                                Collectors.toMap(
-                                        PurchaseOrderReceiptItemRequest
-                                                ::getPurchaseOrderItemId,
-                                        Function.identity(),
-                                        (first, duplicate) -> {
-                                            throw new IllegalArgumentException(
-                                                    "Duplicate receipt details for purchase order item: " +
-                                                    first.getPurchaseOrderItemId()
-                                            );
-                                        }
-                                )
-                        );
+        Map<Long, PurchaseOrderReceiptItemRequest> receiptByItemId = request.getItems().stream()
+                .collect(Collectors.toMap(
+                        PurchaseOrderReceiptItemRequest::getPurchaseOrderItemId,
+                        Function.identity(),
+                        (first, duplicate) -> {
+                            throw new IllegalArgumentException("Duplicate receipt details for purchase order item: " + first.getPurchaseOrderItemId());
+                        }
+                ));
 
-        List<PurchaseOrderItem> orderItems =
-                order.getItems() == null
-                        ? List.of()
-                        : order.getItems();
+        List<PurchaseOrderItem> orderItems = order.getItems() == null ? List.of() : order.getItems();
 
-        if (receiptByItemId.size() !=
-                orderItems.size()) {
-            throw new IllegalArgumentException(
-                    "Receipt details must be provided for every purchase order item"
-            );
+        if (receiptByItemId.size() != orderItems.size()) {
+            throw new IllegalArgumentException("Receipt details must be provided for every purchase order item");
         }
 
         for (PurchaseOrderItem orderItem : orderItems) {
-            PurchaseOrderReceiptItemRequest receipt =
-                    receiptByItemId.get(orderItem.getId());
+            PurchaseOrderReceiptItemRequest receipt = receiptByItemId.get(orderItem.getId());
 
             if (receipt == null) {
-                throw new IllegalArgumentException(
-                        "Missing receipt details for purchase order item: " +
-                        orderItem.getId()
-                );
+                throw new IllegalArgumentException("Missing receipt details for purchase order item: " + orderItem.getId());
             }
 
             if (orderItem.getReceivedQuantity() != null) {
-                throw new IllegalArgumentException(
-                        "Purchase order item has already been received: " +
-                        orderItem.getId()
-                );
+                throw new IllegalArgumentException("Purchase order item has already been received: " + orderItem.getId());
             }
 
             if (orderItem.getMedicine() == null) {
-                throw new IllegalArgumentException(
-                        "Medicine information is missing for purchase order item: " +
-                        orderItem.getId()
-                );
+                throw new IllegalArgumentException("Medicine information is missing for purchase order item: " + orderItem.getId());
             }
 
             inventoryService.receivePurchaseOrderStock(
@@ -423,34 +378,21 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                     order.getOrderNumber()
             );
 
-            orderItem.setReceivedQuantity(
-                    orderItem.getQuantity()
-            );
-
-            orderItem.setReceivedBatchNumber(
-                    receipt.getBatchNumber().trim()
-            );
-
-            orderItem.setReceivedExpiryDate(
-                    receipt.getExpiryDate()
-            );
-
-            orderItem.setReceivedStorageLocation(
-                    receipt.getStorageLocation()
-            );
+            orderItem.setReceivedQuantity(orderItem.getQuantity());
+            orderItem.setReceivedBatchNumber(receipt.getBatchNumber().trim());
+            orderItem.setReceivedExpiryDate(receipt.getExpiryDate());
+            orderItem.setReceivedStorageLocation(receipt.getStorageLocation());
         }
 
         String actor = currentActor();
 
-        order.setStatus("RECEIVED");
+        order.setStatus(PurchaseOrderStatus.RECEIVED);
         order.setReceivedBy(actor);
         order.setReceivedAt(LocalDateTime.now());
         order.setStatusUpdatedBy(actor);
         order.setStatusUpdatedAt(LocalDateTime.now());
 
-        PurchaseOrder saved =
-                purchaseOrderRepository.save(order);
-
+        PurchaseOrder saved = purchaseOrderRepository.save(order);
         return mapToResponse(saved);
     }
 
@@ -502,7 +444,7 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                         .supplier(supResp)
                         .orderDate(order.getOrderDate())
                         .expectedDelivery(order.getExpectedDelivery())
-                        .status(order.getStatus())
+                        .status(order.getStatus() != null ? order.getStatus().name() : "PENDING")
                         .totalAmount(order.getTotalAmount())
                         .createdBy(order.getCreatedBy())
                         .approvedBy(order.getApprovedBy())
