@@ -101,17 +101,25 @@ export default function Dashboard() {
   const tickColor    = isDark ? '#475569' : '#94a3b8'
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       dashboardAPI.getStats(),
       medicineAPI.getAll(),
       aiAPI.getRecommendations(),
     ])
       .then(([dRes, mRes, recRes]) => {
-        setStats(dRes.data)
-        setMedicines(mRes.data)
-        setRecommendations(recRes.data)
+        if (dRes.status === 'fulfilled' && dRes.value?.data) {
+          setStats(dRes.value.data)
+        }
+        if (mRes.status === 'fulfilled' && Array.isArray(mRes.value?.data)) {
+          setMedicines(mRes.value.data)
+        }
+        if (recRes.status === 'fulfilled' && Array.isArray(recRes.value?.data)) {
+          setRecommendations(recRes.value.data)
+        }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Dashboard load error:', err)
+      })
       .finally(() => setLoading(false))
   }, [])
 

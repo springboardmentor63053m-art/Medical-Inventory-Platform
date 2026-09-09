@@ -420,10 +420,14 @@ export default function Inventory() {
   const load = async () => {
     setLoading(true)
     try {
-      const [medRes, supRes] = await Promise.allSettled([
+      const [invRes, medRes, supRes] = await Promise.allSettled([
+        inventoryAPI.getAll(),
         medicineAPI.getAll(),
         supplierAPI.getAll()
       ])
+      if (invRes.status === 'fulfilled' && Array.isArray(invRes.value.data) && invRes.value.data.length > 0) {
+        setInventory(invRes.value.data)
+      }
       if (medRes.status === 'fulfilled' && Array.isArray(medRes.value.data) && medRes.value.data.length > 0) {
         setMedicines(medRes.value.data)
       }

@@ -307,8 +307,8 @@ export default function StockTracking() {
       if (invRes.status === 'fulfilled' && Array.isArray(invRes.value.data) && invRes.value.data.length > 0) {
         setInventory(invRes.value.data)
       }
-    } catch {
-      toast.error('Loaded latest stock telemetry')
+    } catch (err) {
+      console.warn('Stock tracking telemetry warning:', err)
     } finally {
       setLoading(false)
     }
