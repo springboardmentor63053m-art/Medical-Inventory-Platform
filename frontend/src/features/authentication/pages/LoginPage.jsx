@@ -162,8 +162,11 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = (provider) => {
+    const backendUrl =
+      import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+
     toast.info(`Redirecting to ${provider} OAuth2 authentication...`);
-    window.location.href = `http://localhost:8080/oauth2/authorization/${provider.toLowerCase()}`;
+    window.location.href = `${backendUrl}/oauth2/authorization/${provider.toLowerCase()}`;
   };
 
   // Password Reset Request Code
