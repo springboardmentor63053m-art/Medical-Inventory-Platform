@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -84,48 +85,48 @@ public class ReportController {
     }
 
 
-    @GetMapping(
-            value = "/inventory.csv",
-            produces = "text/csv"
-    )
-    @PreAuthorize(
-            "hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')"
-    )
-    public ResponseEntity<byte[]> downloadInventoryReport() {
-        String filename =
-                "medistock-inventory-" +
-                LocalDate.now() +
-                ".csv";
+    /**
+     * Architectural Rationale: Reports vs Analytics
+     * - Reports Controller: Dedicated to exportable, document-oriented representations
+     *   including multi-format summaries and downloadable files (JSON/CSV).
+     * - Analytics Controller: Dedicated to computed, aggregated insights, KPI counters,
+     *   and dashboard-oriented analytical metrics.
+     */
 
-        return createCsvResponse(
-                filename,
-                reportService.generateInventoryCsv()
-        );
+    @GetMapping("/inventory")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
+    public ResponseEntity<?> getInventoryReport(
+            @RequestParam(value = "format", defaultValue = "json") String format,
+            @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String acceptHeader
+    ) {
+        boolean isCsv = "csv".equalsIgnoreCase(format) ||
+                (acceptHeader != null && acceptHeader.contains("text/csv"));
+
+        if (isCsv) {
+            String filename = "medistock-inventory-" + LocalDate.now() + ".csv";
+            return createCsvResponse(filename, reportService.generateInventoryCsv());
+        }
+
+        return ResponseEntity.ok(reportService.getInventoryValuationSummary());
     }
 
-    @GetMapping(
-            value = "/expiry.csv",
-            produces = "text/csv"
-    )
-    @PreAuthorize(
-            "hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')"
-    )
-    public ResponseEntity<byte[]> downloadExpiryReport(
-            @RequestParam(defaultValue = "30") int days
+    @GetMapping("/expiry")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
+    public ResponseEntity<?> getExpiryReport(
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(value = "format", defaultValue = "json") String format,
+            @RequestHeader(value = HttpHeaders.ACCEPT, required = false) String acceptHeader
     ) {
         int safeDays = Math.max(1, Math.min(days, 365));
+        boolean isCsv = "csv".equalsIgnoreCase(format) ||
+                (acceptHeader != null && acceptHeader.contains("text/csv"));
 
-        String filename =
-                "medistock-expiry-" +
-                safeDays +
-                "-days-" +
-                LocalDate.now() +
-                ".csv";
+        if (isCsv) {
+            String filename = "medistock-expiry-" + safeDays + "-days-" + LocalDate.now() + ".csv";
+            return createCsvResponse(filename, reportService.generateExpiryCsv(safeDays));
+        }
 
-        return createCsvResponse(
-                filename,
-                reportService.generateExpiryCsv(safeDays)
-        );
+        return ResponseEntity.ok(reportService.getExpirySummary(safeDays));
     }
 
     private ResponseEntity<byte[]> createCsvResponse(

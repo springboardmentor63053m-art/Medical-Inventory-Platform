@@ -183,19 +183,6 @@ public class SupplierCommunicationController {
         return ResponseEntity.ok(Map.of("message", "Conversation marked as read"));
     }
 
-    @PostMapping("/purchase-orders/{poId}/update-status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
-    public ResponseEntity<SupplierMessageResponse> updatePOStatusFromChat(
-            @PathVariable("poId") Long poId,
-            @RequestBody Map<String, String> body,
-            Authentication authentication
-    ) {
-        String newStatus = body.getOrDefault("status", "CONFIRMED");
-        String note = body.get("note");
-        SupplierMessageResponse response = communicationService.updatePOStatusFromChat(poId, newStatus, note, authentication.getName());
-        return ResponseEntity.ok(response);
-    }
-
     @GetMapping("/unread-count")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Long>> getUnreadCount(Authentication authentication) {

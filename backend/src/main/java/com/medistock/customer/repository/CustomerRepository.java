@@ -1,6 +1,7 @@
 package com.medistock.customer.repository;
 
 import com.medistock.customer.entity.Customer;
+import com.medistock.customer.entity.CustomerStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,6 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     boolean existsByNormalizedPhone(String normalizedPhone);
     List<Customer> findAllByOrderByCreatedAtDesc();
     Page<Customer> findByNameContainingIgnoreCaseOrNormalizedPhoneContaining(String name, String phone, Pageable pageable);
-    Page<Customer> findByStatus(String status, Pageable pageable);
-    Page<Customer> findByStatusAndNameContainingIgnoreCaseOrStatusAndNormalizedPhoneContaining(String status1, String name, String status2, String phone, Pageable pageable);
+    Page<Customer> findByStatus(CustomerStatus status, Pageable pageable);
+    Page<Customer> findByStatusAndNameContainingIgnoreCaseOrStatusAndNormalizedPhoneContaining(CustomerStatus status1, String name, CustomerStatus status2, String phone, Pageable pageable);
 }

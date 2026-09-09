@@ -42,7 +42,8 @@ public class PurchaseOrderController {
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
     public ResponseEntity<PurchaseOrderResponse> updatePurchaseOrderStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String status = body.getOrDefault("status", "PENDING");
-        return ResponseEntity.ok(purchaseOrderService.updatePurchaseOrderStatus(id, status));
+        String note = body.get("note");
+        return ResponseEntity.ok(purchaseOrderService.updatePurchaseOrderStatus(id, status, note));
     }
 
 

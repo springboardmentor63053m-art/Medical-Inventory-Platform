@@ -23,5 +23,5 @@ public class CreateStorePurchaseRequest {
     private String paymentMethod = "CASH";
 
     @NotEmpty(message = "Purchase must contain at least one medicine item")
-    private List<OrderItemRequest> items;
+    private List<StorePurchaseItemRequest> items;
 }

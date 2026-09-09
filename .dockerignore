@@ -1,0 +1,38 @@
+# Dependencies & Build Output
+**/node_modules/
+frontend/node_modules/
+frontend/dist/
+backend/target/
+build/
+dist/
+
+# Git & VCS
+.git/
+.gitignore
+
+# IDE & Editor metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & Temporary Files
+*.log
+**/*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Python caches & scratch workspace
+scratch/
+**/__pycache__/
+*.pyc
+
+# Local runtime upload artifacts
+backend/uploads/

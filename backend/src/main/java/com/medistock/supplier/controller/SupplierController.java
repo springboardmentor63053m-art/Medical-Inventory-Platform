@@ -60,39 +60,67 @@ public class SupplierController {
         return ResponseEntity.ok(supplierService.searchSuppliers(name));
     }
 
-    @PostMapping("/{id}/medicines/{medicineId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
-    public ResponseEntity<SupplierResponse> linkMedicineToSupplier(@PathVariable Long id, @PathVariable Long medicineId) {
-        return ResponseEntity.ok(supplierService.linkMedicineToSupplier(id, medicineId));
+    private String getAuthenticatedEmail(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new org.springframework.security.access.AccessDeniedException("Authentication is required");
+        }
+        return authentication.getName();
     }
 
-    @DeleteMapping("/{id}/medicines/{medicineId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
-    public ResponseEntity<SupplierResponse> unlinkMedicineFromSupplier(@PathVariable Long id, @PathVariable Long medicineId) {
-        return ResponseEntity.ok(supplierService.unlinkMedicineFromSupplier(id, medicineId));
-    }
+    private Long resolveAuthorizedSupplierId(String idStr, Authentication authentication) {
+        String email = getAuthenticatedEmail(authentication);
+        boolean isSupplier = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equalsIgnoreCase("ROLE_SUPPLIER") || a.getAuthority().equalsIgnoreCase("SUPPLIER"));
 
-    @GetMapping("/me/medicines")
-    @PreAuthorize("hasAnyRole('SUPPLIER', 'ADMIN')")
-    public ResponseEntity<List<SupplierResponse.SuppliedMedicineDto>> getMySupplierMedicines(Authentication authentication) {
-        return ResponseEntity.ok(supplierService.getMySupplierMedicines(authentication != null ? authentication.getName() : "supplier@medistock.com"));
-    }
+        if ("me".equalsIgnoreCase(idStr)) {
+            return supplierService.getSupplierByEmail(email).getId();
+        }
 
-    @PostMapping("/me/medicines/{medicineId}")
-    @PreAuthorize("hasAnyRole('SUPPLIER', 'ADMIN')")
-    public ResponseEntity<SupplierResponse> addMedicineToMySupplierCatalog(Authentication authentication, @PathVariable Long medicineId) {
-        return ResponseEntity.ok(supplierService.addMedicineToSupplierByEmail(authentication != null ? authentication.getName() : "supplier@medistock.com", medicineId));
-    }
+        Long supplierId;
+        try {
+            supplierId = Long.parseLong(idStr);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid supplier ID: " + idStr);
+        }
 
-    @DeleteMapping("/me/medicines/{medicineId}")
-    @PreAuthorize("hasAnyRole('SUPPLIER', 'ADMIN')")
-    public ResponseEntity<SupplierResponse> removeMedicineFromMySupplierCatalog(Authentication authentication, @PathVariable Long medicineId) {
-        return ResponseEntity.ok(supplierService.removeMedicineFromSupplierByEmail(authentication != null ? authentication.getName() : "supplier@medistock.com", medicineId));
+        if (isSupplier) {
+            Long mySupplierId = supplierService.getSupplierByEmail(email).getId();
+            if (!supplierId.equals(mySupplierId)) {
+                throw new org.springframework.security.access.AccessDeniedException("Suppliers can only access their own supplier catalog");
+            }
+        }
+        return supplierId;
     }
 
     @GetMapping("/{id}/medicines")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
-    public ResponseEntity<List<SupplierResponse.SuppliedMedicineDto>> getMedicinesBySupplier(@PathVariable Long id) {
-        return ResponseEntity.ok(supplierService.getMedicinesBySupplier(id));
+    public ResponseEntity<List<SupplierResponse.SuppliedMedicineDto>> getMedicinesBySupplier(
+            @PathVariable String id,
+            Authentication authentication
+    ) {
+        Long supplierId = resolveAuthorizedSupplierId(id, authentication);
+        return ResponseEntity.ok(supplierService.getMedicinesBySupplier(supplierId));
+    }
+
+    @PostMapping("/{id}/medicines/{medicineId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
+    public ResponseEntity<SupplierResponse> linkMedicineToSupplier(
+            @PathVariable String id,
+            @PathVariable Long medicineId,
+            Authentication authentication
+    ) {
+        Long supplierId = resolveAuthorizedSupplierId(id, authentication);
+        return ResponseEntity.ok(supplierService.linkMedicineToSupplier(supplierId, medicineId));
+    }
+
+    @DeleteMapping("/{id}/medicines/{medicineId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'SUPPLIER')")
+    public ResponseEntity<SupplierResponse> unlinkMedicineFromSupplier(
+            @PathVariable String id,
+            @PathVariable Long medicineId,
+            Authentication authentication
+    ) {
+        Long supplierId = resolveAuthorizedSupplierId(id, authentication);
+        return ResponseEntity.ok(supplierService.unlinkMedicineFromSupplier(supplierId, medicineId));
     }
 }

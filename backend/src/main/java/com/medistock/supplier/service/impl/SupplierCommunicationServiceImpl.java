@@ -2,6 +2,7 @@ package com.medistock.supplier.service.impl;
 
 import com.medistock.common.exception.ResourceNotFoundException;
 import com.medistock.purchase.entity.PurchaseOrder;
+import com.medistock.purchase.entity.PurchaseOrderStatus;
 import com.medistock.purchase.repository.PurchaseOrderRepository;
 import com.medistock.supplier.dto.*;
 import com.medistock.supplier.entity.*;
@@ -312,8 +313,13 @@ public class SupplierCommunicationServiceImpl implements SupplierCommunicationSe
         String senderRole = getUserPrimaryRole(user);
         String senderName = user != null ? (user.getFirstName() + " " + (user.getLastName() != null ? user.getLastName() : "")).trim() : "System Admin";
 
-        String oldStatus = po.getStatus();
-        String validStatus = newStatus.toUpperCase();
+        String oldStatus = po.getStatus() != null ? po.getStatus().name() : "PENDING";
+        PurchaseOrderStatus validStatus;
+        try {
+            validStatus = PurchaseOrderStatus.valueOf(newStatus.toUpperCase());
+        } catch (Exception e) {
+            validStatus = PurchaseOrderStatus.CONFIRMED;
+        }
         po.setStatus(validStatus);
         po.setStatusUpdatedBy(senderName);
         po.setStatusUpdatedAt(LocalDateTime.now());
@@ -322,7 +328,7 @@ public class SupplierCommunicationServiceImpl implements SupplierCommunicationSe
         SupplierConversation conversation = getOrCreateConversationEntity(po.getSupplier().getId());
 
         String eventText = String.format("Purchase Order %s status updated from %s to %s.%s",
-                po.getOrderNumber(), oldStatus, validStatus,
+                po.getOrderNumber(), oldStatus, validStatus.name(),
                 (note != null && !note.trim().isEmpty()) ? " Note: " + note.trim() : "");
 
         SupplierMessage systemMessage = SupplierMessage.builder()
@@ -344,6 +350,41 @@ public class SupplierCommunicationServiceImpl implements SupplierCommunicationSe
         log.info("PO {} status updated to {} via chat by {}", po.getOrderNumber(), validStatus, userEmail);
 
         return mapToMessageResponse(savedEvent);
+    }
+
+    @Override
+    @Transactional
+    public void logPurchaseOrderStatusChangeEvent(PurchaseOrder po, String oldStatus, String newStatus, String note, String userEmail) {
+        if (po == null || po.getSupplier() == null) return;
+        try {
+            User user = (userEmail != null && !userEmail.isEmpty()) ? userRepository.findByEmail(userEmail).orElse(null) : null;
+            String senderRole = getUserPrimaryRole(user);
+            String senderName = user != null ? (user.getFirstName() + " " + (user.getLastName() != null ? user.getLastName() : "")).trim() : "System";
+
+            SupplierConversation conversation = getOrCreateConversationEntity(po.getSupplier().getId());
+
+            String eventText = String.format("Purchase Order %s status updated from %s to %s.%s",
+                    po.getOrderNumber(), oldStatus, newStatus,
+                    (note != null && !note.trim().isEmpty()) ? " Note: " + note.trim() : "");
+
+            SupplierMessage systemMessage = SupplierMessage.builder()
+                    .conversation(conversation)
+                    .senderUser(user)
+                    .senderName(senderName)
+                    .senderRole(senderRole)
+                    .messageType("SYSTEM_EVENT")
+                    .content(eventText)
+                    .purchaseOrder(po)
+                    .isReadByAdmin(true)
+                    .isReadBySupplier(true)
+                    .build();
+
+            messageRepository.save(systemMessage);
+            conversation.setLastMessageAt(LocalDateTime.now());
+            conversationRepository.save(conversation);
+        } catch (Exception e) {
+            log.warn("Could not log PO status change event to supplier conversation: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -418,7 +459,7 @@ public class SupplierCommunicationServiceImpl implements SupplierCommunicationSe
                 .filter(po -> po.getSupplier() != null && po.getSupplier().getId().equals(conv.getSupplier().getId()))
                 .collect(Collectors.toList());
 
-        long activeOrders = pos.stream().filter(po -> !"DELIVERED".equalsIgnoreCase(po.getStatus()) && !"CANCELLED".equalsIgnoreCase(po.getStatus())).count();
+        long activeOrders = pos.stream().filter(po -> po.getStatus() != PurchaseOrderStatus.RECEIVED && po.getStatus() != PurchaseOrderStatus.CANCELLED).count();
         String lastOrderNum = pos.isEmpty() ? null : pos.get(pos.size() - 1).getOrderNumber();
 
         return SupplierConversationResponse.builder()
@@ -465,7 +506,7 @@ public class SupplierCommunicationServiceImpl implements SupplierCommunicationSe
                 .purchaseOrderId(po != null ? po.getId() : null)
                 .purchaseOrderNumber(po != null ? po.getOrderNumber() : null)
                 .purchaseOrderTotal(po != null ? po.getTotalAmount() : null)
-                .purchaseOrderStatus(po != null ? po.getStatus() : null)
+                .purchaseOrderStatus(po != null && po.getStatus() != null ? po.getStatus().name() : null)
                 .isReadByAdmin(msg.getIsReadByAdmin())
                 .isReadBySupplier(msg.getIsReadBySupplier())
                 .createdAt(msg.getCreatedAt())

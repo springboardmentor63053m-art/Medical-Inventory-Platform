@@ -104,7 +104,7 @@ export const supplierCommunicationService = {
   },
 
   updatePOStatusFromChat: async (poId, status, note = '') => {
-    const response = await apiClient.post(`/supplier-communications/purchase-orders/${poId}/update-status`, {
+    const response = await apiClient.patch(`/purchase-orders/${poId}/status`, {
       status,
       note,
     });

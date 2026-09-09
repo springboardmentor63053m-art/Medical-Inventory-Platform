@@ -18,4 +18,5 @@ public interface SupplierService {
     List<SupplierResponse.SuppliedMedicineDto> getMySupplierMedicines(String email);
     SupplierResponse addMedicineToSupplierByEmail(String email, Long medicineId);
     SupplierResponse removeMedicineFromSupplierByEmail(String email, Long medicineId);
+    SupplierResponse getSupplierByEmail(String email);
 }

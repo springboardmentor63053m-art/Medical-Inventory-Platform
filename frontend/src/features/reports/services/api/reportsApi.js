@@ -76,8 +76,9 @@ export const reportsApi = {
 
   downloadInventoryReport: async () => {
     const response = await apiClient.get(
-      '/reports/inventory.csv',
+      '/reports/inventory',
       {
+        params: { format: 'csv' },
         responseType: 'blob',
       }
     );
@@ -98,9 +99,9 @@ export const reportsApi = {
     );
 
     const response = await apiClient.get(
-      '/reports/expiry.csv',
+      '/reports/expiry',
       {
-        params: { days: safeDays },
+        params: { days: safeDays, format: 'csv' },
         responseType: 'blob',
       }
     );

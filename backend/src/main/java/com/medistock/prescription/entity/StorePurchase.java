@@ -43,8 +43,9 @@ public class StorePurchase {
     private BigDecimal totalAmount;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 30)
-    private String paymentMethod = "CASH";
+    private PaymentMethod paymentMethod = PaymentMethod.CASH;
 
     @Builder.Default
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -21,5 +21,6 @@ public interface SupplierCommunicationService {
     SupplierMessageResponse sendMessageBySupplierIdentifier(String supplierIdentifier, CreateSupplierMessageRequest request, MultipartFile attachment, String userEmail);
     void markAsRead(Long conversationId, String userEmail);
     SupplierMessageResponse updatePOStatusFromChat(Long purchaseOrderId, String newStatus, String note, String userEmail);
+    void logPurchaseOrderStatusChangeEvent(com.medistock.purchase.entity.PurchaseOrder po, String oldStatus, String newStatus, String note, String userEmail);
     long getUnreadCount(String userEmail);
 }

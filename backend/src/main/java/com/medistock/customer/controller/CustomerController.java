@@ -66,6 +66,10 @@ public class CustomerController {
         return ResponseEntity.ok(purchases);
     }
 
+    /**
+     * PUT /api/customers/{id}/status:
+     * Represents full replacement of the customer's status sub-resource.
+     */
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
     public ResponseEntity<CustomerDTO> updateCustomerStatus(
@@ -77,14 +81,18 @@ public class CustomerController {
         return ResponseEntity.ok(dto);
     }
 
+    /**
+     * PATCH /api/customers/{id}:
+     * Represents partial modification of the Customer resource itself.
+     * Supports selective modification of mutable customer fields (name, phone, email, address, status).
+     */
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST')")
     public ResponseEntity<CustomerDTO> patchCustomer(
             @PathVariable("id") Long id,
-            @RequestBody Map<String, String> body
+            @RequestBody Map<String, Object> body
     ) {
-        String status = body.getOrDefault("status", "ACTIVE");
-        CustomerDTO dto = customerService.updateCustomerStatus(id, status);
+        CustomerDTO dto = customerService.patchCustomer(id, body);
         return ResponseEntity.ok(dto);
     }
 }

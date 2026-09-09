@@ -205,6 +205,14 @@ public class SupplierServiceImpl implements SupplierService {
         return unlinkMedicineFromSupplier(supplier.getId(), medicineId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public SupplierResponse getSupplierByEmail(String email) {
+        Supplier supplier = supplierRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier account not found for email: " + email));
+        return mapToResponse(supplier);
+    }
+
     private SupplierResponse mapToResponse(Supplier supplier) {
         List<SupplierResponse.SuppliedMedicineDto> suppliedMedicines = null;
         if (supplier.getMedicines() != null && !supplier.getMedicines().isEmpty()) {

@@ -30,26 +30,13 @@ public class NotificationController {
 
     @PatchMapping("/{id}/read")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
-    public ResponseEntity<NotificationResponse> markAsReadPatch(@PathVariable Long id) {
-        return ResponseEntity.ok(notificationService.markAsRead(id));
-    }
-
-    @PostMapping("/{id}/read")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
-    public ResponseEntity<NotificationResponse> markAsReadPost(@PathVariable Long id) {
+    public ResponseEntity<NotificationResponse> markAsRead(@PathVariable Long id) {
         return ResponseEntity.ok(notificationService.markAsRead(id));
     }
 
     @PatchMapping("/read-all")
     @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
-    public ResponseEntity<Void> markAllAsReadPatch() {
-        notificationService.markAllAsRead();
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/read-all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PHARMACIST', 'STAFF')")
-    public ResponseEntity<Void> markAllAsReadPost() {
+    public ResponseEntity<Void> markAllAsRead() {
         notificationService.markAllAsRead();
         return ResponseEntity.ok().build();
     }

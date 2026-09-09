@@ -10,6 +10,7 @@ public interface PurchaseOrderService {
     List<PurchaseOrderResponse> getAllPurchaseOrders();
     PurchaseOrderResponse getPurchaseOrderById(Long id);
     PurchaseOrderResponse updatePurchaseOrderStatus(Long id, String status);
+    PurchaseOrderResponse updatePurchaseOrderStatus(Long id, String status, String note);
     void deletePurchaseOrder(Long id);
         PurchaseOrderResponse receivePurchaseOrder(
             Long id,

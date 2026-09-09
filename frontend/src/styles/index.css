@@ -81,7 +81,9 @@
 }
 
 .dark .bg-slate-50,
-[data-theme='dark'] .bg-slate-50 {
+.dark .bg-slate-50\/80,
+[data-theme='dark'] .bg-slate-50,
+[data-theme='dark'] .bg-slate-50\/80 {
   background-color: var(--bg-app) !important;
 }
 
@@ -169,19 +171,27 @@
 
 /* Tinted Badges / Category Chips in Dark Mode */
 .dark .bg-blue-50,
+.dark .bg-blue-50\/70,
 .dark .bg-blue-100,
 [data-theme='dark'] .bg-blue-50,
+[data-theme='dark'] .bg-blue-50\/70,
 [data-theme='dark'] .bg-blue-100 {
   background-color: rgba(30, 58, 138, 0.4) !important;
   color: #93c5fd !important;
   border-color: rgba(30, 64, 175, 0.5) !important;
 }
 .dark .bg-purple-50,
+.dark .bg-purple-50\/60,
 .dark .bg-purple-100,
 [data-theme='dark'] .bg-purple-50,
+[data-theme='dark'] .bg-purple-50\/60,
 [data-theme='dark'] .bg-purple-100 {
   background-color: rgba(88, 28, 135, 0.4) !important;
   color: #d8b4fe !important;
+  border-color: rgba(126, 34, 206, 0.5) !important;
+}
+.dark .border-purple-200\/60,
+[data-theme='dark'] .border-purple-200\/60 {
   border-color: rgba(126, 34, 206, 0.5) !important;
 }
 .dark .bg-emerald-50,
