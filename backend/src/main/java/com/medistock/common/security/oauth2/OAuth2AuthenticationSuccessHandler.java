@@ -13,7 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-
+import org.springframework.beans.factory.annotation.Value;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +26,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+
+    @Value("${FRONTEND_URL:http://localhost:5173}")
+    private String frontendUrl;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
@@ -45,7 +48,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         UserPrincipal userPrincipal = UserPrincipal.create(user);
         String token = jwtService.generateToken(userPrincipal);
 
-        String redirectUrl = "http://localhost:5173/login?oauthToken=" + URLEncoder.encode(token, StandardCharsets.UTF_8)
+        String redirectUrl = frontendUrl + "/login?oauthToken=" + URLEncoder.encode(token, StandardCharsets.UTF_8)
                 + "&email=" + URLEncoder.encode(user.getEmail(), StandardCharsets.UTF_8);
 
         log.info("OAuth2 login successful for user {}, redirecting to {}", email, redirectUrl);
