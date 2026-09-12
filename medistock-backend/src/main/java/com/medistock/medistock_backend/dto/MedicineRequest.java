@@ -23,6 +23,9 @@ public class MedicineRequest {
     @Positive(message = "Price must be positive")
     private BigDecimal price;
 
+    private BigDecimal unitPrice;
+    private BigDecimal sellingPrice;
+
     private LocalDate expiryDate;
     private String batchNumber;
 

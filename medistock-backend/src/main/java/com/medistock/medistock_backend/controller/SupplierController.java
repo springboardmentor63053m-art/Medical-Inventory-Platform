@@ -1,6 +1,7 @@
 package com.medistock.medistock_backend.controller;
 
 import com.medistock.medistock_backend.dto.ApiResponse;
+import com.medistock.medistock_backend.dto.MedicineResponse;
 import com.medistock.medistock_backend.dto.SupplierDto;
 import com.medistock.medistock_backend.service.SupplierService;
 import jakarta.validation.Valid;
@@ -27,6 +28,11 @@ public class SupplierController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<SupplierDto>> getSupplierById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("Supplier retrieved successfully", supplierService.getSupplierById(id)));
+    }
+
+    @GetMapping("/{id}/medicines")
+    public ResponseEntity<ApiResponse<List<MedicineResponse>>> getSupplierMedicines(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("Supplier medicines retrieved successfully", supplierService.getSupplierMedicines(id)));
     }
 
     @PostMapping

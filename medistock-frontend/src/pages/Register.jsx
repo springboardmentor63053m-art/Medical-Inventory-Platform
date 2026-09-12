@@ -18,6 +18,10 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));

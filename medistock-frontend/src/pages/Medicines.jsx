@@ -12,7 +12,8 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
-  RotateCcw
+  RotateCcw,
+  Tag
 } from 'lucide-react';
 
 const Medicines = () => {
@@ -75,6 +76,57 @@ const Medicines = () => {
   const [supplierFormError, setSupplierFormError] = useState('');
   const [createNewFormulation, setCreateNewFormulation] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+
+  // Bulk selling price modal states
+  const [bulkPriceModalOpen, setBulkPriceModalOpen] = useState(false);
+  const [bulkSupplierId, setBulkSupplierId] = useState('');
+  const [bulkMode, setBulkMode] = useState('MARKUP');
+  const [bulkValue, setBulkValue] = useState('');
+  const [submittingBulk, setSubmittingBulk] = useState(false);
+  const [bulkFormError, setBulkFormError] = useState('');
+
+  const openBulkPriceModal = () => {
+    setBulkSupplierId(selectedSupplier || suppliers[0]?.id?.toString() || '');
+    setBulkMode('MARKUP');
+    setBulkValue('20');
+    setBulkFormError('');
+    setBulkPriceModalOpen(true);
+  };
+
+  const handleBulkPriceSubmit = async (e) => {
+    e.preventDefault();
+    if (!bulkSupplierId) {
+      setBulkFormError('Please select a supplier');
+      return;
+    }
+    if (!bulkValue || parseFloat(bulkValue) <= 0) {
+      setBulkFormError('Please enter a valid positive value');
+      return;
+    }
+
+    try {
+      setSubmittingBulk(true);
+      setBulkFormError('');
+      const params = {};
+      if (bulkMode === 'MARKUP') {
+        params.markupPercentage = parseFloat(bulkValue);
+      } else {
+        params.fixedSellingPrice = parseFloat(bulkValue);
+      }
+
+      const response = await api.put(`/medicines/suppliers/${bulkSupplierId}/bulk-selling-price`, null, { params });
+      if (response.data.success) {
+        setBulkPriceModalOpen(false);
+        fetchMedicines();
+      } else {
+        setBulkFormError(response.data.message || 'Failed to update selling prices');
+      }
+    } catch (err) {
+      setBulkFormError(err.response?.data?.message || err.message || 'Error updating selling prices');
+    } finally {
+      setSubmittingBulk(false);
+    }
+  };
 
   const openSupplierAddModal = async (med = null) => {
     setSupplierFormError('');
@@ -284,6 +336,8 @@ const Medicines = () => {
       code: '',
       genericName: '',
       manufacturer: '',
+      unitPrice: '',
+      sellingPrice: '',
       price: '',
       expiryDate: '',
       batchNumber: '',
@@ -305,7 +359,9 @@ const Medicines = () => {
       code: medicine.code,
       genericName: medicine.genericName || '',
       manufacturer: medicine.manufacturer || '',
-      price: medicine.price.toString(),
+      unitPrice: medicine.unitPrice != null ? medicine.unitPrice.toString() : '',
+      sellingPrice: medicine.sellingPrice != null ? medicine.sellingPrice.toString() : (medicine.price != null ? medicine.price.toString() : ''),
+      price: medicine.price != null ? medicine.price.toString() : '',
       expiryDate: medicine.expiryDate || '',
       batchNumber: medicine.batchNumber || '',
       categoryId: medicine.category?.id || '',
@@ -330,8 +386,14 @@ const Medicines = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.code.trim() || !formData.price) {
-      setFormError('Name, Code, and Price are required fields.');
+    if (!formData.name.trim() || !formData.code.trim()) {
+      setFormError('Name and Code are required fields.');
+      return;
+    }
+
+    const effectiveSelling = formData.sellingPrice || formData.price;
+    if (!effectiveSelling) {
+      setFormError('Selling price is required.');
       return;
     }
 
@@ -340,7 +402,9 @@ const Medicines = () => {
 
     const payload = {
       ...formData,
-      price: parseFloat(formData.price),
+      unitPrice: formData.unitPrice ? parseFloat(formData.unitPrice) : null,
+      sellingPrice: parseFloat(effectiveSelling),
+      price: parseFloat(effectiveSelling),
       categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
       supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
       initialQuantity: parseInt(formData.initialQuantity) || 0,
@@ -512,6 +576,13 @@ const Medicines = () => {
             <span>Reset</span>
           </button>
 
+          {canModify && !isSupplier && (
+            <button className="btn btn-secondary" onClick={openBulkPriceModal} style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Tag size={16} />
+              <span>Bulk Set Sell Price</span>
+            </button>
+          )}
+
           {canModify && (
             <button className="btn btn-primary" onClick={openCreateModal} style={{ height: '42px' }}>
               <Plus size={16} />
@@ -561,7 +632,7 @@ const Medicines = () => {
                         {getSortIcon('CATEGORY')}
                       </div>
                     </th>
-                    <th className="col-price" style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>Price</th>
+                    <th className="col-price" style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#0f172a' }}>{isSupplier ? 'Price' : 'Purchase / Selling Price'}</th>
                     <th
                       className="col-stock"
                       onClick={() => handleSort('QUANTITY')}
@@ -598,7 +669,22 @@ const Medicines = () => {
                       </td>
                       <td style={{ color: 'var(--text-secondary)' }}>{med.genericName || 'N/A'}</td>
                       <td>{med.category?.name || 'Unassigned'}</td>
-                      <td><strong>{formatCurrency(med.price)}</strong></td>
+                      <td>
+                        {isSupplier ? (
+                          <strong>{formatCurrency(med.price)}</strong>
+                        ) : (
+                          <>
+                            <div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Buy: </span>
+                              <strong>{med.unitPrice != null ? formatCurrency(med.unitPrice) : 'N/A'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sell: </span>
+                              <strong>{med.sellingPrice != null ? formatCurrency(med.sellingPrice) : (med.price != null ? formatCurrency(med.price) : <span style={{ color: '#f59e0b', fontStyle: 'italic' }}>Unset</span>)}</strong>
+                            </div>
+                          </>
+                        )}
+                      </td>
                       <td><strong>{med.currentStock || 0} unit(s)</strong></td>
                       <td>{renderStockBadge(med)}</td>
                       <td>{med.expiryDate || 'N/A'}</td>
@@ -769,20 +855,36 @@ const Medicines = () => {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="price">Unit Price (INR) *</label>
+                  <label htmlFor="unitPrice">Purchase/Buying Cost (INR)</label>
                   <input
                     type="number"
                     step="0.01"
-                    id="price"
-                    name="price"
-                    value={formData.price}
+                    id="unitPrice"
+                    name="unitPrice"
+                    value={formData.unitPrice || ''}
                     onChange={handleInputChange}
-                    placeholder="0.00"
-                    required
+                    placeholder="e.g. 45.00"
                     disabled={submitting}
                   />
                 </div>
 
+                <div className="form-group">
+                  <label htmlFor="sellingPrice">Retail Selling Price (INR) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    id="sellingPrice"
+                    name="sellingPrice"
+                    value={formData.sellingPrice || formData.price || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 60.00"
+                    required
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="expiryDate">Expiry Date</label>
                   <input
@@ -1047,6 +1149,95 @@ const Medicines = () => {
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submittingSupplierMed}>
                   {submittingSupplierMed ? 'Saving...' : 'Save to Supply List'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Selling Price Modal */}
+      {bulkPriceModalOpen && (
+        <div className="modal-overlay">
+          <div className="card modal-content" style={{ maxWidth: '520px' }}>
+            <div className="card-header-flex">
+              <h3 style={{ fontFamily: 'Outfit, sans-serif' }}>Bulk Set Selling Price by Supplier</h3>
+              <button className="btn-icon" onClick={() => setBulkPriceModalOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {bulkFormError && <div className="alert alert-danger">{bulkFormError}</div>}
+
+            <form onSubmit={handleBulkPriceSubmit}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label>Select Supplier *</label>
+                <select
+                  value={bulkSupplierId}
+                  onChange={(e) => setBulkSupplierId(e.target.value)}
+                  disabled={submittingBulk}
+                  required
+                >
+                  <option value="">Select Supplier</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label>Pricing Mode *</label>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 'normal', fontSize: '0.85rem' }}>
+                    <input
+                      type="radio"
+                      name="bulkMode"
+                      value="MARKUP"
+                      checked={bulkMode === 'MARKUP'}
+                      onChange={() => setBulkMode('MARKUP')}
+                    />
+                    Percentage Markup (+%) over Buying Price
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 'normal', fontSize: '0.85rem' }}>
+                    <input
+                      type="radio"
+                      name="bulkMode"
+                      value="FIXED"
+                      checked={bulkMode === 'FIXED'}
+                      onChange={() => setBulkMode('FIXED')}
+                    />
+                    Flat Selling Price (INR)
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label>
+                  {bulkMode === 'MARKUP' ? 'Markup Percentage (%) *' : 'Flat Retail Selling Price (INR) *'}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={bulkValue}
+                  onChange={(e) => setBulkValue(e.target.value)}
+                  placeholder={bulkMode === 'MARKUP' ? 'e.g. 20 (for +20% markup)' : 'e.g. 50.00'}
+                  disabled={submittingBulk}
+                  required
+                />
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  {bulkMode === 'MARKUP' 
+                    ? 'All medicines from this supplier will have selling price set to Buying Cost + % Markup.' 
+                    : 'All medicines from this supplier will be updated to this exact retail selling price.'}
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setBulkPriceModalOpen(false)} disabled={submittingBulk}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submittingBulk}>
+                  {submittingBulk ? 'Updating...' : 'Apply Bulk Selling Price'}
                 </button>
               </div>
             </form>

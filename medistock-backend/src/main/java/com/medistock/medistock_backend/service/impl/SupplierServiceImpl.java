@@ -1,7 +1,10 @@
 package com.medistock.medistock_backend.service.impl;
 
+import com.medistock.medistock_backend.dto.CategoryDto;
+import com.medistock.medistock_backend.dto.MedicineResponse;
 import com.medistock.medistock_backend.dto.SupplierDto;
 import com.medistock.medistock_backend.entity.Supplier;
+import com.medistock.medistock_backend.entity.SupplierMedicine;
 import com.medistock.medistock_backend.exception.BadRequestException;
 import com.medistock.medistock_backend.exception.ResourceNotFoundException;
 import com.medistock.medistock_backend.repository.SupplierRepository;
@@ -37,6 +40,18 @@ public class SupplierServiceImpl implements SupplierService {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + id));
         return mapToDto(supplier);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MedicineResponse> getSupplierMedicines(Long supplierId) {
+        if (!supplierRepository.existsById(supplierId)) {
+            throw new ResourceNotFoundException("Supplier not found with id: " + supplierId);
+        }
+        List<SupplierMedicine> list = supplierMedicineRepository.findBySupplierId(supplierId);
+        return list.stream()
+                .map(this::mapSupplierMedicineToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -93,6 +108,34 @@ public class SupplierServiceImpl implements SupplierService {
                 .email(supplier.getEmail())
                 .phone(supplier.getPhone())
                 .address(supplier.getAddress())
+                .build();
+    }
+
+    private MedicineResponse mapSupplierMedicineToResponse(SupplierMedicine sm) {
+        CategoryDto categoryDto = sm.getCategory() != null ?
+                CategoryDto.builder()
+                        .id(sm.getCategory().getId())
+                        .name(sm.getCategory().getName())
+                        .description(sm.getCategory().getDescription())
+                        .build() : null;
+
+        SupplierDto supplierDto = sm.getSupplier() != null ? mapToDto(sm.getSupplier()) : null;
+        Integer supplierQty = sm.getAvailableQuantity() != null ? sm.getAvailableQuantity() : 0;
+
+        return MedicineResponse.builder()
+                .id(sm.getId())
+                .name(sm.getName())
+                .code(sm.getCode())
+                .genericName(sm.getGenericName())
+                .manufacturer(sm.getManufacturer())
+                .price(sm.getPrice())
+                .expiryDate(sm.getExpiryDate())
+                .batchNumber(sm.getBatchNumber())
+                .category(categoryDto)
+                .supplier(supplierDto)
+                .currentStock(supplierQty)
+                .reorderLevel(10)
+                .supplierAvailableQuantity(supplierQty)
                 .build();
     }
 }

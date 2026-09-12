@@ -31,6 +31,12 @@ public class Medicine {
 
     private String manufacturer;
 
+    @Column(name = "unit_price", precision = 10, scale = 2)
+    private BigDecimal unitPrice;
+
+    @Column(name = "selling_price", precision = 10, scale = 2)
+    private BigDecimal sellingPrice;
+
     @Column(precision = 10, scale = 2)
     private BigDecimal price;
 

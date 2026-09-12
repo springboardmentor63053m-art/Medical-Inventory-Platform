@@ -1,3 +1,4 @@
 medistock-frontend/node_modules
 medistock-frontend/dist/
 .vscode/
+medistock-frontend/.env

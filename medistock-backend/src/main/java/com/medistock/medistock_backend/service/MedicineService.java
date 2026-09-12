@@ -5,6 +5,7 @@ import com.medistock.medistock_backend.dto.MedicineRequest;
 import com.medistock.medistock_backend.dto.MedicineResponse;
 import org.springframework.data.domain.Page;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface MedicineService {
@@ -17,4 +18,5 @@ public interface MedicineService {
     MedicineResponse createMedicine(MedicineRequest medicineRequest);
     MedicineResponse updateMedicine(Long id, MedicineRequest medicineRequest);
     void deleteMedicine(Long id);
+    void bulkUpdateSupplierSellingPrice(Long supplierId, BigDecimal markupPercentage, BigDecimal fixedSellingPrice);
 }

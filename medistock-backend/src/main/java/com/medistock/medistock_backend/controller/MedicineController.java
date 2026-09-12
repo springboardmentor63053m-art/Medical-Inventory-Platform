@@ -69,4 +69,14 @@ public class MedicineController {
         medicineService.deleteMedicine(id);
         return ResponseEntity.ok(ApiResponse.success("Medicine deleted successfully", null));
     }
+
+    @PutMapping("/suppliers/{supplierId}/bulk-selling-price")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> bulkUpdateSupplierSellingPrice(
+            @PathVariable Long supplierId,
+            @RequestParam(required = false) java.math.BigDecimal markupPercentage,
+            @RequestParam(required = false) java.math.BigDecimal fixedSellingPrice) {
+        medicineService.bulkUpdateSupplierSellingPrice(supplierId, markupPercentage, fixedSellingPrice);
+        return ResponseEntity.ok(ApiResponse.success("Bulk selling prices updated successfully", null));
+    }
 }

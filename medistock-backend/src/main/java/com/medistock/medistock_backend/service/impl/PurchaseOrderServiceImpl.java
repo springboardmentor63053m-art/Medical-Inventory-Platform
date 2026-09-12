@@ -195,20 +195,26 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                     }
 
                     Medicine adminMed;
+                    BigDecimal poPurchasePrice = item.getUnitPrice() != null ? item.getUnitPrice() : supplierMed.getPrice();
                     if (adminMedOpt.isPresent()) {
-                        // Case B: Medicine exists — just increase quantity
+                        // Case B: Medicine exists — update unitPrice (buying cost), NEVER overwrite sellingPrice
                         adminMed = adminMedOpt.get();
+                        adminMed.setUnitPrice(poPurchasePrice);
+                        adminMed = medicineRepository.save(adminMed);
                     } else {
                         // Case A: Medicine is new — create it in Admin
+                        // set unitPrice = poPurchasePrice, leave sellingPrice null (unassigned)
                         adminMed = Medicine.builder()
                                 .name(supplierMed.getName())
                                 .code(supplierMed.getCode())
                                 .genericName(supplierMed.getGenericName())
                                 .manufacturer(supplierMed.getManufacturer())
-                                .price(supplierMed.getPrice())
+                                .unitPrice(poPurchasePrice)
+                                .sellingPrice(null)
                                 .expiryDate(supplierMed.getExpiryDate())
                                 .batchNumber(supplierMed.getBatchNumber())
                                 .category(supplierMed.getCategory())
+                                .supplier(order.getSupplier())
                                 .build();
                         adminMed = medicineRepository.save(adminMed);
                     }

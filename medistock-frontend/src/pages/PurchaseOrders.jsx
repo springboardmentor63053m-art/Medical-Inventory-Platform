@@ -84,7 +84,7 @@ const PurchaseOrders = () => {
       return;
     }
     try {
-      const res = await api.get('/medicines', { params: { supplierId } });
+      const res = await api.get(`/suppliers/${supplierId}/medicines`);
       if (res.data.success) {
         const rawMedicines = res.data.data || [];
         const uniqueMedicines = [];
@@ -834,11 +834,13 @@ const PurchaseOrders = () => {
                     <input
                       type="number"
                       step="0.01"
-                      placeholder="Price"
+                      placeholder="Supplier Price"
                       value={item.unitPrice}
-                      onChange={(e) => handleLineItemChange(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      readOnly={true}
+                      disabled={true}
+                      title="Purchase price is locked to the price set by the supplier"
+                      style={{ cursor: 'not-allowed', opacity: 0.8, backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
                       required
-                      disabled={submitting}
                     />
 
                     <button 

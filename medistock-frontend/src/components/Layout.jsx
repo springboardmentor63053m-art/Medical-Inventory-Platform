@@ -52,14 +52,28 @@ const Layout = () => {
     logout();
   };
 
+  const getUserThemeKey = (u) => {
+    const userIdentifier = u?.id ? `id_${u.id}` : u?.username ? `user_${u.username}` : 'guest';
+    return `medistock_theme_${userIdentifier}`;
+  };
+
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('medistock_theme') || 'dark';
+    const key = getUserThemeKey(user);
+    return localStorage.getItem(key) || 'dark';
   });
 
   useEffect(() => {
+    const key = getUserThemeKey(user);
+    const savedTheme = localStorage.getItem(key) || 'dark';
+    setTheme(savedTheme);
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, [user?.id, user?.username]);
+
+  useEffect(() => {
+    const key = getUserThemeKey(user);
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('medistock_theme', theme);
-  }, [theme]);
+    localStorage.setItem(key, theme);
+  }, [theme, user?.id, user?.username]);
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));

@@ -15,6 +15,10 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }, []);
+
+  useEffect(() => {
     if (isAuthenticated) {
       navigate('/', { replace: true });
     }

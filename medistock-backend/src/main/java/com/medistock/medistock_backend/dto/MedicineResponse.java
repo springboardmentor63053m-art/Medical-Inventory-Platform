@@ -21,6 +21,8 @@ public class MedicineResponse {
     private String genericName;
     private String manufacturer;
     private BigDecimal price;
+    private BigDecimal unitPrice;
+    private BigDecimal sellingPrice;
     private LocalDate expiryDate;
     private String batchNumber;
     private CategoryDto category;

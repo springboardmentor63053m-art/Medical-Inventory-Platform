@@ -1,5 +1,6 @@
 package com.medistock.medistock_backend.service.impl;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import com.medistock.medistock_backend.dto.CategoryDto;
 import com.medistock.medistock_backend.dto.MedicineFilterRequest;
@@ -244,12 +245,17 @@ public class MedicineServiceImpl implements MedicineService {
                     .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + request.getSupplierId()));
         }
 
+        BigDecimal effectiveUnitPrice = request.getUnitPrice();
+        BigDecimal effectiveSellingPrice = request.getSellingPrice() != null ? request.getSellingPrice() : request.getPrice();
+
         Medicine medicine = Medicine.builder()
                 .name(request.getName())
                 .code(request.getCode())
                 .genericName(request.getGenericName())
                 .manufacturer(request.getManufacturer())
-                .price(request.getPrice())
+                .unitPrice(effectiveUnitPrice)
+                .sellingPrice(effectiveSellingPrice)
+                .price(request.getPrice() != null ? request.getPrice() : effectiveSellingPrice)
                 .expiryDate(request.getExpiryDate())
                 .batchNumber(request.getBatchNumber())
                 .category(category)
@@ -297,7 +303,18 @@ public class MedicineServiceImpl implements MedicineService {
         medicine.setName(request.getName());
         medicine.setGenericName(request.getGenericName());
         medicine.setManufacturer(request.getManufacturer());
-        medicine.setPrice(request.getPrice());
+
+        if (request.getUnitPrice() != null) {
+            medicine.setUnitPrice(request.getUnitPrice());
+        }
+        if (request.getSellingPrice() != null) {
+            medicine.setSellingPrice(request.getSellingPrice());
+            medicine.setPrice(request.getSellingPrice());
+        } else if (request.getPrice() != null) {
+            medicine.setSellingPrice(request.getPrice());
+            medicine.setPrice(request.getPrice());
+        }
+
         medicine.setExpiryDate(request.getExpiryDate());
         medicine.setBatchNumber(request.getBatchNumber());
 
@@ -321,6 +338,44 @@ public class MedicineServiceImpl implements MedicineService {
         batchRepository.deleteAll(batches);
 
         medicineRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void bulkUpdateSupplierSellingPrice(Long supplierId, BigDecimal markupPercentage, BigDecimal fixedSellingPrice) {
+        if (!supplierRepository.existsById(supplierId)) {
+            throw new ResourceNotFoundException("Supplier not found with id: " + supplierId);
+        }
+
+        List<Medicine> medicines = medicineRepository.findBySupplierId(supplierId);
+        for (Medicine med : medicines) {
+            BigDecimal newSellingPrice = null;
+            if (fixedSellingPrice != null && fixedSellingPrice.compareTo(BigDecimal.ZERO) > 0) {
+                newSellingPrice = fixedSellingPrice;
+            } else if (markupPercentage != null) {
+                BigDecimal baseCost = med.getUnitPrice();
+                if (baseCost == null && med.getCode() != null) {
+                    baseCost = supplierMedicineRepository
+                            .findBySupplierIdAndCode(supplierId, med.getCode())
+                            .map(SupplierMedicine::getPrice)
+                            .orElse(med.getPrice());
+                }
+                if (baseCost == null) {
+                    baseCost = med.getPrice();
+                }
+
+                if (baseCost != null) {
+                    BigDecimal multiplier = BigDecimal.ONE.add(markupPercentage.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP));
+                    newSellingPrice = baseCost.multiply(multiplier).setScale(2, java.math.RoundingMode.HALF_UP);
+                }
+            }
+
+            if (newSellingPrice != null) {
+                med.setSellingPrice(newSellingPrice);
+                med.setPrice(newSellingPrice);
+                medicineRepository.save(med);
+            }
+        }
     }
 
     private List<StockStatus> calculateStockStatus(Medicine medicine) {
@@ -377,12 +432,19 @@ public class MedicineServiceImpl implements MedicineService {
         Integer reorder = medicine.getInventory() != null ? medicine.getInventory().getReorderLevel() : 0;
 
         Integer supplierQty = 0;
+        BigDecimal supplierBuyingPrice = null;
         if (medicine.getSupplier() != null && medicine.getCode() != null) {
-            supplierQty = supplierMedicineRepository
-                    .findBySupplierIdAndCode(medicine.getSupplier().getId(), medicine.getCode())
-                    .map(sm -> sm.getAvailableQuantity() != null ? sm.getAvailableQuantity() : 0)
-                    .orElse(0);
+            Optional<SupplierMedicine> smOpt = supplierMedicineRepository
+                    .findBySupplierIdAndCode(medicine.getSupplier().getId(), medicine.getCode());
+            if (smOpt.isPresent()) {
+                SupplierMedicine sm = smOpt.get();
+                supplierQty = sm.getAvailableQuantity() != null ? sm.getAvailableQuantity() : 0;
+                supplierBuyingPrice = sm.getPrice();
+            }
         }
+
+        BigDecimal effectiveUnitPrice = medicine.getUnitPrice() != null ? medicine.getUnitPrice() : supplierBuyingPrice;
+        BigDecimal effectiveSellingPrice = medicine.getSellingPrice() != null ? medicine.getSellingPrice() : medicine.getPrice();
 
         return MedicineResponse.builder()
                 .id(medicine.getId())
@@ -390,7 +452,9 @@ public class MedicineServiceImpl implements MedicineService {
                 .code(medicine.getCode())
                 .genericName(medicine.getGenericName())
                 .manufacturer(medicine.getManufacturer())
-                .price(medicine.getPrice())
+                .unitPrice(effectiveUnitPrice)
+                .sellingPrice(effectiveSellingPrice)
+                .price(effectiveSellingPrice)
                 .expiryDate(medicine.getExpiryDate())
                 .batchNumber(medicine.getBatchNumber())
                 .category(categoryDto)
