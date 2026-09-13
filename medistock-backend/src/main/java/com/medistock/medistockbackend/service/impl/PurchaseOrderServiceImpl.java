@@ -50,6 +50,21 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
     public PurchaseOrder save(PurchaseOrder entity) {
         boolean isNew = (entity.getId() == null);
 
+        if (!isNew) {
+            PurchaseOrder existing = repository.findById(entity.getId()).orElse(null);
+            if (existing != null) {
+                if (entity.getSupplier() == null) {
+                    entity.setSupplier(existing.getSupplier());
+                }
+                if (entity.getOrderDate() == null) {
+                    entity.setOrderDate(existing.getOrderDate());
+                }
+                if (entity.getItems() == null || entity.getItems().isEmpty()) {
+                    entity.setItems(existing.getItems());
+                }
+            }
+        }
+
         if (entity.getSupplier() != null && entity.getSupplier().getId() != null) {
             Supplier fullSup = supplierRepository.findById(entity.getSupplier().getId()).orElse(null);
             if (fullSup != null) {
