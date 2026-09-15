@@ -149,6 +149,8 @@ public class WebSecurityConfig {
                     .requestMatchers(
                             "/api/auth/**",
                             "/",
+                            "/index.html",
+                            "/assets/**",
                             "/swagger-ui/**",
                             "/v3/api-docs/**"
                     ).permitAll()
