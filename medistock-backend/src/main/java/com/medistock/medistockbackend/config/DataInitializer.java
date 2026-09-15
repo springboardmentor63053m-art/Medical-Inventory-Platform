@@ -55,6 +55,11 @@ public class DataInitializer {
                     "ROLE_SUPPLIER"
             );
 
+            Role staffRole = createRoleIfNotExists(
+                    roleRepository,
+                    "ROLE_STAFF"
+            );
+
 
             // =====================================================
             // CREATE / UPDATE ADMIN
@@ -281,6 +286,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Metformin",
+                "Diabetes",
+                15.0,
                 "MED-MET-001",
                 60,
                 LocalDate.of(2028, 1, 31)
@@ -295,6 +302,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Amlodipine",
+                "Cardiovascular",
+                12.0,
                 "MED-AML-001",
                 45,
                 LocalDate.of(2027, 8, 31)
@@ -309,6 +318,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Vitamin C",
+                "Vitamins",
+                8.0,
                 "MED-VIT-001",
                 200,
                 LocalDate.of(2028, 6, 30)
@@ -323,6 +334,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Ibuprofen",
+                "Pain Relief",
+                10.0,
                 "MED-IBU-001",
                 80,
                 LocalDate.of(2027, 10, 31)
@@ -337,6 +350,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Azithromycin",
+                "Antibiotics",
+                25.0,
                 "MED-AZI-001",
                 50,
                 LocalDate.of(2027, 7, 31)
@@ -351,6 +366,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Omeprazole",
+                "Gastrointestinal",
+                18.0,
                 "MED-OME-001",
                 110,
                 LocalDate.of(2028, 2, 29)
@@ -365,6 +382,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Paracetamol",
+                "Analgesic",
+                5.0,
                 "MED-PAR-001",
                 150,
                 LocalDate.of(2027, 12, 31)
@@ -379,6 +398,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Cetirizine",
+                "Antihistamine",
+                9.0,
                 "MED-CET-001",
                 15,
                 LocalDate.of(2027, 9, 30)
@@ -393,6 +414,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Losartan",
+                "Blood Pressure",
+                14.0,
                 "MED-LOS-001",
                 10,
                 LocalDate.of(2027, 11, 30)
@@ -407,6 +430,8 @@ public class DataInitializer {
                 medicineRepository,
                 inventoryRepository,
                 "Aspirin",
+                "Analgesic",
+                6.0,
                 "MED-ASP-001",
                 0,
                 LocalDate.of(2027, 6, 30)
@@ -420,21 +445,16 @@ public class DataInitializer {
 
 
     // =============================================================
-    // CREATE SINGLE INVENTORY RECORD
+    // CREATE MEDICINE IF NEEDED
     // =============================================================
 
-    private void createInventoryIfNeeded(
+    private Medicine createMedicineIfNeeded(
             MedicineRepository medicineRepository,
-            InventoryRepository inventoryRepository,
             String medicineName,
-            String batchNumber,
-            int quantity,
+            String category,
+            Double price,
+            int stockQuantity,
             LocalDate expiryDate) {
-
-
-        // ---------------------------------------------------------
-        // FIND MEDICINE
-        // ---------------------------------------------------------
 
         Optional<Medicine> medicineOptional =
                 medicineRepository
@@ -442,24 +462,56 @@ public class DataInitializer {
                         .stream()
                         .findFirst();
 
-
-        // ---------------------------------------------------------
-        // MEDICINE NOT FOUND
-        // ---------------------------------------------------------
-
-        if (medicineOptional.isEmpty()) {
-
-            System.out.println(
-                    "Medicine not found: "
-                            + medicineName
-                            + " - inventory skipped."
-            );
-
-            return;
+        if (medicineOptional.isPresent()) {
+            return medicineOptional.get();
         }
 
+        Medicine medicine = new Medicine();
+        medicine.setName(medicineName);
+        medicine.setCategory(category);
+        medicine.setPrice(price);
+        medicine.setStockQuantity(stockQuantity);
+        medicine.setExpiryDate(expiryDate);
+        medicine.setDescription(medicineName + " tablet/capsule");
+        medicine.setDosage("Standard");
+        medicine.setPrescriptionRequired(false);
+        medicine.setPregnancySafe(true);
 
-        Medicine medicine = medicineOptional.get();
+        Medicine savedMedicine = medicineRepository.save(medicine);
+
+        System.out.println("Created medicine: " + medicineName);
+
+        return savedMedicine;
+    }
+
+
+    // =============================================================
+    // CREATE SINGLE INVENTORY RECORD
+    // =============================================================
+
+    private void createInventoryIfNeeded(
+            MedicineRepository medicineRepository,
+            InventoryRepository inventoryRepository,
+            String medicineName,
+            String category,
+            Double price,
+            String batchNumber,
+            int quantity,
+            LocalDate expiryDate) {
+
+
+        // ---------------------------------------------------------
+        // FIND OR CREATE MEDICINE
+        // ---------------------------------------------------------
+
+        Medicine medicine = createMedicineIfNeeded(
+                medicineRepository,
+                medicineName,
+                category,
+                price,
+                quantity,
+                expiryDate
+        );
 
 
         // ---------------------------------------------------------

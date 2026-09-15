@@ -145,15 +145,29 @@ public class WebSecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
-                    // Public endpoints
+                    // Public endpoints and SPA frontend routes
                     .requestMatchers(
                             "/api/auth/**",
                             "/",
                             "/index.html",
                             "/assets/**",
                             "/swagger-ui/**",
-                            "/v3/api-docs/**"
+                            "/v3/api-docs/**",
+                            "/login",
+                            "/register",
+                            "/signup",
+                            "/dashboard/**",
+                            "/admin/**",
+                            "/pharmacist/**",
+                            "/staff/**",
+                            "/supplier/**",
+                            "/medicines/**",
+                            "/inventory/**",
+                            "/suppliers/**"
                     ).permitAll()
+
+                    // Allow non-API GET requests for SPA routing
+                    .requestMatchers(req -> !req.getServletPath().startsWith("/api")).permitAll()
 
                     // Everything else requires authentication
                     .anyRequest().authenticated()
