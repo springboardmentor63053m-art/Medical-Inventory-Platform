@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-canvas: #f6f4ec;
+  --color-surface: #ffffff;
+  --color-ink: #16302c;
+  --color-ink-soft: #45564f;
+
+  --color-primary: #0f5c56;
+  --color-primary-dark: #0a3f3b;
+  --color-primary-light: #16786f;
+
+  --color-mint: #e4f1ea;
+  --color-mint-line: #c9dfd2;
+
+  --color-amber: #d9932e;
+  --color-amber-bg: #fbf0dd;
+
+  --color-coral: #d1503a;
+  --color-coral-bg: #fbe7e2;
+
+  --color-line: #ddd6c3;
+}
+
+/*
+ * Dark mode. Almost every component in this app reads colour through the
+ * CSS custom properties above (var(--color-...)) rather than hardcoded
+ * Tailwind gray/white utilities, so redefining them under a `.dark` scope
+ * on <html> re-themes the whole app without touching each component.
+ * Brand hue (teal) stays recognisable in both modes; only lightness/surface
+ * values change.
+ */
+:root.dark {
+  --color-canvas: #0d1614;
+  --color-surface: #142320;
+  --color-ink: #eef5f1;
+  --color-ink-soft: #9fb5ac;
+
+  --color-primary: #2bb3a3;
+  --color-primary-dark: #1c8478;
+  --color-primary-light: #4fd6c4;
+
+  --color-mint: #1b2a26;
+  --color-mint-line: #274038;
+
+  --color-amber: #e3a63f;
+  --color-amber-bg: #2c2415;
+
+  --color-coral: #e07862;
+  --color-coral-bg: #2e1c17;
+
+  --color-line: #27423b;
+}
+
+html, body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  transition: background-color .25s ease, color .25s ease;
+}
+
+* {
+  border-color: var(--color-line);
+}
+
+::selection {
+  background: var(--color-primary);
+  color: white;
+}
+
+.label-card {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+
+.label-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44px;
+  height: 0;
+  border-top: 1.5px dashed var(--color-line);
+  pointer-events: none;
+}
+
+.label-card .label-punch {
+  position: absolute;
+  top: 40px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line);
+}
+.label-card .label-punch.left { left: -5px; }
+.label-card .label-punch.right { right: -5px; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-mint-line); border-radius: 8px; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fade-up .4s ease both; }
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(3deg); }
+}
+.animate-float-slow { animation: float-slow 6s ease-in-out infinite; }
+
+@keyframes float-slower {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(-4deg); }
+}
+.animate-float-slower { animation: float-slower 8s ease-in-out infinite; }
+
+@keyframes blob-morph {
+  0%, 100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
+  50% { border-radius: 63% 37% 41% 59% / 55% 48% 52% 45%; }
+}
+.animate-blob { animation: blob-morph 10s ease-in-out infinite; }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 var(--color-primary-light); opacity: .55; }
+  100% { box-shadow: 0 0 0 22px transparent; opacity: 0; }
+}
+.animate-pulse-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  animation: pulse-ring 2.2s ease-out infinite;
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in { animation: scale-in .22s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up, .animate-float-slow, .animate-float-slower,
+  .animate-blob, .animate-pulse-ring::after, .animate-scale-in { animation: none; }
+}

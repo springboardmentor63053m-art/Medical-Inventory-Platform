@@ -1,0 +1,3635 @@
+{
+  "info": {
+    "_postman_id": "5b25cd15-ce6d-4a2b-a679-21c256613c5d",
+    "name": "MediStock API",
+    "description": "Covers Auth, Profile, Medicines, Suppliers, Purchases, Sales, Stock Movements, Notifications, Reports, and Admin/User Management, with positive AND negative cases for every RBAC boundary and stock-integrity guarantee this pass fixed or added. See postman/README.md for how to run this.\n\nIMPORTANT: some requests are ORDER-DEPENDENT within their folder (e.g. Register before Login, Create medicine before Update/Delete) because they capture ids/tokens into environment variables for later requests. Run each folder top-to-bottom, or use Postman's Collection Runner against the whole collection in order.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register - Staff (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Public self-registration as STAFF must succeed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"New Staff User\",\n  \"email\": \"newstaff@medistock.com\",\n  \"password\": \"password123\",\n  \"role\": \"STAFF\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('staffToken', pm.response.json().token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - Pharmacist (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Public self-registration as PHARMACIST must succeed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"New Pharmacist User\",\n  \"email\": \"newpharmacist@medistock.com\",\n  \"password\": \"password123\",\n  \"role\": \"PHARMACIST\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('pharmacistToken', pm.response.json().token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - Supplier (NEGATIVE: must be rejected)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "SECURITY REGRESSION TEST: public registration must NEVER create a SUPPLIER account, even with a real supplierId. Expects 400.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Sneaky Supplier\",\n  \"email\": \"sneaky-supplier@medistock.com\",\n  \"password\": \"password123\",\n  \"role\": \"SUPPLIER\",\n  \"supplierId\": 1\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Response indicates role is not permitted', function () {",
+                  "    pm.expect(pm.response.text()).to.match(/STAFF or PHARMACIST/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - Admin (NEGATIVE: must be rejected)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Public registration must NEVER create an ADMIN account. Expects 400.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Wannabe Admin\",\n  \"email\": \"wannabe-admin@medistock.com\",\n  \"password\": \"password123\",\n  \"role\": \"ADMIN\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - Duplicate email (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Registering an already-used email must fail. Run this AFTER 'Register - Staff (valid)'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Duplicate\",\n  \"email\": \"newstaff@medistock.com\",\n  \"password\": \"password123\",\n  \"role\": \"STAFF\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Admin (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Default seeded Admin credentials \u2014 see DataInitializer. Change these in a real deployment.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@medistock.com\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('adminToken', pm.response.json().token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Staff (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newstaff@medistock.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('staffToken', pm.response.json().token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Pharmacist (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newpharmacist@medistock.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('pharmacistToken', pm.response.json().token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Invalid password (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Expect 400/401 depending on Spring Security's configured AuthenticationEntryPoint \u2014 check whichever your build returns and keep one assertion.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@medistock.com\",\n  \"password\": \"wrong-password\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Unknown email (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nobody@medistock.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get current user (/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "OAuth2 status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/oauth2-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "oauth2-status"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot password - known email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Always returns 200 with a generic message, whether or not the email exists (no account enumeration). Check the backend console log for the reset link if email isn't configured.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newstaff@medistock.com\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot password - unknown email (same response expected)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Must return the SAME response shape/status as the known-email case above \u2014 that's the point of the test.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"definitely-nobody@medistock.com\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset password - invalid token (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Expect 400 'Invalid or expired reset link'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"not-a-real-token\",\n  \"newPassword\": \"brandNewPassword1\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Registration security, login, password reset."
+    },
+    {
+      "name": "2. Profile",
+      "item": [
+        {
+          "name": "Get my profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update my profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"New Staff User (Updated)\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change my password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "change-password"
+              ]
+            },
+            "description": "Re-using the same password as 'new' so repeated collection runs don't lock you out.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"password123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change my password - wrong current password (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "change-password"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"totally-wrong\",\n  \"newPassword\": \"somethingNew1\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Self-service profile + change password."
+    },
+    {
+      "name": "3. Medicines",
+      "item": [
+        {
+          "name": "List medicines (active only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List medicines - include inactive (Admin only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines?includeInactive=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines"
+              ],
+              "query": [
+                {
+                  "key": "includeInactive",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search medicines by name",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines?name=Paracetamol",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Paracetamol"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get medicine by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "1"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get medicine by id - not found (NEGATIVE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "999999"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Low stock medicines",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/low-stock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "low-stock"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Out of stock medicines",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/out-of-stock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "out-of-stock"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Near-expiry medicines",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/near-expiry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "near-expiry"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expired medicines",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/expired",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "expired"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create medicine (Pharmacist - valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines"
+              ]
+            },
+            "description": "Creating with quantity > 0 must log an INITIAL_STOCK movement \u2014 verify via GET /stock-movements/medicine/{id} afterward.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Medicine\",\n  \"batchNumber\": \"TEST-001\",\n  \"category\": \"Test\",\n  \"quantity\": 100,\n  \"reorderLevel\": 10,\n  \"manufacturingDate\": \"2026-01-01\",\n  \"expiryDate\": \"2027-01-01\",\n  \"price\": 15.5\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('testMedicineId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create medicine as Staff (NEGATIVE: must be 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines"
+              ]
+            },
+            "description": "SECURITY TEST: Staff must never be able to create medicines. Also verify the 'Add medicine' button is hidden for Staff in the UI.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Should Fail\",\n  \"batchNumber\": \"FAIL-001\",\n  \"quantity\": 10,\n  \"manufacturingDate\": \"2026-01-01\",\n  \"expiryDate\": \"2027-01-01\",\n  \"price\": 5\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update medicine (Pharmacist - valid)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/{{testMedicineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "{{testMedicineId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Medicine (Updated)\",\n  \"batchNumber\": \"TEST-001\",\n  \"category\": \"Test\",\n  \"quantity\": 100,\n  \"reorderLevel\": 10,\n  \"manufacturingDate\": \"2026-01-01\",\n  \"expiryDate\": \"2027-01-01\",\n  \"price\": 18.0\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update medicine - quantity change is audited",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/{{testMedicineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "{{testMedicineId}}"
+              ]
+            },
+            "description": "Changes quantity 100 -> 150. Follow up with GET /stock-movements/medicine/{{testMedicineId}} and confirm a MANUAL_ADJUSTMENT row with previousQuantity=100, newQuantity=150 exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Medicine (Updated)\",\n  \"batchNumber\": \"TEST-001\",\n  \"category\": \"Test\",\n  \"quantity\": 150,\n  \"reorderLevel\": 10,\n  \"manufacturingDate\": \"2026-01-01\",\n  \"expiryDate\": \"2027-01-01\",\n  \"price\": 18.0\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update medicine as Staff (NEGATIVE: must be 403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/{{testMedicineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "{{testMedicineId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Should Fail\",\n  \"batchNumber\": \"TEST-001\",\n  \"quantity\": 100,\n  \"manufacturingDate\": \"2026-01-01\",\n  \"expiryDate\": \"2027-01-01\",\n  \"price\": 5\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adjust stock (Pharmacist - valid)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/{{testMedicineId}}/adjust-stock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "{{testMedicineId}}",
+                "adjust-stock"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": 20,\n  \"reason\": \"Physical stock reconciliation\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adjust stock - would go negative (NEGATIVE)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/{{testMedicineId}}/adjust-stock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "{{testMedicineId}}",
+                "adjust-stock"
+              ]
+            },
+            "description": "STOCK INTEGRITY TEST: stock must never be allowed to go negative, regardless of role.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": -99999,\n  \"reason\": \"Testing negative stock guard\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message mentions insufficient stock', function () {",
+                  "    pm.expect(pm.response.text()).to.match(/Insufficient stock/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adjust stock as Staff (NEGATIVE: must be 403)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/{{testMedicineId}}/adjust-stock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "{{testMedicineId}}",
+                "adjust-stock"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": 5,\n  \"reason\": \"Should fail\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete medicine as Staff (NEGATIVE: must be 403)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/{{testMedicineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "{{testMedicineId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete medicine (Admin - soft delete if it has history)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/medicines/{{testMedicineId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "medicines",
+                "{{testMedicineId}}"
+              ]
+            },
+            "description": "If this medicine has any stock movements (it will, from the earlier requests), it's soft-deleted (active=false), not removed. Confirm via 'List medicines - include inactive'."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "CRUD, RBAC (Staff read-only), stock audit trail, negative-stock guard, soft delete."
+    },
+    {
+      "name": "4. Suppliers",
+      "item": [
+        {
+          "name": "List suppliers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Supplier directory summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers",
+                "summary"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get supplier by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers",
+                "1"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get supplier by id - not found (NEGATIVE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers",
+                "999999"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create supplier (Pharmacist - valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Supplier Co\",\n  \"contactNumber\": \"9876543210\",\n  \"email\": \"contact@testsupplier.com\",\n  \"address\": \"123 Test Street\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('testSupplierId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create supplier as Staff (NEGATIVE: must be 403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Should Fail\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update supplier",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/{{testSupplierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers",
+                "{{testSupplierId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Supplier Co (Updated)\",\n  \"contactNumber\": \"9876543210\",\n  \"email\": \"contact@testsupplier.com\",\n  \"address\": \"456 New Street\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete supplier as Pharmacist (NEGATIVE: must be 403, Admin-only)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/{{testSupplierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers",
+                "{{testSupplierId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create supplier login (Admin - valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/suppliers/{{testSupplierId}}/create-login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "suppliers",
+                "{{testSupplierId}}",
+                "create-login"
+              ]
+            },
+            "description": "The ONLY way a SUPPLIER account can be created. Compare with the rejected public-registration attempt in the Auth folder.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Test Supplier Rep\",\n  \"email\": \"rep@testsupplier.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('supplierToken', pm.response.json().token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create supplier login as Pharmacist (NEGATIVE: must be 403, Admin-only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/suppliers/{{testSupplierId}}/create-login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "suppliers",
+                "{{testSupplierId}}",
+                "create-login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Should Fail\",\n  \"email\": \"shouldfail@testsupplier.com\",\n  \"password\": \"password123\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Supplier requests the supplier directory (NEGATIVE: must be 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{supplierToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers"
+              ]
+            },
+            "description": "OWNERSHIP/IDOR TEST: a Supplier login must not be able to browse the full supplier directory (SUPPLIER is not in this endpoint's allowed roles) \u2014 it can only see its own data via GET /dashboard/supplier."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Supplier views own dashboard (valid)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{supplierToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/supplier",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "supplier"
+              ]
+            },
+            "description": "Ownership is derived entirely from the JWT server-side \u2014 there is no supplierId in this URL to tamper with, which is what prevents Supplier A from ever requesting Supplier B's data."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete supplier (Admin - valid)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/suppliers/{{testSupplierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "suppliers",
+                "{{testSupplierId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "CRUD, RBAC, supplier-login creation, ownership/ IDOR checks."
+    },
+    {
+      "name": "5. Purchases",
+      "item": [
+        {
+          "name": "List all purchases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my purchases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record purchase (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "Must: raise medicine.quantity by 50, create a Purchase row, log a PURCHASE_IN stock movement, and raise a PURCHASE_ALERT notification. Verify each via the corresponding GET endpoints.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"medicineId\": 1,\n  \"supplierId\": 1,\n  \"quantity\": 50,\n  \"unitPrice\": 8.5,\n  \"note\": \"Postman test purchase\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record purchase - invalid medicine id (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"medicineId\": 999999,\n  \"quantity\": 10,\n  \"unitPrice\": 5.0\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record purchase - invalid supplier id (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"medicineId\": 1,\n  \"supplierId\": 999999,\n  \"quantity\": 10,\n  \"unitPrice\": 5.0\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record purchase - missing required field (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/purchases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "purchases"
+              ]
+            },
+            "description": "unitPrice is @NotNull \u2014 expect a validation error.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"medicineId\": 1,\n  \"quantity\": 10\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Purchase -> stock -> movement -> notification chain."
+    },
+    {
+      "name": "6. Sales",
+      "item": [
+        {
+          "name": "List all sales (Admin/Pharmacist only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List all sales as Staff (NEGATIVE: must be 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my sales (Staff/Pharmacist)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record sale (valid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "Must validate stock for every item BEFORE writing anything, deduct stock, create Sale+SaleItems, log a DISPENSE_OUT movement per item.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Test Customer\",\n  \"items\": [\n    {\n      \"medicineId\": 1,\n      \"quantity\": 2\n    }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) { pm.environment.set('testSaleId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record sale as Admin (NEGATIVE: must be 403 - Admin doesn't sell)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Should Fail\",\n  \"items\": [\n    {\n      \"medicineId\": 1,\n      \"quantity\": 1\n    }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record sale - quantity exceeds stock (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "NEGATIVE-STOCK TEST: the sale must be fully rejected \u2014 no Sale row, no SaleItems, no stock deduction. Confirm stock is unchanged via GET /medicines/1 afterward.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Postman Test Customer\",\n  \"items\": [\n    {\n      \"medicineId\": 1,\n      \"quantity\": 999999\n    }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Error message mentions insufficient stock', function () {",
+                  "    pm.expect(pm.response.text()).to.match(/Insufficient stock/i);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record sale - unknown medicine (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Test\",\n  \"items\": [\n    {\n      \"medicineId\": 999999,\n      \"quantity\": 1\n    }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record sale - empty items list (NEGATIVE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Test\",\n  \"items\": []\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get sale by id - own bill (valid)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{testSaleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{testSaleId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get sale by id as Admin (valid - can view any bill)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/{{testSaleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "{{testSaleId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sales analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sales/analytics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sales",
+                "analytics"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Multi-item validation, insufficient-stock guard, Staff-own-bill access."
+    },
+    {
+      "name": "7. Stock Movements",
+      "item": [
+        {
+          "name": "List all stock movements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-movements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-movements"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock movements for a medicine",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock-movements/medicine/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock-movements",
+                "medicine",
+                "1"
+              ]
+            },
+            "description": "After running the Medicines/Purchases/Sales requests above against medicine id 1, this should show a mix of PURCHASE_IN / DISPENSE_OUT / MANUAL_ADJUSTMENT rows that reconcile with its current quantity."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Audit trail reads."
+    },
+    {
+      "name": "8. Notifications",
+      "item": [
+        {
+          "name": "List my notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.json().length > 0) { pm.environment.set('testNotificationId', pm.response.json()[0].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My unread count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark one notification read (affects only this user)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{testNotificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{testNotificationId}}",
+                "read"
+              ]
+            },
+            "description": "PER-USER READ STATE TEST: run 'List my notifications' as a DIFFERENT role token afterward (same notification, if targetRole=ALL) and confirm it still shows read=false there \u2014 read state must never be shared."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark all my notifications read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Per-user read state."
+    },
+    {
+      "name": "9. Reports",
+      "item": [
+        {
+          "name": "Inventory report (Admin only, CSV)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/inventory?format=csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "inventory"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "csv"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory report as Pharmacist (NEGATIVE: must be 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/inventory?format=csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "inventory"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "csv"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Expiry report (Admin/Pharmacist, XLSX)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/expiry?format=xlsx",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "expiry"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "xlsx"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Purchase history report (PDF)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/purchases?format=pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "purchases"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "pdf"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sales report (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/sales?format=csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "sales"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "csv"
+                }
+              ]
+            },
+            "description": "New this pass \u2014 was previously missing entirely."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock movement report (Admin only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/stock-movements?format=csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "stock-movements"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "csv"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Analytics report (Admin/Pharmacist)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/analytics?format=pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "analytics"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "pdf"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "CSV/XLSX/PDF downloads, RBAC per report type."
+    },
+    {
+      "name": "10. Admin",
+      "item": [
+        {
+          "name": "User activity log (Admin only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/user-activity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "user-activity"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "User activity log as Staff (NEGATIVE: must be 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/user-activity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "user-activity"
+              ]
+            },
+            "description": "ADMIN-ONLY ENDPOINT TEST: Staff must never reach Admin-only endpoints."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Active users (Admin only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/active-users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "active-users"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "User activity, active users."
+    },
+    {
+      "name": "11. Admin - User Management",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List users as Pharmacist (NEGATIVE: must be 403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{pharmacistToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search + filter users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?role=STAFF&search=staff",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "STAFF"
+                },
+                {
+                  "key": "search",
+                  "value": "staff"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate a user (valid)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{staffUserIdToManage}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{staffUserIdToManage}}",
+                "deactivate"
+              ]
+            },
+            "description": "Set the collection variable 'staffUserIdToManage' to a real, non-Admin user id first (e.g. the id from 'List users')."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate a user (valid)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{staffUserIdToManage}}/activate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{staffUserIdToManage}}",
+                "activate"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Change a user's role (valid)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{staffUserIdToManage}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{staffUserIdToManage}}",
+                "role"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"PHARMACIST\"\n}"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate the last Admin (NEGATIVE: must be rejected)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{adminUserId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{adminUserId}}",
+                "deactivate"
+              ]
+            },
+            "description": "LOCKOUT-PROTECTION TEST: set 'adminUserId' to the seeded Admin's own id (from /auth/me). If this is the only Admin account, deactivation must be rejected with 400."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change own role (NEGATIVE: must be rejected)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{adminUserId}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{adminUserId}}",
+                "role"
+              ]
+            },
+            "description": "SELF-ACTION PROTECTION TEST: an Admin (or anyone) must never be able to change their own role through this endpoint.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"STAFF\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "List/search/filter, activate/deactivate, change role, last-Admin protection."
+    }
+  ]
+}

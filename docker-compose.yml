@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: medistock_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - medistock-mysql-data:/var/lib/mysql
+      # MySQL's official image runs any .sql file here automatically the
+      # FIRST time the container starts with an empty data volume — this is
+      # what actually loads schema.sql/seed.sql into `docker compose up`,
+      # which previously started with an empty database (no medicines, no
+      # suppliers), silently skipping DataInitializer's purchase/sale
+      # seeding since it checks for existing medicines first. Order matters:
+      # 01 (schema) must run before 02 (seed data). If you change the
+      # schema, delete the `medistock-mysql-data` volume to re-trigger this
+      # on next `docker compose up` — it will NOT re-run against an
+      # already-initialized volume.
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/medistock_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      JWT_SECRET: ${JWT_SECRET:-medistockSecretKeyForJWTSigningChangeThisInProductionEnvironment123456}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      # Bootstrap Admin override — only applied on first boot (empty users table).
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Optional integrations — leave unset to keep them inactive.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      EMAIL_ALERTS_ENABLED: ${EMAIL_ALERTS_ENABLED:-false}
+      EMAIL_ALERTS_RECIPIENTS: ${EMAIL_ALERTS_RECIPIENTS:-}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8080/api
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+volumes:
+  medistock-mysql-data:
