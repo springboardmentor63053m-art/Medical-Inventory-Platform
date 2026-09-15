@@ -79,14 +79,14 @@ import StaffNotifications from "./pages/staff/StaffNotifications";
 // PHARMACIST
 // ============================================================
 
-import PharmacistLayout from "./pages/pharmacist/PharmacistLayout";
-import PharmacistDashboard from "./pages/pharmacist/PharmacistDashboard";
-import PharmacistMedicines from "./pages/pharmacist/PharmacistMedicines";
-import PharmacistOrders from "./pages/pharmacist/PharmacistOrders";
-import PharmacistPrescriptions from "./pages/pharmacist/PharmacistPrescriptions";
-import PharmacistNotifications from "./pages/pharmacist/PharmacistNotifications";
-import PharmacistActivity from "./pages/pharmacist/PharmacistActivity";
-import PharmacistDispensing from "./pages/pharmacist/PharmacistDispensing";
+import PharmacistLayout from "./pages/Pharmacist/PharmacistLayout";
+import PharmacistDashboard from "./pages/Pharmacist/PharmacistDashboard";
+import PharmacistMedicines from "./pages/Pharmacist/PharmacistMedicines";
+import PharmacistOrders from "./pages/Pharmacist/PharmacistOrders";
+import PharmacistPrescriptions from "./pages/Pharmacist/PharmacistPrescriptions";
+import PharmacistNotifications from "./pages/Pharmacist/PharmacistNotifications";
+import PharmacistActivity from "./pages/Pharmacist/PharmacistActivity";
+import PharmacistDispensing from "./pages/Pharmacist/PharmacistDispensing";
 
 // ============================================================
 // SUPPLIERS

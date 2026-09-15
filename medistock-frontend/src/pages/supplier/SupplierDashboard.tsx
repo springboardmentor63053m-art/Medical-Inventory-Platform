@@ -234,13 +234,13 @@ export default function SupplierDashboard() {
 
         setProfile({
           id: data.id ?? data.supplierId ?? 1,
-          name: data.name ?? demoProfile.name,
+          name: data.name ?? currentProfile.name,
           contact:
             data.contact ??
             data.phone ??
-            demoProfile.contact,
-          email: data.email ?? demoProfile.email,
-          address: data.address ?? demoProfile.address,
+            currentProfile.contact,
+          email: data.email ?? currentProfile.email,
+          address: data.address ?? currentProfile.address,
         });
       }
 

@@ -237,9 +237,9 @@ export default function UserDashboard() {
       }
 
       const userName =
-        currentUser?.name ||
+        (currentUser as any)?.name ||
         currentUser?.username ||
-        currentUser?.fullName ||
+        (currentUser as any)?.fullName ||
         localStorage.getItem("username") ||
         "Customer";
 

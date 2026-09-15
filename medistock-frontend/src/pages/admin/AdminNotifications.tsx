@@ -291,7 +291,7 @@ const AdminNotifications = () => {
   };
 
   const refreshNotifications = () => {
-    setNotifications([...initialNotifications]);
+    fetchNotifications();
     setSearch("");
     setFilter("ALL");
   };
