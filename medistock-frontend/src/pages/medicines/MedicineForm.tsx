@@ -99,9 +99,10 @@ export const MedicineForm = () => {
           : null,
       };
 
+      const apiBase = import.meta.env.VITE_API_URL || "/api";
       const url = isEditMode && id
-        ? `http://localhost:8081/api/medicines/${id}`
-        : "http://localhost:8081/api/medicines";
+        ? `${apiBase}/medicines/${id}`
+        : `${apiBase}/medicines`;
 
       const response = await fetch(url, {
         method: isEditMode ? "PUT" : "POST",

@@ -13,7 +13,7 @@ import {
   Package,
 } from "lucide-react";
 
-const API_URL = "http://localhost:8081/api/auth";
+const API_URL = (import.meta.env.VITE_API_URL || "/api") + "/auth";
 
 type Role =
   | "ADMIN"

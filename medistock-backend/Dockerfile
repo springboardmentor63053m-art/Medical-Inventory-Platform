@@ -1,23 +1,46 @@
 # =========================================================
-# Standalone Backend Dockerfile for Spring Boot 3 on Render
+# Build Frontend
 # =========================================================
+FROM node:22-alpine AS frontend-build
 
-# Stage 1: Build
-FROM maven:3.9.6-eclipse-temurin-17-alpine AS build
-WORKDIR /app
+WORKDIR /app/frontend
 
-COPY pom.xml ./
-COPY src ./src
+COPY medistock-frontend/package*.json ./
+RUN npm install
+
+COPY medistock-frontend/ ./
+
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN npm run build
+
+
+# =========================================================
+# Build Backend
+# =========================================================
+FROM maven:3.9.6-eclipse-temurin-17-alpine AS backend-build
+
+WORKDIR /app/backend
+
+COPY medistock-backend/pom.xml ./
+COPY medistock-backend/src ./src
+
+# Copy React build into Spring Boot static folder
+COPY --from=frontend-build /app/frontend/dist ./src/main/resources/static/
 
 RUN mvn clean package -DskipTests
 
-# Stage 2: Runtime
+
+# =========================================================
+# Run Application
+# =========================================================
 FROM eclipse-temurin:17-jre-alpine
+
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=backend-build /app/backend/target/*.jar app.jar
 
 EXPOSE 8081
 
-# Dynamically bind server port to Render's PORT environment variable
 CMD ["sh", "-c", "java -Dserver.port=${PORT:-8081} -jar app.jar"]

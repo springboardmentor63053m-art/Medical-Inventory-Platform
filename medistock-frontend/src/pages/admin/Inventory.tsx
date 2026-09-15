@@ -59,7 +59,7 @@ function Inventory() {
   const [stockStatus, setStockStatus] = useState("all");
   
 
-  const API_URL = "http://localhost:8081/api/medicines";
+  const API_URL = (import.meta.env.VITE_API_URL || "/api") + "/medicines";
 
   // ============================================================
   // LOAD INVENTORY FROM MEDICINES DATABASE

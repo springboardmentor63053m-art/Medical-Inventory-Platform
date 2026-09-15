@@ -239,8 +239,9 @@ export default function Purchases() {
     try {
       const token = localStorage.getItem("token");
 
+      const apiBase = import.meta.env.VITE_API_URL || "/api";
       const response = await fetch(
-        "http://localhost:8081/api/purchaseorders",
+        `${apiBase}/purchaseorders`,
         {
           headers: {
             Accept: "application/json",

@@ -77,7 +77,7 @@ interface NewPurchaseItem {
 // ============================================================
 
 const API_BASE =
-  "http://localhost:8081/api";
+  import.meta.env.VITE_API_URL || "/api";
 
 
 // ============================================================
