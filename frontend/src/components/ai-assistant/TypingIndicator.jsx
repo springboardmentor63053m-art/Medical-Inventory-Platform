@@ -11,14 +11,14 @@ export default function TypingIndicator() {
       </div>
 
       {/* Bubble with bouncing dots */}
-      <div className="px-3.5 py-2 rounded-2xl rounded-tl-sm bg-slate-800/80 border border-slate-700/60 shadow-md flex items-center gap-2">
-        <span className="text-xs font-medium text-cyan-300">
+      <div className="px-3.5 py-2 rounded-2xl rounded-tl-sm bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-sm dark:shadow-md flex items-center gap-2">
+        <span className="text-xs font-medium text-cyan-600 dark:text-cyan-300">
           MedStock AI is thinking
         </span>
         <div className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:-0.3s]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce [animation-delay:-0.15s]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" />
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-bounce [animation-delay:-0.3s]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-bounce [animation-delay:-0.15s]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-bounce" />
         </div>
       </div>
     </div>

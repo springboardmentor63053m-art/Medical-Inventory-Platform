@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { purchaseAPI, saleAPI, inventoryAPI } from '../../api/services'
 import {
   BarChart2, ShoppingCart, Banknote, Package, Receipt, Download,
@@ -146,10 +146,122 @@ export default function Reports() {
   const [showCsvModal, setShowCsvModal] = useState(false)
   const [selectedMed,  setSelectedMed]  = useState(null)
   const [copied,       setCopied]       = useState(false)
+  const [loading,      setLoading]      = useState(true)
+
+  const [liveInventory, setLiveInventory] = useState([])
+  const [livePurchases, setLivePurchases] = useState([])
+  const [liveSales,     setLiveSales]     = useState([])
+
+  useEffect(() => {
+    async function fetchReportData() {
+      try {
+        setLoading(true)
+        const [invRes, purRes, salRes] = await Promise.allSettled([
+          inventoryAPI.getAll(),
+          purchaseAPI.getAll(),
+          saleAPI.getAll(),
+        ])
+        if (invRes.status === 'fulfilled' && Array.isArray(invRes.value.data) && invRes.value.data.length > 0) {
+          setLiveInventory(invRes.value.data)
+        }
+        if (purRes.status === 'fulfilled' && Array.isArray(purRes.value.data)) {
+          setLivePurchases(purRes.value.data)
+        }
+        if (salRes.status === 'fulfilled' && Array.isArray(salRes.value.data)) {
+          setLiveSales(salRes.value.data)
+        }
+      } catch (err) {
+        console.error('Failed to load live reports data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchReportData()
+  }, [])
+
+  // 1. Dynamic Inventory Rows
+  const inventoryRows = useMemo(() => {
+    if (!liveInventory.length) return MOCK_INVENTORY_REPORT
+    return liveInventory.map((inv, idx) => {
+      const stock = inv.quantity ?? 0
+      const reorder = inv.minQuantity ?? inv.medicine?.reorderLevel ?? 50
+      const unitPrice = Number(inv.medicine?.unitPrice) || 10
+      const val = stock * unitPrice
+      const isLow = stock <= reorder
+      const expDate = inv.expiryDate || '2027-12-31'
+      return {
+        id: inv.id || (idx + 1),
+        name: inv.medicine?.name || `SKU #${inv.id}`,
+        batchNo: inv.batchNumber || `BAT-${202600 + idx}`,
+        stock,
+        reorder,
+        expiry: expDate,
+        value: '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        numericValue: val,
+        status: isLow ? 'Low Stock' : 'Optimal',
+        color: isLow ? 'from-orange-500 to-amber-600' : 'from-blue-500 to-indigo-600'
+      }
+    })
+  }, [liveInventory])
 
   const displayedRows = activeTab === 'VALUATION'
-    ? MOCK_INVENTORY_REPORT
-    : MOCK_INVENTORY_REPORT.filter(m => m.status === 'Low Stock' || m.expiry.startsWith('2026'))
+    ? inventoryRows
+    : inventoryRows.filter(m => m.status === 'Low Stock' || (m.expiry && m.expiry.startsWith('2026')))
+
+  // 2. Dynamic KPI Totals
+  const totalProcurement = useMemo(() => {
+    if (!livePurchases.length) return 83322
+    return livePurchases.reduce((sum, p) => sum + (Number(p.netAmount) || 0), 0)
+  }, [livePurchases])
+
+  const totalSalesRev = useMemo(() => {
+    if (!liveSales.length) return 4808
+    return liveSales.reduce((sum, s) => sum + (Number(s.netAmount) || 0), 0)
+  }, [liveSales])
+
+  const totalSKUs = inventoryRows.length
+
+  const totalInventoryVal = useMemo(() => {
+    return inventoryRows.reduce((sum, r) => sum + (r.numericValue || 0), 0)
+  }, [inventoryRows])
+
+  // 3. Dynamic Payment Distribution
+  const paymentDistribution = useMemo(() => {
+    if (!liveSales.length) return PAYMENT_DISTRIBUTION
+    const counts = { CASH: 0, CARD: 0, UPI: 0, INSURANCE: 0 }
+    let totalAmt = 0
+    liveSales.forEach(s => {
+      const amt = Number(s.netAmount) || 0
+      totalAmt += amt
+      const m = s.paymentMethod ? s.paymentMethod.toUpperCase() : 'CASH'
+      if (counts[m] !== undefined) counts[m] += amt
+      else counts.CASH += amt
+    })
+    if (totalAmt === 0) return PAYMENT_DISTRIBUTION
+    return [
+      { name: 'Cash',      percentage: Math.round((counts.CASH / totalAmt) * 100),      amount: '₹' + Math.round(counts.CASH).toLocaleString('en-IN'),      color: '#0066ff' },
+      { name: 'Card',      percentage: Math.round((counts.CARD / totalAmt) * 100),      amount: '₹' + Math.round(counts.CARD).toLocaleString('en-IN'),      color: '#10b981' },
+      { name: 'UPI',       percentage: Math.round((counts.UPI / totalAmt) * 100),       amount: '₹' + Math.round(counts.UPI).toLocaleString('en-IN'),       color: '#f59e0b' },
+      { name: 'Insurance', percentage: Math.round((counts.INSURANCE / totalAmt) * 100), amount: '₹' + Math.round(counts.INSURANCE).toLocaleString('en-IN'), color: '#8b5cf6' }
+    ]
+  }, [liveSales])
+
+  // 4. Dynamic Purchase Pipeline
+  const purchaseStatus = useMemo(() => {
+    if (!livePurchases.length) return PURCHASE_STATUS
+    let rec = 0, pen = 0, can = 0
+    livePurchases.forEach(p => {
+      const st = p.status ? p.status.toUpperCase() : 'RECEIVED'
+      if (st === 'RECEIVED') rec++
+      else if (st === 'PENDING') pen++
+      else if (st === 'CANCELLED') can++
+    })
+    return [
+      { name: 'Received',  value: rec, color: '#0066ff' },
+      { name: 'Pending',   value: pen, color: '#10b981' },
+      { name: 'Cancelled', value: can, color: '#8b5cf6' }
+    ]
+  }, [livePurchases])
 
   const executePdfDownload = () => {
     try {
@@ -168,9 +280,11 @@ export default function Reports() {
       doc.text('Inventory Valuation, Procurement & Expiry Statement (Module 9)', 14, 21)
       doc.text(`Generated: ${new Date().toLocaleString('en-IN')} · Audit Statement`, 14, 26.5)
 
-      const tableData = MOCK_INVENTORY_REPORT.map((inv, idx) => [
+      const tableData = displayedRows.map((inv, idx) => [
         idx + 1, inv.name, inv.batchNo, inv.stock, inv.reorder, inv.expiry, inv.value, inv.status
       ])
+
+      const totalStockUnits = displayedRows.reduce((acc, r) => acc + (r.stock || 0), 0)
 
       autoTable(doc, {
         startY: 42,
@@ -179,7 +293,7 @@ export default function Reports() {
         theme: 'grid',
         headStyles: { fillColor: [0, 102, 255], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
         bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
-        foot: [['Total', 'All 10 Monitored SKUs', '', '3,298 units', '', '', '₹33,780.00', '100% Audit Ready']],
+        foot: [['Total', `${displayedRows.length} Monitored SKUs`, '', `${totalStockUnits.toLocaleString('en-IN')} units`, '', '', '₹' + totalInventoryVal.toLocaleString('en-IN', { minimumFractionDigits: 2 }), '100% Audit Ready']],
         footStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 8.5 }
       })
 
@@ -194,7 +308,7 @@ export default function Reports() {
   const executeCsvDownload = () => {
     try {
       const headers = ['#', 'Medicine Name', 'Batch No', 'Current Stock', 'Reorder Level', 'Expiry Date', 'Stock Value (INR)', 'Status']
-      const rows = MOCK_INVENTORY_REPORT.map((inv, idx) => [
+      const rows = displayedRows.map((inv, idx) => [
         idx + 1, `"${inv.name}"`, `"${inv.batchNo}"`, inv.stock, inv.reorder, inv.expiry, `"${inv.value}"`, `"${inv.status}"`
       ].join(','))
       const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n')
@@ -218,7 +332,7 @@ export default function Reports() {
   const copyCsvToClipboard = () => {
     try {
       const headers = ['#', 'Medicine Name', 'Batch No', 'Current Stock', 'Reorder Lvl', 'Expiry Date', 'Stock Value', 'Status']
-      const rows = MOCK_INVENTORY_REPORT.map((inv, idx) => [
+      const rows = displayedRows.map((inv, idx) => [
         idx + 1, inv.name, inv.batchNo, inv.stock, inv.reorder, inv.expiry, inv.value, inv.status
       ].join('\t'))
       const tsv = [headers.join('\t'), ...rows].join('\n')
@@ -230,6 +344,7 @@ export default function Reports() {
       toast.error('Failed to copy')
     }
   }
+
 
   return (
     <div className="space-y-5 animate-fade-in text-slate-100">
@@ -293,11 +408,11 @@ export default function Reports() {
             <div>
               <p className="text-xs font-bold text-slate-500 dark:text-slate-300">Total Procurement Cost</p>
               <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
-                ₹83,322
+                ₹{Math.round(totalProcurement).toLocaleString('en-IN')}
               </p>
               <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1 mt-1">
                 <span>↑ 12%</span>
-                <span className="text-slate-500 dark:text-slate-400 font-normal">vs. last month</span>
+                <span className="text-slate-500 dark:text-slate-400 font-normal">live procurement ledger</span>
               </p>
             </div>
           </div>
@@ -323,11 +438,11 @@ export default function Reports() {
             <div>
               <p className="text-xs font-bold text-slate-500 dark:text-slate-300">Total Sales Revenue</p>
               <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
-                ₹4,808
+                ₹{Math.round(totalSalesRev).toLocaleString('en-IN')}
               </p>
               <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1 mt-1">
                 <span>↑ 8%</span>
-                <span className="text-slate-500 dark:text-slate-400 font-normal">vs. last month</span>
+                <span className="text-slate-500 dark:text-slate-400 font-normal">live sales transactions</span>
               </p>
             </div>
           </div>
@@ -353,11 +468,11 @@ export default function Reports() {
             <div>
               <p className="text-xs font-bold text-slate-500 dark:text-slate-300">Total Monitored SKUs</p>
               <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
-                10
+                {totalSKUs}
               </p>
-              <p className="text-xs font-semibold text-slate-400 flex items-center gap-1 mt-1">
-                <span>↑ 0%</span>
-                <span className="text-slate-500 dark:text-slate-400 font-normal">vs. last month</span>
+              <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1 mt-1">
+                <span>Active</span>
+                <span className="text-slate-500 dark:text-slate-400 font-normal">in inventory database</span>
               </p>
             </div>
           </div>
@@ -406,7 +521,7 @@ export default function Reports() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={PAYMENT_DISTRIBUTION}
+                    data={paymentDistribution}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -415,7 +530,7 @@ export default function Reports() {
                     dataKey="percentage"
                     stroke="none"
                   >
-                    {PAYMENT_DISTRIBUTION.map((entry, index) => (
+                    {paymentDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -434,13 +549,13 @@ export default function Reports() {
 
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-[11px] font-medium text-slate-400">Total Sales</span>
-                <span className="text-base font-black text-slate-900 dark:text-white font-mono">₹4,808</span>
+                <span className="text-base font-black text-slate-900 dark:text-white font-mono">₹{Math.round(totalSalesRev).toLocaleString('en-IN')}</span>
               </div>
             </div>
 
             {/* Legend Breakdown Table */}
             <div className="flex-1 w-full space-y-3.5 pr-2">
-              {PAYMENT_DISTRIBUTION.map((item, idx) => (
+              {paymentDistribution.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs font-semibold">
                   <div className="flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
@@ -474,20 +589,20 @@ export default function Reports() {
             {/* Legend Pills */}
             <div className="flex items-center gap-3 self-start sm:self-auto text-[11px] font-semibold">
               <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                <span className="w-2 h-2 rounded-full bg-blue-500" /> 9 Received
+                <span className="w-2 h-2 rounded-full bg-blue-500" /> {purchaseStatus.find(p => p.name === 'Received')?.value || 0} Received
               </span>
               <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" /> 1 Pending
+                <span className="w-2 h-2 rounded-full bg-emerald-500" /> {purchaseStatus.find(p => p.name === 'Pending')?.value || 0} Pending
               </span>
               <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                <span className="w-2 h-2 rounded-full bg-purple-500" /> 0 Cancelled
+                <span className="w-2 h-2 rounded-full bg-purple-500" /> {purchaseStatus.find(p => p.name === 'Cancelled')?.value || 0} Cancelled
               </span>
             </div>
           </div>
 
           <div className="w-full h-44 pt-1">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={PURCHASE_STATUS} margin={{ top: 20, right: 10, bottom: 0, left: -25 }}>
+              <BarChart data={purchaseStatus} margin={{ top: 20, right: 10, bottom: 0, left: -25 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis
                   dataKey="name"
@@ -496,8 +611,7 @@ export default function Reports() {
                   tickLine={false}
                 />
                 <YAxis
-                  domain={[0, 12]}
-                  ticks={[0, 2, 4, 6, 8, 10, 12]}
+                  allowDecimals={false}
                   tick={{ fontSize: 11, fill: '#94a3b8' }}
                   axisLine={{ stroke: '#334155' }}
                   tickLine={false}
@@ -513,7 +627,7 @@ export default function Reports() {
                   }}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={70}>
-                  {PURCHASE_STATUS.map((entry, index) => (
+                  {purchaseStatus.map((entry, index) => (
                     <Cell key={`bar-${index}`} fill={entry.color} />
                   ))}
                   <LabelList dataKey="value" position="top" fill="#94a3b8" fontSize={11} fontWeight="bold" offset={6} />

@@ -46,6 +46,7 @@ com\medicalinventory\repository\RoleRepository.class
 com\medicalinventory\repository\SaleRepository.class
 com\medicalinventory\controller\EmployeeController.class
 com\medicalinventory\entity\Medicine$MedicineBuilder.class
+com\medicalinventory\config\OpenApiConfig.class
 com\medicalinventory\entity\Medicine.class
 com\medicalinventory\entity\StockMovement$MovementType.class
 com\medicalinventory\controller\InventoryController.class

@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import {
   LayoutDashboard, Pill, Package, Truck, ShoppingCart,
   Receipt, Users, Bell, BarChart2, X, Activity, Settings, Zap, Shield, Cpu, TrendingUp,
@@ -52,6 +53,7 @@ const navSections = [
 
 export default function Sidebar({ open, onClose }) {
   const { user } = useAuth()
+  const { isDark } = useTheme()
   const location = useLocation()
 
   const roleColor = {
@@ -82,9 +84,13 @@ export default function Sidebar({ open, onClose }) {
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${!open ? 'lg:w-0 lg:overflow-hidden' : 'lg:w-64'}
         `}
-        style={{
+        style={isDark ? {
           background: 'linear-gradient(170deg, #0b1329 0%, #0f2042 45%, #081226 100%)',
           boxShadow: '4px 0 40px rgba(0,0,0,0.5)',
+        } : {
+          background: 'linear-gradient(170deg, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%)',
+          boxShadow: '4px 0 24px rgba(0,0,0,0.08)',
+          borderRight: '1px solid #e2e8f0',
         }}
       >
         {/* Decorative orb blurs */}
@@ -92,7 +98,7 @@ export default function Sidebar({ open, onClose }) {
         <div className="absolute bottom-40 right-4 w-32 h-32 bg-teal-600/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Logo Header */}
-        <div className="relative flex items-center justify-between px-5 py-5 border-b border-white/[0.07]">
+        <div className={`relative flex items-center justify-between px-5 py-5 border-b ${isDark ? 'border-white/[0.07]' : 'border-slate-200'}`}>
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-teal-500 to-cyan-500 rounded-2xl
@@ -105,14 +111,14 @@ export default function Sidebar({ open, onClose }) {
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <p className="text-white font-extrabold text-base leading-tight tracking-wide font-display">
+                <p className={`font-extrabold text-base leading-tight tracking-wide font-display ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   MedStock
                 </p>
                 <span className="px-1.5 py-0.5 rounded-md bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-black text-[9px] tracking-wider uppercase shadow-xs ring-1 ring-white/20">
                   AI
                 </span>
               </div>
-              <p className="text-blue-400/80 text-[10px] font-bold tracking-widest uppercase">Pharmacy Platform</p>
+              <p className={`text-[10px] font-bold tracking-widest uppercase ${isDark ? 'text-blue-400/80' : 'text-blue-600'}`}>Pharmacy Platform</p>
             </div>
           </div>
           <button
@@ -125,21 +131,22 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         {/* User Badge Card */}
-        <div className="px-4 py-3.5 border-b border-white/[0.05]">
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl
-                          bg-white/[0.05] border border-white/[0.08]
-                          backdrop-blur-sm">
+        <div className={`px-4 py-3.5 border-b ${isDark ? 'border-white/[0.05]' : 'border-slate-200'}`}>
+          <div className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl backdrop-blur-sm ${
+            isDark
+              ? 'bg-white/[0.05] border border-white/[0.08]'
+              : 'bg-slate-100 border border-slate-200'
+          }`}>
             <div className="relative flex-shrink-0">
               <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${roleColor}
                               flex items-center justify-center text-white font-bold text-xs
                               shadow-md`}>
                 {user?.username?.[0]?.toUpperCase()}
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400
-                               rounded-full border-2 border-[#0b1329]" />
+              <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 ${isDark ? 'border-[#0b1329]' : 'border-white'}`} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-white text-xs font-semibold truncate">{user?.username}</p>
+              <p className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{user?.username}</p>
               <p className="text-slate-400 text-[10px] truncate capitalize font-medium">{roleLabel}</p>
             </div>
             <Zap className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
@@ -154,7 +161,7 @@ export default function Sidebar({ open, onClose }) {
 
             return (
               <div key={section.title} className="space-y-1">
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-1.5">
+                <p className={`text-[10px] font-bold uppercase tracking-[0.14em] px-3 mb-1.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                   {section.title}
                 </p>
 
@@ -169,8 +176,12 @@ export default function Sidebar({ open, onClose }) {
                         flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium
                         transition-all duration-200 cursor-pointer relative overflow-hidden
                         ${navActive
-                          ? 'text-white bg-white/10 border border-white/[0.1] shadow-inner'
-                          : 'text-slate-400 hover:text-white hover:bg-white/[0.07]'
+                          ? isDark
+                            ? 'text-white bg-white/10 border border-white/[0.1] shadow-inner'
+                            : 'text-blue-700 bg-blue-50 border border-blue-200 shadow-sm'
+                          : isDark
+                            ? 'text-slate-400 hover:text-white hover:bg-white/[0.07]'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                         }
                       `}>
                         {navActive && (
@@ -181,8 +192,8 @@ export default function Sidebar({ open, onClose }) {
                         <span className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0
                                           transition-all duration-200
                                           ${navActive
-                                            ? `bg-gradient-to-br ${color} shadow-md`
-                                            : 'bg-white/5 group-hover:bg-white/10'
+                                            ? `bg-gradient-to-br ${color} shadow-md text-white`
+                                            : isDark ? 'bg-white/5' : 'bg-slate-200/60'
                                           }`}>
                           <Icon className="w-3.5 h-3.5" />
                         </span>
@@ -200,14 +211,14 @@ export default function Sidebar({ open, onClose }) {
         </nav>
 
         {/* Footer Branding */}
-        <div className="px-4 py-3.5 border-t border-white/[0.06]">
+        <div className={`px-4 py-3.5 border-t ${isDark ? 'border-white/[0.06]' : 'border-slate-200'}`}>
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
               </span>
-              <p className="text-slate-400 text-[11px] font-semibold">MedStock AI v3.0</p>
+              <p className={`text-[11px] font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>MedStock AI v3.0</p>
             </div>
             <span className="text-[10px] text-blue-400 font-mono font-black tracking-wider">AI Active</span>
           </div>

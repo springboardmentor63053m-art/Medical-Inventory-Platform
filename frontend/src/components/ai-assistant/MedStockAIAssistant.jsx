@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTheme } from '../../context/ThemeContext'
 import FloatingAIButton from './FloatingAIButton'
 import AIChatHeader from './AIChatHeader'
 import SuggestedPrompts from './SuggestedPrompts'
@@ -8,8 +9,7 @@ import { AIService } from './AIService'
 
 const INITIAL_MESSAGE = {
   sender: 'ai',
-  text: `## Welcome to MedStock AI Assistant 🤖
-I'm your dedicated conversational pharmacy copilot. I analyze live inventory levels, FEFO batch expiry dates, demand forecasting, sales revenue, and supplier fulfillment in real-time.
+  text: `I'm your dedicated conversational pharmacy copilot. I analyze live inventory levels, FEFO batch expiry dates, demand forecasting, sales revenue, and supplier fulfillment in real-time.
 
 Select a quick question below or ask me anything about your pharmacy!`,
   mode: 'MEDSTOCK',
@@ -21,6 +21,7 @@ Select a quick question below or ask me anything about your pharmacy!`,
 }
 
 export default function MedStockAIAssistant() {
+  const { isDark } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
@@ -105,11 +106,11 @@ export default function MedStockAIAssistant() {
       {/* Dedicated Floating Conversational AI Panel */}
       {isOpen && (
         <div
-          className={`fixed z-50 transition-all duration-300 ease-out flex flex-col
-                     bg-[#070f22]/98 border border-cyan-500/35 rounded-3xl
-                     shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(6,182,212,0.18)]
-                     backdrop-blur-2xl overflow-hidden
-                     ${
+          className={`fixed z-50 transition-all duration-300 ease-out flex flex-col rounded-3xl backdrop-blur-2xl overflow-hidden ${
+            isDark
+              ? 'bg-[#070f22] border border-cyan-500/35 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(6,182,212,0.18)] text-slate-200'
+              : 'bg-white border border-slate-200 shadow-2xl text-slate-800'
+          } ${
                        isMinimized
                          ? 'bottom-24 right-4 sm:right-6 w-[340px] max-w-[calc(100vw-32px)] h-[60px]'
                          : isMaximized
@@ -131,14 +132,15 @@ export default function MedStockAIAssistant() {
 
           {/* Body when not minimized */}
           {!isMinimized && (
-            <div className="flex-1 flex flex-col min-h-0 relative">
-              {/* Optional Interactive Suggested Questions Drawer */}
-              {showPrompts && (
-                <SuggestedPrompts
-                  onSelectPrompt={handleSendMessage}
-                  onClose={() => setShowPrompts(false)}
-                />
-              )}
+            <div className={`flex-1 flex flex-col min-h-0 relative ${
+              isDark ? 'bg-[#070f22]' : 'bg-white'
+            }`}>
+              {/* Suggested Questions: Pills when prompts false (Image 1), Grid Drawer when true (Image 2) */}
+              <SuggestedPrompts
+                onSelectPrompt={handleSendMessage}
+                onClose={() => setShowPrompts(false)}
+                variant={showPrompts ? 'grid' : 'pills'}
+              />
 
               {/* Scrollable Message History */}
               <ChatMessageList
@@ -147,12 +149,14 @@ export default function MedStockAIAssistant() {
                 onActionClick={() => {
                   // Handled within AIMessage navigation
                 }}
+                isFloating={true}
               />
 
-              {/* Multi-line Conversational Input Bar */}
+              {/* Conversational Input Bar: Universal (Image 1) or Clinical (Image 2) */}
               <ChatInput
                 onSend={handleSendMessage}
                 isLoading={isLoading}
+                variant={showPrompts ? 'clinical' : 'universal'}
               />
             </div>
           )}

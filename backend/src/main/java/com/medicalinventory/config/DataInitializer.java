@@ -325,14 +325,14 @@ public class DataInitializer implements CommandLineRunner {
         // ── 10 Inventory Records (matching sample_data.sql lines 85-95) ────
         log.info("Seeding 10 inventory records...");
         inventoryRepository.saveAll(List.of(
-                Inventory.builder().medicine(med1).batchNumber("AMX-2026-001").quantity(500).minQuantity(100).expiryDate(LocalDate.of(2027,1,30)).location("Shelf A1").build(),
-                Inventory.builder().medicine(med2).batchNumber("DOL-2026-088").quantity( 45).minQuantity(200).expiryDate(LocalDate.of(2026,8,29)).location("Shelf B2").build(),
-                Inventory.builder().medicine(med3).batchNumber("LIP-2026-012").quantity(300).minQuantity( 50).expiryDate(LocalDate.of(2027,8, 4)).location("Shelf C3").build(),
+                Inventory.builder().medicine(med1).batchNumber("AMX-2026-001").quantity(500).minQuantity(100).expiryDate(LocalDate.now().plusDays(16)).location("Shelf A1").build(), // 1 critical in < 30 days
+                Inventory.builder().medicine(med2).batchNumber("DOL-2026-088").quantity( 45).minQuantity(200).expiryDate(LocalDate.now().minusDays(6)).location("Shelf B2").build(), // 1 expired
+                Inventory.builder().medicine(med3).batchNumber("LIP-2026-012").quantity(300).minQuantity( 50).expiryDate(LocalDate.now().plusDays(80)).location("Shelf C3").build(), // 1 caution in < 90 days
                 Inventory.builder().medicine(med4).batchNumber("GLI-2026-045").quantity(620).minQuantity(150).expiryDate(LocalDate.of(2027,5, 1)).location("Shelf D1").build(),
                 Inventory.builder().medicine(med5).batchNumber("DRS-2026-019").quantity(200).minQuantity( 80).expiryDate(LocalDate.of(2028,1,26)).location("Shelf E2").build(),
-                Inventory.builder().medicine(med6).batchNumber("ZIT-2026-033").quantity( 25).minQuantity( 60).expiryDate(LocalDate.of(2026,8,19)).location("Shelf A3").build(),
+                Inventory.builder().medicine(med6).batchNumber("ZIT-2026-033").quantity( 25).minQuantity( 60).expiryDate(LocalDate.of(2027,6,19)).location("Shelf A3").build(),
                 Inventory.builder().medicine(med7).batchNumber("NOR-2026-007").quantity(480).minQuantity(120).expiryDate(LocalDate.of(2027,9, 8)).location("Shelf C1").build(),
-                Inventory.builder().medicine(med8).batchNumber("LAN-2026-062").quantity( 18).minQuantity( 30).expiryDate(LocalDate.of(2026,11,2)).location("Refrigerator R1").build(),
+                Inventory.builder().medicine(med8).batchNumber("LAN-2026-062").quantity( 18).minQuantity( 30).expiryDate(LocalDate.now().plusDays(49)).location("Refrigerator R1").build(), // 1 warning in < 60 days
                 Inventory.builder().medicine(med9).batchNumber("BRU-2026-041").quantity(750).minQuantity(180).expiryDate(LocalDate.of(2027,5,31)).location("Shelf B4").build(),
                 Inventory.builder().medicine(med10).batchNumber("SUP-2026-028").quantity(310).minQuantity(100).expiryDate(LocalDate.of(2028,8, 3)).location("Shelf F1").build()
         ));
@@ -419,7 +419,11 @@ public class DataInitializer implements CommandLineRunner {
                 .invoiceNumber("INV-2024-0008").supplier(sup3).purchaseDate(LocalDate.of(2026,8,1))
                 .totalAmount(new BigDecimal("13500.00")).discount(new BigDecimal("675.00"))
                 .taxAmount(new BigDecimal("607.50")).netAmount(new BigDecimal("13432.50"))
-                .status(Purchase.PurchaseStatus.RECEIVED).createdBy(ravi).build();
+                .status(Purchase.PurchaseStatus.PENDING).createdBy(ravi).build();
+        p8.setItems(List.of(
+                PurchaseItem.builder().purchase(p8).medicine(m[2]).batchNumber("LIP-2026-035").quantity(250).unitCost(new BigDecimal("22.00")).totalCost(new BigDecimal("5500.00")).expiryDate(LocalDate.of(2027,8,1)).build(),
+                PurchaseItem.builder().purchase(p8).medicine(m[6]).batchNumber("NOR-2026-042").quantity(400).unitCost(new BigDecimal("20.00")).totalCost(new BigDecimal("8000.00")).expiryDate(LocalDate.of(2027,10,15)).build()
+        ));
 
         Purchase p9 = Purchase.builder()
                 .invoiceNumber("INV-2026-0009").supplier(sup1).purchaseDate(LocalDate.of(2026,9,2))
@@ -431,7 +435,17 @@ public class DataInitializer implements CommandLineRunner {
                 PurchaseItem.builder().purchase(p9).medicine(m[3]).batchNumber("PAR-2026-022").quantity(400).unitCost(new BigDecimal("2.00")).totalCost(new BigDecimal("800.00")).expiryDate(LocalDate.of(2027,9,30)).build()
         ));
 
-        purchaseRepository.saveAll(List.of(p1, p2, p3, p4, p5, p6, p7, p8, p9));
+        Purchase p10 = Purchase.builder()
+                .invoiceNumber("INV-2026-0010").supplier(sup4).purchaseDate(LocalDate.of(2026,9,12))
+                .totalAmount(new BigDecimal("10500.00")).discount(new BigDecimal("500.00"))
+                .taxAmount(new BigDecimal("472.50")).netAmount(new BigDecimal("10472.50"))
+                .status(Purchase.PurchaseStatus.RECEIVED).createdBy(admin).build();
+        p10.setItems(List.of(
+                PurchaseItem.builder().purchase(p10).medicine(m[4]).batchNumber("DRS-2026-031").quantity(300).unitCost(new BigDecimal("18.00")).totalCost(new BigDecimal("5400.00")).expiryDate(LocalDate.of(2028,2,20)).build(),
+                PurchaseItem.builder().purchase(p10).medicine(m[8]).batchNumber("BRU-2026-052").quantity(350).unitCost(new BigDecimal("3.00")).totalCost(new BigDecimal("1050.00")).expiryDate(LocalDate.of(2027,11,10)).build()
+        ));
+
+        purchaseRepository.saveAll(List.of(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10));
 
         // ── Real Sales & Items covering Jan to Sep 2026 (matching wave split) ──
         log.info("Seeding realistic sales from Jan to Sep 2026...");
