@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import "./inventory.css";
+import "./Inventory.css";
 
 interface Supplier {
   id?: number;
