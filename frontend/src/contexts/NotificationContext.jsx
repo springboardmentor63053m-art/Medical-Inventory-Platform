@@ -5,12 +5,13 @@ import { notificationsApi } from '../features/notifications/services/api/notific
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
-  const { user, isSupplier } = useAuth();
+  const { user, isAdmin, isPharmacist, isStaff } = useAuth();
+  const canUseNotifications = isAdmin || isPharmacist || isStaff;
   const [rawNotifications, setRawNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
-    if (!user || isSupplier) {
+    if (!user || !canUseNotifications) {
       setRawNotifications([]);
       return;
     }
@@ -24,7 +25,7 @@ export function NotificationProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [user, isSupplier]);
+  }, [user, canUseNotifications]);
 
   useEffect(() => {
     fetchNotifications();
