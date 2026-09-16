@@ -623,19 +623,19 @@ export default function MedicineListPage() {
                     <td className="py-4 px-6 text-slate-600 font-medium">{med.dosage || 'N/A'}</td>
                     <td className="py-4 px-6 text-slate-600">{med.manufacturer}</td>
                     {canViewCostPrice && (
-                      <td className="py-4 px-6 font-bold text-amber-700">
+                      <td className="py-4 px-6 font-bold text-sky-700 dark:text-sky-300">
                         {formatINR(med.costPrice ?? med.unitPrice)}
                       </td>
                     )}
 
                     {canViewSellingPrice && (
-                      <td className="py-4 px-6 font-bold text-emerald-700">
+                      <td className="py-4 px-6 font-bold text-blue-700 dark:text-blue-300">
                         {formatINR(med.sellingPrice ?? med.unitPrice)}
                       </td>
                     )}
 
                     {canViewProfit && (
-                      <td className="py-4 px-6 font-bold text-blue-700">
+                      <td className="py-4 px-6 font-bold text-indigo-700 dark:text-indigo-300">
                         {formatINR(
                           med.profitPerUnit ??
                             (Number(med.sellingPrice || 0) - Number(med.costPrice || 0))
