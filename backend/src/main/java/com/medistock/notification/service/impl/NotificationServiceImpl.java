@@ -119,8 +119,29 @@ public class NotificationServiceImpl implements NotificationService {
 
     private void processCondition(Inventory item, String type, String medicineName, String batchNo,
                                   int quantity, int minStock, LocalDate expiryDate) {
-        Optional<Notification> existingOpt = notificationRepository
-                .findByInventoryIdAndTypeAndIsActiveTrue(item.getId(), type);
+        List<Notification> existingNotifications = notificationRepository
+                .findByInventoryIdAndTypeAndIsActiveTrueOrderByCreatedAtDesc(
+                        item.getId(),
+                        type
+                );
+
+        Notification existing = existingNotifications.isEmpty()
+                ? null
+                : existingNotifications.get(0);
+
+        if (existingNotifications.size() > 1) {
+            LocalDateTime resolvedAt = LocalDateTime.now();
+
+            for (int i = 1; i < existingNotifications.size(); i++) {
+                Notification duplicate = existingNotifications.get(i);
+                duplicate.setIsActive(false);
+                duplicate.setResolvedAt(resolvedAt);
+            }
+
+            notificationRepository.saveAll(
+                    existingNotifications.subList(1, existingNotifications.size())
+            );
+        }
 
         String severity;
         String title;
@@ -155,8 +176,7 @@ public class NotificationServiceImpl implements NotificationService {
                 break;
         }
 
-        if (existingOpt.isPresent()) {
-            Notification existing = existingOpt.get();
+        if (existing != null) {
             existing.setSeverity(severity);
             existing.setTitle(title);
             existing.setMessage(message);
