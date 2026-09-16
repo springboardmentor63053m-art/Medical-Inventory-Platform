@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
@@ -14,8 +13,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByIsActiveTrueAndIsReadFalse();
 
-    Optional<Notification> findByInventoryIdAndTypeAndIsActiveTrue(Long inventoryId, String type);
-
+    List<Notification> findByInventoryIdAndTypeAndIsActiveTrueOrderByCreatedAtDesc(
+            Long inventoryId,
+            String type
+    );
     List<Notification> findByInventoryIdAndIsActiveTrue(Long inventoryId);
 
     long countByIsActiveTrueAndIsReadFalse();

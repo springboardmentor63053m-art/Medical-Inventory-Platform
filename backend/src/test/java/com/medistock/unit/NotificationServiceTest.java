@@ -16,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -65,7 +66,7 @@ public class NotificationServiceTest {
 
         when(inventoryRepository.findAll()).thenReturn(List.of(testBatch));
         when(notificationRepository.findByInventoryIdAndIsActiveTrue(1L)).thenReturn(Collections.emptyList());
-        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrue(1L, "LOW_STOCK")).thenReturn(Optional.empty());
+        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrueOrderByCreatedAtDesc(1L, "LOW_STOCK")).thenReturn(Collections.emptyList());
 
         notificationService.syncInventoryNotifications();
 
@@ -102,7 +103,7 @@ public class NotificationServiceTest {
 
         when(inventoryRepository.findAll()).thenReturn(List.of(testBatch));
         when(notificationRepository.findByInventoryIdAndIsActiveTrue(1L)).thenReturn(Collections.emptyList());
-        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrue(1L, "OUT_OF_STOCK")).thenReturn(Optional.empty());
+        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrueOrderByCreatedAtDesc(1L, "OUT_OF_STOCK")).thenReturn(Collections.emptyList());
 
         notificationService.syncInventoryNotifications();
 
@@ -138,7 +139,7 @@ public class NotificationServiceTest {
 
         when(inventoryRepository.findAll()).thenReturn(List.of(testBatch));
         when(notificationRepository.findByInventoryIdAndIsActiveTrue(1L)).thenReturn(Collections.emptyList());
-        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrue(1L, "EXPIRED")).thenReturn(Optional.empty());
+        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrueOrderByCreatedAtDesc(1L, "EXPIRED")).thenReturn(Collections.emptyList());
 
         notificationService.syncInventoryNotifications();
 
@@ -160,7 +161,7 @@ public class NotificationServiceTest {
 
         when(inventoryRepository.findAll()).thenReturn(List.of(testBatch));
         when(notificationRepository.findByInventoryIdAndIsActiveTrue(1L)).thenReturn(Collections.emptyList());
-        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrue(1L, "EXPIRING_SOON")).thenReturn(Optional.empty());
+        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrueOrderByCreatedAtDesc(1L, "EXPIRING_SOON")).thenReturn(Collections.emptyList());
 
         notificationService.syncInventoryNotifications();
 
@@ -192,7 +193,7 @@ public class NotificationServiceTest {
 
         when(inventoryRepository.findAll()).thenReturn(List.of(testBatch));
         when(notificationRepository.findByInventoryIdAndIsActiveTrue(1L)).thenReturn(List.of(existingNotif));
-        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrue(1L, "LOW_STOCK")).thenReturn(Optional.of(existingNotif));
+        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrueOrderByCreatedAtDesc(1L, "LOW_STOCK")).thenReturn(List.of(existingNotif));
 
         notificationService.syncInventoryNotifications();
 
@@ -267,7 +268,7 @@ public class NotificationServiceTest {
         // Previous notification resolved
         when(inventoryRepository.findAll()).thenReturn(List.of(testBatch));
         when(notificationRepository.findByInventoryIdAndIsActiveTrue(1L)).thenReturn(Collections.emptyList());
-        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrue(1L, "LOW_STOCK")).thenReturn(Optional.empty());
+        when(notificationRepository.findByInventoryIdAndTypeAndIsActiveTrueOrderByCreatedAtDesc(1L, "LOW_STOCK")).thenReturn(Collections.emptyList());
 
         notificationService.syncInventoryNotifications();
 
