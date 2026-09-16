@@ -449,7 +449,7 @@ export default function StoreCounterPurchasePage() {
         <tr>
           <th>Item Description</th>
           <th style="text-align: center;">Qty</th>
-          <th style="text-align: right;">Unit Price</th>
+          <th style="text-align: right;">Selling Price</th>
           <th style="text-align: right;">Total</th>
         </tr>
       </thead>
@@ -597,7 +597,9 @@ export default function StoreCounterPurchasePage() {
 
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-bold text-emerald-400">
-                            ₹{med.unitPrice ? med.unitPrice.toFixed(2) : '0.00'}
+                            ₹{(med.sellingPrice ?? med.unitPrice)
+                              ? (med.sellingPrice ?? med.unitPrice).toFixed(2)
+                              : '0.00'}
                           </span>
                           <button
                             onClick={() => addToCart(med)}

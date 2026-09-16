@@ -65,9 +65,9 @@ public class ReportServiceImpl implements ReportService {
 
             BigDecimal unitPrice =
                     medicine == null ||
-                    medicine.getUnitPrice() == null
+                    medicine.getCostPrice() == null
                             ? BigDecimal.ZERO
-                            : medicine.getUnitPrice();
+                            : medicine.getCostPrice();
 
             BigDecimal stockValue =
                     unitPrice.multiply(
@@ -234,9 +234,9 @@ public class ReportServiceImpl implements ReportService {
 
             BigDecimal unitPrice =
                     medicine == null ||
-                    medicine.getUnitPrice() == null
+                    medicine.getCostPrice() == null
                             ? BigDecimal.ZERO
-                            : medicine.getUnitPrice();
+                            : medicine.getCostPrice();
 
             BigDecimal stockValue =
                     unitPrice.multiply(
@@ -772,9 +772,9 @@ public class ReportServiceImpl implements ReportService {
 
         BigDecimal unitPrice =
                 medicine == null ||
-                medicine.getUnitPrice() == null
+                medicine.getCostPrice() == null
                         ? BigDecimal.ZERO
-                        : medicine.getUnitPrice();
+                        : medicine.getCostPrice();
 
         BigDecimal stockValue =
                 unitPrice.multiply(

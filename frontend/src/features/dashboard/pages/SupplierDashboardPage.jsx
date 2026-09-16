@@ -242,7 +242,7 @@ export default function SupplierDashboardPage() {
                     <p className="text-[10px] text-slate-500">{med.manufacturer || 'Enterprise Supplier'}</p>
                   </div>
                   <span className="font-mono text-slate-700 font-semibold">
-                    ₹{Number(med.unitPrice || 0).toFixed(2)}
+                    ₹{Number(med.costPrice ?? med.unitPrice ?? 0).toFixed(2)}
                   </span>
                 </div>
               ))}

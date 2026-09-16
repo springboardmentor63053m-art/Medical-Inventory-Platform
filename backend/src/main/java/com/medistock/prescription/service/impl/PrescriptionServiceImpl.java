@@ -100,7 +100,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                         + "'. Requested: " + itemReq.getQuantity() + ", Available: " + availableQuantity);
             }
 
-            BigDecimal unitPrice = medicine.getUnitPrice();
+            BigDecimal unitPrice = medicine.getSellingPrice() != null
+                    ? medicine.getSellingPrice()
+                    : medicine.getUnitPrice();
             BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(subtotal);
 
@@ -377,7 +379,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             Medicine medicine = medicineRepository.findById(itemReq.getMedicineId())
                     .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + itemReq.getMedicineId()));
 
-            BigDecimal unitPrice = medicine.getUnitPrice();
+            BigDecimal unitPrice = medicine.getSellingPrice() != null
+                    ? medicine.getSellingPrice()
+                    : medicine.getUnitPrice();
             BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             totalAmount = totalAmount.add(subtotal);
 

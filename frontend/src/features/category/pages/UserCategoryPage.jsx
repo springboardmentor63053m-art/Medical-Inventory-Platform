@@ -299,7 +299,7 @@ export default function UserCategoryPage() {
 
                     <div className="text-right shrink-0">
                       <span className="text-[10px] text-slate-400 block uppercase font-bold">Price</span>
-                      <span className="text-sm font-black text-slate-900">{formatINR(med.unitPrice)}</span>
+                      <span className="text-sm font-black text-slate-900">{formatINR(med.sellingPrice ?? med.unitPrice)}</span>
                     </div>
                   </div>
                 ))}

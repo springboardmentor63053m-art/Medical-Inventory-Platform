@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -60,6 +61,10 @@ public class MedicineServiceImpl implements MedicineService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
 
+        BigDecimal costPrice = resolveCostPrice(request);
+        BigDecimal sellingPrice = resolveSellingPrice(request);
+        validatePrices(costPrice, sellingPrice);
+
         Medicine medicine = Medicine.builder()
                 .category(category)
                 .medicineCode(request.getMedicineCode())
@@ -67,7 +72,9 @@ public class MedicineServiceImpl implements MedicineService {
                 .genericName(request.getGenericName())
                 .manufacturer(request.getManufacturer())
                 .dosage(request.getDosage())
-                .unitPrice(request.getUnitPrice())
+                .unitPrice(sellingPrice)
+                .costPrice(costPrice)
+                .sellingPrice(sellingPrice)
                 .reorderLevel(request.getReorderLevel() != null ? request.getReorderLevel() : 10)
                 .description(request.getDescription())
                 .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
@@ -118,13 +125,18 @@ public class MedicineServiceImpl implements MedicineService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
 
+        BigDecimal costPrice = resolveCostPrice(request);
+        BigDecimal sellingPrice = resolveSellingPrice(request);
+        validatePrices(costPrice, sellingPrice);
         medicine.setCategory(category);
         medicine.setMedicineCode(request.getMedicineCode());
         medicine.setName(request.getName());
         medicine.setGenericName(request.getGenericName());
         medicine.setManufacturer(request.getManufacturer());
         medicine.setDosage(request.getDosage());
-        medicine.setUnitPrice(request.getUnitPrice());
+        medicine.setUnitPrice(sellingPrice);
+        medicine.setCostPrice(costPrice);
+        medicine.setSellingPrice(sellingPrice);
         medicine.setReorderLevel(request.getReorderLevel());
         medicine.setDescription(request.getDescription());
         if (request.getStatus() != null) {
@@ -257,6 +269,30 @@ public class MedicineServiceImpl implements MedicineService {
             // Log warning fallback if query fails
         }
 
+        boolean isAdmin = hasRole("ADMIN");
+        boolean isPharmacist = hasRole("PHARMACIST");
+        boolean isSupplier = hasRole("SUPPLIER");
+
+        boolean canViewCostPrice = isAdmin || isPharmacist || isSupplier;
+        boolean canViewSellingPrice = !isSupplier || isAdmin || isPharmacist;
+
+        BigDecimal costPrice = medicine.getCostPrice() != null
+                ? medicine.getCostPrice()
+                : medicine.getUnitPrice();
+
+        BigDecimal sellingPrice = medicine.getSellingPrice() != null
+                ? medicine.getSellingPrice()
+                : medicine.getUnitPrice();
+
+        BigDecimal profitPerUnit = isAdmin
+                ? sellingPrice.subtract(costPrice)
+                : null;
+
+        BigDecimal legacyDisplayPrice =
+                isSupplier && !isAdmin && !isPharmacist
+                        ? costPrice
+                        : sellingPrice;
+
         return MedicineResponse.builder()
                 .id(medicine.getId())
                 .category(categoryResp)
@@ -265,7 +301,10 @@ public class MedicineServiceImpl implements MedicineService {
                 .genericName(medicine.getGenericName())
                 .manufacturer(medicine.getManufacturer())
                 .dosage(medicine.getDosage())
-                .unitPrice(medicine.getUnitPrice())
+                .unitPrice(legacyDisplayPrice)
+                .costPrice(canViewCostPrice ? costPrice : null)
+                .sellingPrice(canViewSellingPrice ? sellingPrice : null)
+                .profitPerUnit(profitPerUnit)
                 .reorderLevel(medicine.getReorderLevel())
                 .description(medicine.getDescription())
                 .status(medicine.getStatus())
@@ -275,5 +314,49 @@ public class MedicineServiceImpl implements MedicineService {
                 .createdAt(medicine.getCreatedAt())
                 .updatedAt(medicine.getUpdatedAt())
                 .build();
+    }
+
+    private boolean hasRole(String role) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+
+        return auth.getAuthorities().stream()
+                .anyMatch(authority ->
+                        authority.getAuthority().equals("ROLE_" + role)
+                                || authority.getAuthority().equals(role));
+    }
+
+    private BigDecimal resolveCostPrice(MedicineRequest request) {
+        return request.getCostPrice() != null
+                ? request.getCostPrice()
+                : request.getUnitPrice();
+    }
+
+    private BigDecimal resolveSellingPrice(MedicineRequest request) {
+        return request.getSellingPrice() != null
+                ? request.getSellingPrice()
+                : request.getUnitPrice();
+    }
+
+    private void validatePrices(BigDecimal costPrice, BigDecimal sellingPrice) {
+        if (costPrice == null) {
+            throw new IllegalArgumentException("Cost price is required");
+        }
+        if (sellingPrice == null) {
+            throw new IllegalArgumentException("Selling price is required");
+        }
+        if (costPrice.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Cost price must be zero or positive");
+        }
+        if (sellingPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Selling price must be positive");
+        }
+        if (sellingPrice.compareTo(costPrice) < 0) {
+            throw new IllegalArgumentException(
+                    "Selling price cannot be lower than cost price"
+            );
+        }
     }
 }

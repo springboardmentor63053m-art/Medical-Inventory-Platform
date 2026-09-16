@@ -355,7 +355,9 @@ export default function PrescriptionOrderPage() {
 
                       <div className="flex items-center gap-3">
                         <span className="text-xs font-bold text-emerald-400">
-                          ₹{med.unitPrice ? med.unitPrice.toFixed(2) : '0.00'}
+                          ₹{(med.sellingPrice ?? med.unitPrice)
+                            ? (med.sellingPrice ?? med.unitPrice).toFixed(2)
+                            : '0.00'}
                         </span>
                         {inventoryByMedicine[String(med.id)] > 0 ? (
                           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">

@@ -296,7 +296,7 @@ export default function ReportsPage() {
           'Category',
           'Batch',
           'Quantity',
-          'Unit Price (INR)',
+          'Cost Price (INR)',
           'Stock Value (INR)',
         ]];
 
@@ -1418,7 +1418,7 @@ const expiryForecastLabel =
                 {formatINR(averageUnitValue)} / unit
               </h3>
               <p className="text-[11px] text-slate-400 mt-1">
-                Based on current catalog prices
+                Based on current cost prices
               </p>
             </div>
           </div>
@@ -1448,7 +1448,7 @@ const expiryForecastLabel =
                 </h3>
 
                 <p className="text-xs text-slate-500 mt-1">
-                  Medicine and batch-level valuation using current stock and catalog prices
+                  Medicine and batch-level valuation using current stock and cost prices
                 </p>
               </div>
 
@@ -1481,7 +1481,7 @@ const expiryForecastLabel =
                       Quantity
                     </th>
                     <th className="px-5 py-3.5 text-right">
-                      Unit Price
+                      Cost Price
                     </th>
                     <th className="px-5 py-3.5 text-right">
                       Stock Value

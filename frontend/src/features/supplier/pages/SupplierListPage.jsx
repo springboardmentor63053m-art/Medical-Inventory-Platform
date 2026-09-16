@@ -782,7 +782,7 @@ export default function SupplierListPage() {
                           .filter(m => !viewSupplierMedicines.some(sm => Number(sm.id) === Number(m.id)))
                           .map(m => (
                             <option key={m.id} value={m.id} className="dark:bg-slate-900 dark:text-slate-200">
-                              {m.name} ({m.medicineCode}) - {m.manufacturer} [{formatINR(m.unitPrice)}]
+                              {m.name} ({m.medicineCode}) - {m.manufacturer} [{formatINR(m.costPrice ?? m.unitPrice)}]
                             </option>
                           ))}
                       </select>
@@ -819,7 +819,7 @@ export default function SupplierListPage() {
                           <div>
                             <div className="font-bold text-slate-900 dark:text-slate-100">{med.name}</div>
                             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                              Code: <span className="font-bold text-slate-700 dark:text-slate-300">{med.medicineCode}</span> • Generic: {med.genericName || 'N/A'} • Mfg: {med.manufacturer || 'Mfg'} • Dosage: {med.dosage || 'Form'} • <span className="font-bold text-blue-600 dark:text-blue-400">{formatINR(med.unitPrice)}</span>
+                              Code: <span className="font-bold text-slate-700 dark:text-slate-300">{med.medicineCode}</span> • Generic: {med.genericName || 'N/A'} • Mfg: {med.manufacturer || 'Mfg'} • Dosage: {med.dosage || 'Form'} • <span className="font-bold text-blue-600 dark:text-blue-400">{formatINR(med.costPrice ?? med.unitPrice)}</span>
                             </div>
                           </div>
                         </div>
@@ -981,7 +981,7 @@ export default function SupplierListPage() {
                         <th className="p-2.5 text-center w-8">#</th>
                         <th className="p-2.5">Medicine</th>
                         <th className="p-2.5 text-center">Quantity</th>
-                        <th className="p-2.5 text-right">Unit Price</th>
+                        <th className="p-2.5 text-right">Cost Price</th>
                         <th className="p-2.5 text-right">Line Total</th>
                       </tr>
                     </thead>
@@ -1102,7 +1102,7 @@ export default function SupplierListPage() {
                               <span className="text-[10px] text-slate-500 font-mono ml-2">({med.medicineCode})</span>
                             </div>
                           </div>
-                          <span className="font-bold text-blue-600 font-mono">{formatINR(med.unitPrice)}</span>
+                          <span className="font-bold text-blue-600 font-mono">{formatINR(med.costPrice ?? med.unitPrice)}</span>
                         </div>
                       );
                     })
@@ -1132,7 +1132,7 @@ export default function SupplierListPage() {
                           <div className="flex-1">
                             <div className="font-bold text-slate-900">{item.name}</div>
                             <div className="text-[10px] text-slate-500 font-mono">
-                              Unit Price: <span className="font-bold text-slate-700">{formatINR(item.unitPrice)}</span>
+                              Cost Price: <span className="font-bold text-slate-700">{formatINR(item.unitPrice)}</span>
                             </div>
                           </div>
 

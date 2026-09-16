@@ -1,10 +1,13 @@
 package com.medistock.medicine.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.medistock.category.dto.response.CategoryResponse;
 import lombok.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+
 
 @Getter
 @Setter
@@ -21,6 +24,16 @@ public class MedicineResponse {
     private String manufacturer;
     private String dosage;
     private BigDecimal unitPrice;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private BigDecimal costPrice;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private BigDecimal sellingPrice;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private BigDecimal profitPerUnit;
+
     private Integer reorderLevel;
     private String description;
     private String status;

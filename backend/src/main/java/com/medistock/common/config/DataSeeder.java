@@ -368,6 +368,8 @@ public class DataSeeder implements CommandLineRunner {
                     .manufacturer(mfr)
                     .dosage(dosageForm)
                     .unitPrice(BigDecimal.valueOf(price))
+                    .costPrice(BigDecimal.valueOf(price))
+                    .sellingPrice(BigDecimal.valueOf(price))
                     .reorderLevel(minStock)
                     .description(dosageForm + " formulation of " + generic + " by " + mfr)
                     .status("ACTIVE")

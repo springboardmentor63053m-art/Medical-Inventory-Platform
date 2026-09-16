@@ -176,7 +176,11 @@ public class SupplierServiceImpl implements SupplierService {
                         .manufacturer(m.getManufacturer())
                         .dosage(m.getDosage())
                         .categoryName(m.getCategory() != null ? m.getCategory().getName() : "General")
-                        .unitPrice(m.getUnitPrice())
+                        .unitPrice(
+                                m.getCostPrice() != null
+                                        ? m.getCostPrice()
+                                        : m.getUnitPrice()
+                        )
                         .build())
                 .collect(Collectors.toList());
     }
@@ -225,7 +229,11 @@ public class SupplierServiceImpl implements SupplierService {
                             .manufacturer(m.getManufacturer())
                             .dosage(m.getDosage())
                             .categoryName(m.getCategory() != null ? m.getCategory().getName() : "General")
-                            .unitPrice(m.getUnitPrice())
+                            .unitPrice(
+                                    m.getCostPrice() != null
+                                            ? m.getCostPrice()
+                                            : m.getUnitPrice()
+                            )
                             .build())
                     .collect(Collectors.toList());
         }
