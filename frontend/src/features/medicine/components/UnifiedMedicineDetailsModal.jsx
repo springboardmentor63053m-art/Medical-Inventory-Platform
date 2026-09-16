@@ -65,7 +65,17 @@ export default function UnifiedMedicineDetailsModal({
   const categoryName = medicine.category?.name || 'General Pharmaceutical';
   const dosage = medicine.dosage || 'Standard Dosage';
   const manufacturer = medicine.manufacturer || 'Standard Manufacturer';
-  const unitPrice = medicine.unitPrice;
+  const costPrice =
+    medicine.costPrice ?? (isSupplier ? medicine.unitPrice : null);
+
+  const sellingPrice =
+    medicine.sellingPrice ?? (!isSupplier ? medicine.unitPrice : null);
+
+  const profitPerUnit =
+    medicine.profitPerUnit ??
+    (isAdmin && costPrice != null && sellingPrice != null
+      ? Number(sellingPrice) - Number(costPrice)
+      : null);
   const description = medicine.description || 'Standard pharmaceutical medicine formulation.';
   const reorderLevel = medicine.reorderLevel || 10;
   const countryOfOrigin = medicine.countryOfOrigin || 'India';
@@ -252,8 +262,12 @@ export default function UnifiedMedicineDetailsModal({
 
               {/* Price & Strength Box */}
               <div className="bg-slate-800/80 border border-slate-700/80 p-3.5 rounded-xl text-right flex flex-col justify-center">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Unit Price</span>
-                <span className="text-xl font-black text-blue-400 mt-0.5">{formatINR(unitPrice)}</span>
+               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                  {isSupplier ? 'Cost Price' : 'Selling Price'}
+                </span>
+                <span className="text-xl font-black text-blue-400 mt-0.5">
+                  {formatINR(isSupplier ? costPrice : sellingPrice)}
+                </span>
                 <span className="text-[10px] text-slate-400 font-medium mt-0.5">Pack: {packSize}</span>
               </div>
             </div>
@@ -367,10 +381,38 @@ export default function UnifiedMedicineDetailsModal({
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Pack Size</span>
                   <span className="font-semibold text-slate-900">{packSize}</span>
                 </div>
-                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Unit Price</span>
-                  <span className="font-bold text-blue-600">{formatINR(unitPrice)}</span>
-                </div>
+                {(isAdmin || isPharmacist || isSupplier) && (
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
+                      Cost Price
+                    </span>
+                    <span className="font-bold text-amber-600">
+                      {formatINR(costPrice)}
+                    </span>
+                  </div>
+                )}
+
+                {!isSupplier && (
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
+                      Selling Price
+                    </span>
+                    <span className="font-bold text-blue-600">
+                      {formatINR(sellingPrice)}
+                    </span>
+                  </div>
+                )}
+
+                {isAdmin && (
+                  <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
+                      Profit Per Unit
+                    </span>
+                    <span className="font-bold text-emerald-600">
+                      {formatINR(profitPerUnit)}
+                    </span>
+                  </div>
+                )}
                 <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl">
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Prescription Status</span>
                   <span className="font-bold text-slate-800">{rxRequired}</span>

@@ -178,7 +178,7 @@ export default function SupplierAddMedicineModal({ isOpen, onClose, suppliedMedi
 
                     <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
                       <span className="text-xs font-bold text-slate-900">
-                        ₹{Number(med.unitPrice || 0).toFixed(2)}
+                        ₹{Number(med.costPrice ?? med.unitPrice ?? 0).toFixed(2)}
                       </span>
 
                       {isAlreadySupplied ? (

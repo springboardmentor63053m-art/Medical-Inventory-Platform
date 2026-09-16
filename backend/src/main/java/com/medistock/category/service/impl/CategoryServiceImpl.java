@@ -151,7 +151,15 @@ public class CategoryServiceImpl implements CategoryService {
                     .genericName(med.getGenericName())
                     .manufacturer(med.getManufacturer())
                     .dosage(med.getDosage())
-                    .unitPrice(med.getUnitPrice())
+                    .unitPrice(
+                            supplier != null
+                                    ? (med.getCostPrice() != null
+                                            ? med.getCostPrice()
+                                            : med.getUnitPrice())
+                                    : (med.getSellingPrice() != null
+                                            ? med.getSellingPrice()
+                                            : med.getUnitPrice())
+                    )
                     .reorderLevel(minStock)
                     .status(status)
                     .prescriptionRequired(med.getPrescriptionRequired() != null ? med.getPrescriptionRequired() : true)

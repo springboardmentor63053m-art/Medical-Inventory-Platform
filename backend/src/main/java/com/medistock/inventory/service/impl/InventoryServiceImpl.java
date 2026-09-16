@@ -16,6 +16,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.math.BigDecimal;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +34,17 @@ public class InventoryServiceImpl implements InventoryService {
     private final StockMovementService stockMovementService;
     private final NotificationService notificationService;
 
+    private boolean hasRole(String role) {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    if (auth == null || !auth.isAuthenticated()) {
+        return false;
+    }
+
+    return auth.getAuthorities().stream()
+            .anyMatch(authority ->
+                    authority.getAuthority().equals("ROLE_" + role)
+                            || authority.getAuthority().equals(role));
+}
     private synchronized String resolveUniqueBatchNumber(String requestedBatch, Long currentId) {
         String year = String.valueOf(LocalDate.now().getYear());
         String batchNo = (requestedBatch != null && !requestedBatch.trim().isEmpty())
@@ -326,6 +342,22 @@ public class InventoryServiceImpl implements InventoryService {
                         .build();
             }
 
+        boolean isAdmin = hasRole("ADMIN");
+        boolean isPharmacist = hasRole("PHARMACIST");
+        boolean isSupplier = hasRole("SUPPLIER");
+
+        BigDecimal costPrice = med.getCostPrice() != null
+                ? med.getCostPrice()
+                : med.getUnitPrice();
+
+        BigDecimal sellingPrice = med.getSellingPrice() != null
+                ? med.getSellingPrice()
+                : med.getUnitPrice();
+
+        BigDecimal profitPerUnit = isAdmin
+                ? sellingPrice.subtract(costPrice)
+                : null;
+
             medicineResp = MedicineResponse.builder()
                     .id(med.getId())
                     .category(categoryResp)
@@ -334,7 +366,10 @@ public class InventoryServiceImpl implements InventoryService {
                     .genericName(med.getGenericName())
                     .manufacturer(med.getManufacturer())
                     .dosage(med.getDosage())
-                    .unitPrice(med.getUnitPrice())
+                    .unitPrice(isSupplier ? costPrice : sellingPrice)
+                    .costPrice(isAdmin || isPharmacist || isSupplier ? costPrice : null)
+                    .sellingPrice(isSupplier ? null : sellingPrice)
+                    .profitPerUnit(profitPerUnit)
                     .reorderLevel(med.getReorderLevel())
                     .description(med.getDescription())
                     .status(med.getStatus())

@@ -42,7 +42,7 @@ export default function UserMedicineDetailsModal({
   const categoryName = medicine.category?.name || 'General Pharmaceutical';
   const dosage = medicine.dosage || 'Standard Dosage';
   const manufacturer = medicine.manufacturer || 'Standard Manufacturer';
-  const unitPrice = medicine.unitPrice;
+  const sellingPrice = medicine.sellingPrice ?? medicine.unitPrice;
   const description = medicine.description || 'Standard pharmaceutical medicine formulation.';
   const prescriptionLabel = medicine.prescriptionRequired === false ? 'Over-The-Counter (OTC)' : 'Prescription Required (Rx)';
 
@@ -152,8 +152,12 @@ export default function UserMedicineDetailsModal({
               Category: <strong className="text-white">{categoryName}</strong>
             </span>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block uppercase font-bold">Unit Price</span>
-              <span className="text-base font-black text-blue-400">{formatINR(unitPrice)}</span>
+              <span className="text-[10px] text-slate-400 block uppercase font-bold">
+                Selling Price
+              </span>
+              <span className="text-base font-black text-blue-400">
+                {formatINR(sellingPrice)}
+              </span>
                 <span className="text-[10px] text-slate-300 block mt-1">{prescriptionLabel}</span>
             </div>
           </div>

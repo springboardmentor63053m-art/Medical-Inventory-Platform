@@ -28,7 +28,7 @@ import {
 export default function CategoryDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isPharmacist } = useAuth();
+  const { isAdmin, isPharmacist, isSupplier } = useAuth();
 
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -369,7 +369,9 @@ export default function CategoryDetailsPage() {
                 <th className="py-3 px-4">Name & Generic Name</th>
                 <th className="py-3 px-4">Dosage / Form</th>
                 <th className="py-3 px-4">Manufacturer</th>
-                <th className="py-3 px-4 text-right">Unit Price</th>
+                <th className="py-3 px-4 text-right">
+                  {isSupplier ? 'Cost Price' : 'Selling Price'}
+                </th>
                 <th className="py-3 px-4 text-center">Real Inventory Stock</th>
                 <th className="py-3 px-4 text-center">Stock Health</th>
                 <th className="py-3 px-4 text-center">Status</th>
@@ -547,7 +549,9 @@ export default function CategoryDetailsPage() {
               </div>
               <div className="text-right">
                 <span className="text-sm font-bold text-emerald-600">₹{selectedMedicine.unitPrice ? selectedMedicine.unitPrice.toFixed(2) : '0.00'}</span>
-                <p className="text-[10px] text-slate-400 mt-0.5">Unit Price</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {isSupplier ? 'Cost Price' : 'Selling Price'}
+                </p>
               </div>
             </div>
 

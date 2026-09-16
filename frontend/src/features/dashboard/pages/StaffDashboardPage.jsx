@@ -208,7 +208,7 @@ export default function StaffDashboardPage() {
                 <th className="py-3 px-4">Name & Generic</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Dosage</th>
-                <th className="py-3 px-4">Unit Price</th>
+                <th className="py-3 px-4">Selling Price</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
@@ -235,7 +235,7 @@ export default function StaffDashboardPage() {
                     </td>
                     <td className="py-3 px-4 font-semibold text-slate-700">{med.category?.name || 'General'}</td>
                     <td className="py-3 px-4 font-medium text-slate-600">{med.dosage || 'N/A'}</td>
-                    <td className="py-3 px-4 font-bold text-slate-900">₹{Number(med.unitPrice || 0).toFixed(2)}</td>
+                    <td className="py-3 px-4 font-bold text-slate-900">₹{Number(med.sellingPrice ?? med.unitPrice ?? 0).toFixed(2)}</td>
                   </tr>
                 ))
               )}

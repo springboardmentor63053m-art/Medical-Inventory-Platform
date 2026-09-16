@@ -266,8 +266,8 @@ export default function UserDashboardPage() {
 
                 <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-400 block font-semibold uppercase">Unit Price</span>
-                    <span className="text-sm font-black text-slate-900">{formatINR(med.unitPrice)}</span>
+                    <span className="text-[10px] text-slate-400 block font-semibold uppercase">Selling Price</span>
+                    <span className="text-sm font-black text-slate-900">{formatINR(med.sellingPrice ?? med.unitPrice)}</span>
                   </div>
                   <button
                     onClick={() => {

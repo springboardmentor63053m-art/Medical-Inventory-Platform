@@ -44,6 +44,12 @@ public class Medicine {
     @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 
+    @Column(name = "cost_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal costPrice;
+
+    @Column(name = "selling_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal sellingPrice;
+
     @Builder.Default
     @Column(name = "reorder_level", nullable = false)
     private Integer reorderLevel = 10;

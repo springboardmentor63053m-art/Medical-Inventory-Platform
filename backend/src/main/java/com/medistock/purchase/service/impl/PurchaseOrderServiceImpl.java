@@ -153,9 +153,17 @@ public class PurchaseOrderServiceImpl implements PurchaseOrderService {
                         + "' is not approved for supplier '" + supplier.getSupplierName() + "'");
                 }
 
-                BigDecimal unitPrice = (med.getUnitPrice() != null && med.getUnitPrice().compareTo(BigDecimal.ZERO) > 0)
-                        ? med.getUnitPrice()
-                        : (itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO);
+                BigDecimal unitPrice =
+                        itemReq.getUnitPrice() != null
+                                && itemReq.getUnitPrice().compareTo(BigDecimal.ZERO) > 0
+                                ? itemReq.getUnitPrice()
+                                : med.getCostPrice();
+
+                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) < 0) {
+                    throw new IllegalArgumentException(
+                            "A valid cost price is required for medicine: " + med.getName()
+                    );
+                }
                 BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
                 total = total.add(subtotal);
 

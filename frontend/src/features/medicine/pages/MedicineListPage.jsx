@@ -36,7 +36,16 @@ export default function MedicineListPage() {
   const navigate = useNavigate();
   const { isAdmin, isPharmacist, isStaff, isSupplier } = useAuth();
   const canManage = isAdmin || isPharmacist;
+  const canViewCostPrice = isAdmin || isPharmacist || isSupplier;
+  const canViewSellingPrice = !isSupplier;
+  const canViewProfit = isAdmin;
 
+  const priceColumnCount =
+    Number(canViewCostPrice) +
+    Number(canViewSellingPrice) +
+    Number(canViewProfit);
+
+  const tableColumnCount = 7 + priceColumnCount;
   const [masterMedicines, setMasterMedicines] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -74,7 +83,8 @@ export default function MedicineListPage() {
     genericName: '',
     manufacturer: '',
     dosage: '',
-    unitPrice: '',
+    costPrice: '',
+    sellingPrice: '',
     reorderLevel: 10,
     description: '',
     status: 'ACTIVE',
@@ -178,7 +188,8 @@ export default function MedicineListPage() {
       genericName: med.genericName || '',
       manufacturer: med.manufacturer || '',
       dosage: med.dosage || '',
-      unitPrice: med.unitPrice || '',
+      costPrice: med.costPrice ?? med.unitPrice ?? '',
+      sellingPrice: med.sellingPrice ?? med.unitPrice ?? '',
       reorderLevel: med.reorderLevel ?? 10,
       description: med.description || '',
       status: med.status || 'ACTIVE',
@@ -188,16 +199,33 @@ export default function MedicineListPage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.medicineCode || !formData.categoryId || !formData.manufacturer || !formData.unitPrice) {
+    if (
+      !formData.name ||
+      !formData.medicineCode ||
+      !formData.categoryId ||
+      !formData.manufacturer ||
+      formData.costPrice === '' ||
+      formData.sellingPrice === ''
+    ) {
       toast.error('Please fill in all required fields marked with *');
       return;
     }
+
+    if (Number(formData.sellingPrice) < Number(formData.costPrice)) {
+      toast.error('Selling price cannot be lower than cost price');
+      return;
+    }
+
+    const costPrice = Number(formData.costPrice);
+    const sellingPrice = Number(formData.sellingPrice);
 
     setSubmitting(true);
     const payload = {
       ...formData,
       categoryId: Number(formData.categoryId),
-      unitPrice: Number(formData.unitPrice),
+      costPrice,
+      sellingPrice,
+      unitPrice: sellingPrice,
       reorderLevel: Number(formData.reorderLevel),
     };
 
@@ -535,8 +563,33 @@ export default function MedicineListPage() {
                   className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>Unit Price</span>
-                    {renderSortIcon('unitPrice')}
+                    {canViewCostPrice && (
+                      <th
+                        onClick={() => handleSort('costPrice')}
+                        className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>Cost Price</span>
+                          {renderSortIcon('costPrice')}
+                        </div>
+                      </th>
+                    )}
+
+                    {canViewSellingPrice && (
+                      <th
+                        onClick={() => handleSort('sellingPrice')}
+                        className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>Selling Price</span>
+                          {renderSortIcon('sellingPrice')}
+                        </div>
+                      </th>
+                    )}
+
+                    {canViewProfit && (
+                      <th className="py-3.5 px-6">Profit / Unit</th>
+                    )}
                   </div>
                 </th>
                 <th className="py-3.5 px-6">Status</th>
@@ -546,14 +599,14 @@ export default function MedicineListPage() {
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={tableColumnCount}className="py-12 text-center text-slate-500">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600 mb-2" />
                     Loading medicine details...
                   </td>
                 </tr>
               ) : paginatedMedicines.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={tableColumnCount} className="py-12 text-center text-slate-500">
                     No medicine items found.
                   </td>
                 </tr>
@@ -576,9 +629,26 @@ export default function MedicineListPage() {
                     </td>
                     <td className="py-4 px-6 text-slate-600 font-medium">{med.dosage || 'N/A'}</td>
                     <td className="py-4 px-6 text-slate-600">{med.manufacturer}</td>
-                    <td className="py-4 px-6 font-bold text-slate-900">
-                      {formatINR(med.unitPrice)}
-                    </td>
+                    {canViewCostPrice && (
+                      <td className="py-4 px-6 font-bold text-amber-700">
+                        {formatINR(med.costPrice ?? med.unitPrice)}
+                      </td>
+                    )}
+
+                    {canViewSellingPrice && (
+                      <td className="py-4 px-6 font-bold text-emerald-700">
+                        {formatINR(med.sellingPrice ?? med.unitPrice)}
+                      </td>
+                    )}
+
+                    {canViewProfit && (
+                      <td className="py-4 px-6 font-bold text-blue-700">
+                        {formatINR(
+                          med.profitPerUnit ??
+                            (Number(med.sellingPrice || 0) - Number(med.costPrice || 0))
+                        )}
+                      </td>
+                    )}
                     <td className="py-4 px-6">
                       <StatusBadge status={med.status} />
                     </td>
@@ -756,14 +826,32 @@ export default function MedicineListPage() {
               </h4>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <FormField label="Unit Price (₹)" required>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <FormField label="Cost Price (₹)" required>
                 <input
                   type="number"
+                  min="0"
                   step="0.01"
                   required
-                  value={formData.unitPrice}
-                  onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
+                  value={formData.costPrice}
+                  onChange={(e) =>
+                    setFormData({ ...formData, costPrice: e.target.value })
+                  }
+                  placeholder="100.00"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
+                />
+              </FormField>
+
+              <FormField label="Selling Price (₹)" required>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={formData.sellingPrice}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sellingPrice: e.target.value })
+                  }
                   placeholder="125.00"
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
                 />
