@@ -76,32 +76,31 @@ export const ProtectedLayout = () => {
   };
 
   const navItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER', 'VIEWER', 'STAFF', 'SUPPLIER'] },
-    { label: 'Medicines', path: '/medicines', icon: Pill, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER', 'VIEWER', 'STAFF'] },
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'PHARMACIST', 'VIEWER', 'STAFF', 'SUPPLIER'] },
+    { label: 'Medicines', path: '/medicines', icon: Pill, roles: ['ADMIN', 'PHARMACIST', 'VIEWER', 'STAFF'] },
     { label: 'User Management', path: '/user-management', icon: Shield, roles: ['ADMIN'] },
     { label: 'Point of Sale (POS)', path: '/sales', icon: ShoppingCart, roles: ['ADMIN', 'PHARMACIST'] },
-    { label: 'Bills & Invoices', path: '/bills', icon: Receipt, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER', 'VIEWER', 'STAFF'] },
+    { label: 'Bills & Invoices', path: '/bills', icon: Receipt, roles: ['ADMIN', 'PHARMACIST', 'VIEWER', 'STAFF'] },
     { label: 'Customers', path: '/customers', icon: UserCheck, roles: ['ADMIN', 'PHARMACIST'] },
     { label: 'Prescriptions', path: '/prescriptions', icon: FileCheck, roles: ['ADMIN', 'PHARMACIST'] },
-    { label: 'Suppliers', path: '/suppliers', icon: Users, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
-    { label: 'Supplier Catalogue', path: '/supplier-catalogue', icon: Store, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
-    { label: 'Inventory Stock', path: '/inventory', icon: Boxes, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER', 'VIEWER', 'STAFF'] },
-    { label: 'Expiry Tracking', path: '/expiry', icon: Calendar, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
-    { label: 'Stock Operations', path: '/stock-management', icon: ArrowDownUp, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
-    { label: 'Stock History', path: '/stock-history', icon: History, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER', 'VIEWER', 'STAFF'] },
-    { label: 'Low Stock Alerts', path: '/low-stock', icon: AlertTriangle, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
-    { label: 'Out of Stock', path: '/out-of-stock', icon: XCircle, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
-    { label: 'Notifications', path: '/notifications', icon: Bell, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER', 'STAFF', 'SUPPLIER'] },
-    { label: 'Analytics', path: '/analytics', icon: BarChart3, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
-    { label: 'Reports', path: '/reports', icon: FileText, roles: ['ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
+    { label: 'Suppliers', path: '/suppliers', icon: Users, roles: ['ADMIN', 'PHARMACIST'] },
+    { label: 'Supplier Catalogue', path: '/supplier-catalogue', icon: Store, roles: ['ADMIN', 'PHARMACIST', 'SUPPLIER'] },
+    { label: 'Inventory Stock', path: '/inventory', icon: Boxes, roles: ['ADMIN', 'PHARMACIST', 'VIEWER', 'STAFF'] },
+    { label: 'Expiry Tracking', path: '/expiry', icon: Calendar, roles: ['ADMIN', 'PHARMACIST'] },
+    { label: 'Stock Operations', path: '/stock-management', icon: ArrowDownUp, roles: ['ADMIN', 'PHARMACIST', 'STAFF'] },
+    { label: 'Stock History', path: '/stock-history', icon: History, roles: ['ADMIN', 'PHARMACIST', 'VIEWER', 'STAFF'] },
+    { label: 'Low Stock Alerts', path: '/low-stock', icon: AlertTriangle, roles: ['ADMIN', 'PHARMACIST', 'STAFF'] },
+    { label: 'Out of Stock', path: '/out-of-stock', icon: XCircle, roles: ['ADMIN', 'PHARMACIST', 'STAFF'] },
+    { label: 'Notifications', path: '/notifications', icon: Bell, roles: ['ADMIN', 'PHARMACIST', 'STAFF', 'SUPPLIER'] },
+    { label: 'Analytics', path: '/analytics', icon: BarChart3, roles: ['ADMIN', 'PHARMACIST'] },
+    { label: 'Reports', path: '/reports', icon: FileText, roles: ['ADMIN', 'PHARMACIST', 'STAFF', 'VIEWER', 'SUPPLIER'] },
     { label: 'Messages / Chat', path: '/messages', icon: MessageSquare, roles: ['ADMIN', 'SUPPLIER', 'PHARMACIST'] },
-    { label: 'Procurement Orders', path: '/supplier-orders', icon: Truck, roles: ['SUPPLIER', 'ADMIN', 'PHARMACIST', 'STORE_MANAGER'] },
+    { label: 'Procurement Orders', path: '/supplier-orders', icon: Truck, roles: ['SUPPLIER', 'ADMIN', 'PHARMACIST'] },
   ].filter(item => item.roles.includes(role));
 
   // Determine display role label
   const getRoleDisplay = () => {
     if (role === 'VIEWER' || role === 'STAFF') return 'STAFF';
-    if (role === 'STORE_MANAGER') return 'STORE MANAGER';
     return role;
   };
 

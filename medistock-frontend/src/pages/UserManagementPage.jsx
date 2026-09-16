@@ -13,7 +13,6 @@ import {
 const ROLE_MAP = {
   1: 'ADMIN',
   2: 'PHARMACIST',
-  3: 'STORE_MANAGER',
   4: 'STAFF',
   5: 'SUPPLIER'
 };
@@ -21,7 +20,6 @@ const ROLE_MAP = {
 const ROLE_COLORS = {
   ADMIN: { bg: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' },
   PHARMACIST: { bg: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' },
-  STORE_MANAGER: { bg: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' },
   STAFF: { bg: 'rgba(100, 116, 139, 0.12)', color: '#64748b', border: '1px solid rgba(100, 116, 139, 0.3)' },
   SUPPLIER: { bg: 'rgba(20, 184, 166, 0.12)', color: '#14b8a6', border: '1px solid rgba(20, 184, 166, 0.3)' },
 };
@@ -170,7 +168,7 @@ export const UserManagementPage = () => {
         background: style.bg, color: style.color, border: style.border
       }}>
         <Shield size={12} />
-        {roleName === 'STORE_MANAGER' ? 'STORE MGR' : roleName}
+        {roleName}
       </span>
     );
   };
@@ -401,7 +399,6 @@ export const UserManagementPage = () => {
               >
                 <option value={1}>Admin</option>
                 <option value={2}>Pharmacist</option>
-                <option value={3}>Store Manager</option>
                 <option value={4}>Staff</option>
                 <option value={5}>Supplier</option>
               </select>

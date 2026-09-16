@@ -82,19 +82,18 @@ export const Login = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'radial-gradient(ellipse at center top, #0e1e38 0%, #060b14 100%)',
+      background: 'radial-gradient(ellipse at 50% 0%, #e0f2fe 0%, #f0fdf4 40%, #f8fafc 100%)',
       padding: '24px 16px',
       fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif"
     }}>
       <div style={{
-        background: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(56, 189, 248, 0.15)',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
         borderRadius: '24px',
         width: '100%',
         maxWidth: isRegisterMode ? '520px' : '440px',
         padding: '36px 32px',
-        boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(2, 132, 199, 0.1)',
+        boxShadow: '0 20px 45px -10px rgba(2, 132, 199, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04)',
         transition: 'all 0.3s ease'
       }}>
         {/* Header with Pulse Icon */}
@@ -106,24 +105,24 @@ export const Login = () => {
             width: '52px',
             height: '52px',
             borderRadius: '16px',
-            background: 'rgba(2, 132, 199, 0.15)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            color: '#38bdf8',
+            background: 'rgba(2, 132, 199, 0.1)',
+            border: '1px solid rgba(56, 189, 248, 0.4)',
+            color: '#0284c7',
             marginBottom: '14px',
-            boxShadow: '0 0 20px rgba(56, 189, 248, 0.25)'
+            boxShadow: '0 4px 12px rgba(2, 132, 199, 0.15)'
           }}>
             <Activity size={28} strokeWidth={2.5} />
           </div>
           <h1 style={{
             fontSize: '26px',
             fontWeight: 800,
-            color: '#ffffff',
+            color: '#0f172a',
             letterSpacing: '-0.5px',
             margin: '0 0 6px 0'
           }}>
             {isRegisterMode ? 'Create Account' : 'MediStock Portal'}
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: 0 }}>
+          <p style={{ color: '#64748b', fontSize: '13.5px', margin: 0 }}>
             {isRegisterMode
               ? 'Register to access hospital stock & inventory'
               : 'Sign in to manage medical inventory systems'}
@@ -135,7 +134,7 @@ export const Login = () => {
           <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {/* Username */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
                 Email / Username
               </label>
               <div style={{ position: 'relative' }}>
@@ -145,26 +144,28 @@ export const Login = () => {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
+                  placeholder="Enter your username or email"
                   style={{
                     width: '100%',
                     padding: '12px 14px 12px 42px',
-                    background: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid #334155',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '12px',
-                    color: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'border-color 0.2s, box-shadow 0.2s',
                     boxSizing: 'border-box'
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#38bdf8';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(56, 189, 248, 0.2)';
+                    e.target.style.borderColor = '#0284c7';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(2, 132, 199, 0.15)';
+                    e.target.style.background = '#ffffff';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#334155';
+                    e.target.style.borderColor = '#cbd5e1';
                     e.target.style.boxShadow = 'none';
+                    e.target.style.background = '#f8fafc';
                   }}
                 />
               </div>
@@ -172,7 +173,7 @@ export const Login = () => {
 
             {/* Password */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
                 Password
               </label>
               <div style={{ position: 'relative' }}>
@@ -186,22 +187,24 @@ export const Login = () => {
                   style={{
                     width: '100%',
                     padding: '12px 42px 12px 42px',
-                    background: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid #334155',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '12px',
-                    color: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'border-color 0.2s, box-shadow 0.2s',
                     boxSizing: 'border-box'
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#38bdf8';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(56, 189, 248, 0.2)';
+                    e.target.style.borderColor = '#0284c7';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(2, 132, 199, 0.15)';
+                    e.target.style.background = '#ffffff';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#334155';
+                    e.target.style.borderColor = '#cbd5e1';
                     e.target.style.boxShadow = 'none';
+                    e.target.style.background = '#f8fafc';
                   }}
                 />
                 <button
@@ -228,7 +231,7 @@ export const Login = () => {
 
             {/* Select Role */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
                 Select Role
               </label>
               <div style={{ position: 'relative' }}>
@@ -239,10 +242,10 @@ export const Login = () => {
                   style={{
                     width: '100%',
                     padding: '12px 14px 12px 42px',
-                    background: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid #334155',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '12px',
-                    color: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '14px',
                     outline: 'none',
                     cursor: 'pointer',
@@ -252,7 +255,6 @@ export const Login = () => {
                   <option value="Staff">Staff</option>
                   <option value="Admin">Admin</option>
                   <option value="Pharmacist">Pharmacist</option>
-                  <option value="Store Manager">Store Manager</option>
                   <option value="Supplier">Supplier</option>
                 </select>
               </div>
@@ -276,11 +278,11 @@ export const Login = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 15px rgba(2, 132, 199, 0.35)',
+                boxShadow: '0 4px 15px rgba(2, 132, 199, 0.25)',
                 transition: 'all 0.2s ease',
                 marginTop: '4px'
               }}
-              onMouseEnter={(e) => e.target.style.filter = 'brightness(1.1)'}
+              onMouseEnter={(e) => e.target.style.filter = 'brightness(1.08)'}
               onMouseLeave={(e) => e.target.style.filter = 'none'}
             >
               {loading ? 'Authenticating...' : 'Sign In'}
@@ -291,7 +293,7 @@ export const Login = () => {
           <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>First Name *</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>First Name *</label>
                 <input
                   type="text"
                   required
@@ -301,10 +303,10 @@ export const Login = () => {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    background: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid #334155',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '10px',
-                    color: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '13px',
                     outline: 'none',
                     boxSizing: 'border-box'
@@ -312,7 +314,7 @@ export const Login = () => {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Last Name *</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Last Name *</label>
                 <input
                   type="text"
                   required
@@ -322,10 +324,10 @@ export const Login = () => {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    background: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid #334155',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '10px',
-                    color: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '13px',
                     outline: 'none',
                     boxSizing: 'border-box'
@@ -335,7 +337,7 @@ export const Login = () => {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Email Address *</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Email Address *</label>
               <input
                 type="email"
                 required
@@ -345,10 +347,10 @@ export const Login = () => {
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  background: 'rgba(15, 23, 42, 0.9)',
-                  border: '1px solid #334155',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
                   borderRadius: '10px',
-                  color: '#ffffff',
+                  color: '#0f172a',
                   fontSize: '13px',
                   outline: 'none',
                   boxSizing: 'border-box'
@@ -358,7 +360,7 @@ export const Login = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Password *</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Password *</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showRegPassword ? 'text' : 'password'}
@@ -369,10 +371,10 @@ export const Login = () => {
                     style={{
                       width: '100%',
                       padding: '10px 36px 10px 12px',
-                      background: 'rgba(15, 23, 42, 0.9)',
-                      border: '1px solid #334155',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
                       borderRadius: '10px',
-                      color: '#ffffff',
+                      color: '#0f172a',
                       fontSize: '13px',
                       outline: 'none',
                       boxSizing: 'border-box'
@@ -400,17 +402,17 @@ export const Login = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Role</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Role</label>
                 <select
                   value={regRole}
                   onChange={(e) => setRegRole(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    background: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid #334155',
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '10px',
-                    color: '#ffffff',
+                    color: '#0f172a',
                     fontSize: '13px',
                     outline: 'none',
                     cursor: 'pointer',
@@ -419,7 +421,6 @@ export const Login = () => {
                 >
                   <option value="Staff">Staff</option>
                   <option value="Pharmacist">Pharmacist</option>
-                  <option value="Store Manager">Store Manager</option>
                   <option value="Supplier">Supplier</option>
                   <option value="Admin">Admin</option>
                 </select>
@@ -427,7 +428,7 @@ export const Login = () => {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Contact Phone</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Contact Phone</label>
               <input
                 type="text"
                 placeholder="+91 98765 43210"
@@ -436,10 +437,10 @@ export const Login = () => {
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  background: 'rgba(15, 23, 42, 0.9)',
-                  border: '1px solid #334155',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
                   borderRadius: '10px',
-                  color: '#ffffff',
+                  color: '#0f172a',
                   fontSize: '13px',
                   outline: 'none',
                   boxSizing: 'border-box'
@@ -464,7 +465,7 @@ export const Login = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.35)',
+                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.25)',
                 transition: 'all 0.2s ease',
                 marginTop: '4px'
               }}
@@ -475,7 +476,7 @@ export const Login = () => {
         )}
 
         {/* Toggle between Login and Registration */}
-        <div style={{ textAlign: 'center', fontSize: '13.5px', color: '#94a3b8', marginTop: '20px' }}>
+        <div style={{ textAlign: 'center', fontSize: '13.5px', color: '#64748b', marginTop: '20px' }}>
           {!isRegisterMode ? (
             <div>
               Don't have an account?{' '}
@@ -485,7 +486,7 @@ export const Login = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#38bdf8',
+                  color: '#0284c7',
                   fontWeight: 700,
                   cursor: 'pointer',
                   padding: 0,
@@ -505,7 +506,7 @@ export const Login = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#38bdf8',
+                  color: '#0284c7',
                   fontWeight: 700,
                   cursor: 'pointer',
                   padding: 0,

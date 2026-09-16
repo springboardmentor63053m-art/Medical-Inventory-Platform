@@ -192,8 +192,8 @@ body {
 
 .role-admin { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
 .role-pharmacist { background: rgba(16, 185, 129, 0.12); color: #059669; }
-.role-store_manager { background: rgba(245, 158, 11, 0.12); color: #d97706; }
 .role-viewer, .role-staff { background: rgba(100, 116, 139, 0.12); color: #475569; }
+.role-supplier { background: rgba(20, 184, 166, 0.12); color: #0d9488; }
 
 .page-body {
   padding: 32px;

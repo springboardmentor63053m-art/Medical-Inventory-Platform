@@ -63,7 +63,6 @@ export const AuthProvider = ({ children }) => {
       const roleIdMap = {
         'ADMIN': 1,
         'PHARMACIST': 2,
-        'STORE_MANAGER': 3,
         'STAFF': 4,
         'SUPPLIER': 5
       };

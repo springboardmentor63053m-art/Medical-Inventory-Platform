@@ -35,7 +35,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 /* ───────────────────────────────────────────────
-   ADMIN / STORE MANAGER  Dashboard
+   ADMIN Dashboard
    ─────────────────────────────────────────────── */
 const AdminDashboard = ({ summary }) => {
   const navigate = useNavigate();
@@ -53,76 +53,76 @@ const AdminDashboard = ({ summary }) => {
   return (
     <>
       <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f8fafc' }}>Dashboard Overview</h1>
-        <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>Real-time inventory metrics, stock alerts, and catalogue analytics</p>
+        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b' }}>Administrator Dashboard Overview</h1>
+        <p style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>Real-time inventory metrics, stock alerts, and enterprise analytics</p>
       </div>
 
       {/* KPI Cards */}
       <div className="card-grid">
-        <div className="kpi-card" onClick={() => navigate('/medicines')} style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} title="Click to view all Medicines">
+        <div className="kpi-card" onClick={() => navigate('/medicines')} style={{ cursor: 'pointer' }} title="Click to view all Medicines">
           <div>
             <div className="kpi-title">Total Medicines</div>
             <div className="kpi-value">{totalMeds}</div>
-            <div style={{ fontSize: '11px', color: '#38bdf8', marginTop: '4px' }}>View Catalogue →</div>
+            <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>View Catalogue →</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7' }}>
             <Pill size={24} />
           </div>
         </div>
 
-        <div className="kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} title="Click to view Inventory Stock">
+        <div className="kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }} title="Click to view Inventory Stock">
           <div>
             <div className="kpi-title">Available Stock</div>
             <div className="kpi-value" style={{ color: '#10b981' }}>{available}</div>
-            <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>Healthy Stock Items →</div>
+            <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 600 }}>Healthy Stock Items →</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>
             <CheckCircle size={24} />
           </div>
         </div>
 
-        <div className="kpi-card" onClick={() => navigate('/low-stock')} style={{ cursor: 'pointer', border: '1px solid rgba(245, 158, 11, 0.4)', transition: 'transform 0.2s, box-shadow 0.2s' }} title="Click to open Low Stock Alert Center">
+        <div className="kpi-card" onClick={() => navigate('/low-stock')} style={{ cursor: 'pointer', borderLeft: '4px solid #f59e0b' }} title="Click to open Low Stock Alert Center">
           <div>
             <div className="kpi-title">Low Stock Items</div>
-            <div className="kpi-value" style={{ color: '#f59e0b' }}>{lowStock}</div>
-            <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '4px', fontWeight: 600 }}>Action Required →</div>
+            <div className="kpi-value" style={{ color: '#d97706' }}>{lowStock}</div>
+            <div style={{ fontSize: '11px', color: '#d97706', marginTop: '4px', fontWeight: 600 }}>Action Required →</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706' }}>
             <AlertTriangle size={24} />
           </div>
         </div>
 
-        <div className="kpi-card" onClick={() => navigate('/out-of-stock')} style={{ cursor: 'pointer', border: '1px solid rgba(239, 68, 68, 0.4)', transition: 'transform 0.2s, box-shadow 0.2s' }} title="Click to open Out of Stock Alert Center">
+        <div className="kpi-card" onClick={() => navigate('/out-of-stock')} style={{ cursor: 'pointer', borderLeft: '4px solid #ef4444' }} title="Click to open Out of Stock Alert Center">
           <div>
             <div className="kpi-title">Out of Stock</div>
-            <div className="kpi-value" style={{ color: '#ef4444' }}>{outOfStock}</div>
-            <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: 600 }}>Critical Reorders →</div>
+            <div className="kpi-value" style={{ color: '#dc2626' }}>{outOfStock}</div>
+            <div style={{ fontSize: '11px', color: '#dc2626', marginTop: '4px', fontWeight: 600 }}>Critical Reorders →</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#dc2626' }}>
             <XCircle size={24} />
           </div>
         </div>
 
-        <div className="kpi-card" onClick={() => navigate('/suppliers')} style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} title="Click to view Suppliers">
+        <div className="kpi-card" onClick={() => navigate('/suppliers')} style={{ cursor: 'pointer' }} title="Click to view Suppliers">
           <div>
             <div className="kpi-title">Total Suppliers</div>
             <div className="kpi-value">{summary?.totalSuppliers || 0}</div>
-            <div style={{ fontSize: '11px', color: '#14b8a6', marginTop: '4px' }}>View Directory →</div>
+            <div style={{ fontSize: '11px', color: '#0d9488', marginTop: '4px', fontWeight: 600 }}>View Directory →</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(20, 184, 166, 0.15)', color: '#14b8a6' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(20, 184, 166, 0.12)', color: '#0d9488' }}>
             <Users size={24} />
           </div>
         </div>
 
-        <div className="kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} title="Click to view Inventory Stock Valuation">
+        <div className="kpi-card" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }} title="Click to view Inventory Stock Valuation">
           <div>
             <div className="kpi-title">Total Inventory Value</div>
             <div className="kpi-value" style={{ color: '#10b981' }}>
               ₹{Number(summary?.totalInventoryValue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
-            <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>Full Inventory Audit →</div>
+            <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px', fontWeight: 600 }}>Full Inventory Audit →</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>
             <IndianRupee size={24} />
           </div>
         </div>
@@ -131,72 +131,78 @@ const AdminDashboard = ({ summary }) => {
       {/* Quick Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
         <a href="/medicines" style={{
-          background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(2, 132, 199, 0.05))',
-          border: '1px solid rgba(56, 189, 248, 0.3)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: '12px',
-          textDecoration: 'none', color: '#38bdf8', fontWeight: 700, fontSize: '14px',
+          textDecoration: 'none', color: '#0284c7', fontWeight: 700, fontSize: '14px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           transition: 'all 0.2s ease'
         }}>
           <Pill size={20} /> Manage Medicines <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
         </a>
         <a href="/stock-management" style={{
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05))',
-          border: '1px solid rgba(52, 211, 153, 0.3)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: '12px',
-          textDecoration: 'none', color: '#34d399', fontWeight: 700, fontSize: '14px',
+          textDecoration: 'none', color: '#059669', fontWeight: 700, fontSize: '14px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           transition: 'all 0.2s ease'
         }}>
           <Package size={20} /> Stock Operations <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
         </a>
         <a href="/suppliers" style={{
-          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))',
-          border: '1px solid rgba(167, 139, 250, 0.3)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: '12px',
-          textDecoration: 'none', color: '#a78bfa', fontWeight: 700, fontSize: '14px',
+          textDecoration: 'none', color: '#7c3aed', fontWeight: 700, fontSize: '14px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           transition: 'all 0.2s ease'
         }}>
           <Users size={20} /> View Suppliers <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
         </a>
         <a href="/expiry" style={{
-          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05))',
-          border: '1px solid rgba(251, 191, 36, 0.3)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: '12px',
-          textDecoration: 'none', color: '#fbbf24', fontWeight: 700, fontSize: '14px',
+          textDecoration: 'none', color: '#d97706', fontWeight: 700, fontSize: '14px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           transition: 'all 0.2s ease'
         }}>
           <Calendar size={20} /> Expiry Tracking <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
         </a>
         <a href="/user-management" style={{
-          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: '12px',
-          textDecoration: 'none', color: '#f87171', fontWeight: 700, fontSize: '14px',
+          textDecoration: 'none', color: '#dc2626', fontWeight: 700, fontSize: '14px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           transition: 'all 0.2s ease'
         }}>
           <Shield size={20} /> User Management <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
         </a>
-        <a href="/supplier-catalogue" style={{
-          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))',
-          border: '1px solid rgba(167, 139, 250, 0.3)',
+        <a href="/reports" style={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
           display: 'flex', alignItems: 'center', gap: '12px',
-          textDecoration: 'none', color: '#c084fc', fontWeight: 700, fontSize: '14px',
+          textDecoration: 'none', color: '#0284c7', fontWeight: 700, fontSize: '14px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
           transition: 'all 0.2s ease'
         }}>
-          <Store size={20} /> Supplier Catalogue <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
+          <FileText size={20} /> Role Reports <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
         </a>
       </div>
 
       {/* Charts Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '28px' }}>
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Boxes size={18} color="#38bdf8" /> Stock Status Distribution
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Boxes size={18} color="#0284c7" /> Stock Status Distribution
           </h3>
           {pieData.length > 0 ? (
             <>
@@ -208,13 +214,13 @@ const AdminDashboard = ({ summary }) => {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }} />
+                    <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '13px', marginTop: '12px' }}>
                 {pieData.map((item) => (
-                  <span key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
                     <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: item.color }} />
                     {item.name} ({item.value})
                   </span>
@@ -229,30 +235,30 @@ const AdminDashboard = ({ summary }) => {
         </div>
 
         {/* Summary Stats Panel */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TrendingUp size={18} color="#14b8a6" /> Inventory Summary
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TrendingUp size={18} color="#0d9488" /> Inventory Summary
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '14px 16px', borderRadius: '10px', border: '1px solid #334155' }}>
-              <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 600 }}>Total Stock Units</span>
-              <span style={{ fontWeight: 800, color: '#f8fafc', fontSize: '16px' }}>{(summary?.totalStockQuantity || 0).toLocaleString()}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Total Stock Units</span>
+              <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '16px' }}>{(summary?.totalStockQuantity || 0).toLocaleString()}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '14px 16px', borderRadius: '10px', border: '1px solid #334155' }}>
-              <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 600 }}>Active Suppliers</span>
-              <span style={{ fontWeight: 800, color: '#14b8a6', fontSize: '16px' }}>{summary?.totalSuppliers || 0}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Active Suppliers</span>
+              <span style={{ fontWeight: 800, color: '#0d9488', fontSize: '16px' }}>{summary?.totalSuppliers || 0}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '14px 16px', borderRadius: '10px', border: '1px solid #334155' }}>
-              <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 600 }}>Expiring Soon</span>
-              <span style={{ fontWeight: 800, color: '#f59e0b', fontSize: '16px' }}>{summary?.expiringSoonCount || 0}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Expiring Soon</span>
+              <span style={{ fontWeight: 800, color: '#d97706', fontSize: '16px' }}>{summary?.expiringSoonCount || 0}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '14px 16px', borderRadius: '10px', border: '1px solid #334155' }}>
-              <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 600 }}>Expired</span>
-              <span style={{ fontWeight: 800, color: '#ef4444', fontSize: '16px' }}>{summary?.expiredCount || 0}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Expired</span>
+              <span style={{ fontWeight: 800, color: '#dc2626', fontSize: '16px' }}>{summary?.expiredCount || 0}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '14px 16px', borderRadius: '10px', border: '1px solid #334155' }}>
-              <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 600 }}>Pending Orders</span>
-              <span style={{ fontWeight: 800, color: '#a78bfa', fontSize: '16px' }}>{summary?.pendingOrdersCount || 0}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Pending Orders</span>
+              <span style={{ fontWeight: 800, color: '#7c3aed', fontSize: '16px' }}>{summary?.pendingOrdersCount || 0}</span>
             </div>
           </div>
         </div>
@@ -261,8 +267,8 @@ const AdminDashboard = ({ summary }) => {
       {/* Recent Activity Table */}
       <div className="table-container">
         <div className="table-header">
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={18} color="#f59e0b" /> Recent Audit Activity Logs
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Activity size={18} color="#d97706" /> Recent Audit Activity Logs
           </h3>
         </div>
         <table className="custom-table">
@@ -277,7 +283,7 @@ const AdminDashboard = ({ summary }) => {
           </thead>
           <tbody>
             {(summary?.recentActivities || []).length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No recent activity</td></tr>
+              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>No recent activity</td></tr>
             ) : (
               summary.recentActivities.map((act) => (
                 <tr key={act.id}>
@@ -292,8 +298,8 @@ const AdminDashboard = ({ summary }) => {
                     </span>
                   </td>
                   <td style={{ fontWeight: 700 }}>{act.quantity} units</td>
-                  <td style={{ color: '#94a3b8' }}>{act.performedBy || 'System'}</td>
-                  <td style={{ color: '#94a3b8', fontSize: '13px' }}>
+                  <td style={{ color: '#64748b' }}>{act.performedBy || 'System'}</td>
+                  <td style={{ color: '#64748b', fontSize: '13px' }}>
                     {act.createdAt ? new Date(act.createdAt).toLocaleString() : '—'}
                   </td>
                 </tr>
@@ -334,8 +340,6 @@ const PharmacistDashboard = ({ summary }) => {
 
   const purchasesThisMonth = summary?.purchasesThisMonth || purchaseOrders.length || 0;
   const spendThisMonth = Number(summary?.spendThisMonth || purchaseOrders.reduce((sum, po) => sum + (po.status !== 'CANCELLED' ? Number(po.totalAmount || 0) : 0), 0));
-  const totalMedicines = summary?.totalMedicines || 0;
-  const available = summary?.availableStockCount || 0;
   const lowStock = summary?.lowStockCount || 0;
 
   useEffect(() => {
@@ -414,19 +418,13 @@ const PharmacistDashboard = ({ summary }) => {
     }
   };
 
-  // Filtered PO list
   const filteredOrders = purchaseOrders.filter(po => {
     if (poFilter === 'ALL') return true;
     return po.status === poFilter;
   });
 
-  // Calculate status breakdown
   const pendingCount = purchaseOrders.filter(p => p.status === 'PENDING').length;
-  const approvedCount = purchaseOrders.filter(p => p.status === 'APPROVED').length;
-  const shippedCount = purchaseOrders.filter(p => p.status === 'SHIPPED').length;
-  const receivedCount = purchaseOrders.filter(p => p.status === 'RECEIVED').length;
 
-  // Inline medicine search
   const handleMedSearch = async (query) => {
     setMedSearch(query);
     if (query.length < 2) { setMedResults([]); return; }
@@ -441,7 +439,6 @@ const PharmacistDashboard = ({ summary }) => {
     }
   };
 
-  // Mock comparison chart data for spend vs sales
   const comparisonData = [
     { month: 'May', RestockSpend: 8500, SalesRevenue: 14200 },
     { month: 'Jun', RestockSpend: 11200, SalesRevenue: 19800 },
@@ -451,116 +448,109 @@ const PharmacistDashboard = ({ summary }) => {
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' }}>
+      <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Pill size={24} color="#38bdf8" /> Pharmacist Dashboard
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <ShoppingCart size={24} color="#0284c7" /> Pharmacist Operations & Restock Hub
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>Monthly restock procurement tracking, supplier spend, and inventory analytics</p>
+          <p style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>
+            Dispensing, monthly procurement tracker, sales revenue, and instant medicine search
+          </p>
         </div>
-        <button
-          onClick={() => setIsPoModalOpen(true)}
-          style={{
-            background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-            border: 'none',
-            color: 'white',
-            fontWeight: 700,
-            fontSize: '14px',
-            padding: '10px 18px',
-            borderRadius: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(139, 92, 246, 0.35)'
-          }}
-        >
-          <ShoppingCart size={18} /> + Create Restock PO
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => setIsPoModalOpen(true)}
+            className="btn btn-primary"
+            style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' }}
+          >
+            <Plus size={16} /> Quick Restock PO
+          </button>
+          <a href="/sales" className="btn btn-secondary">
+            <ShoppingCart size={16} /> POS Billing
+          </a>
+          <a href="/reports" className="btn btn-secondary">
+            <FileText size={16} /> Pharmacist Reports
+          </a>
+        </div>
       </div>
 
-      {/* ── Row 1: Procurement & Financial KPI Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '28px' }}>
-        {/* Purchases This Month */}
-        <div className="kpi-card" onClick={() => navigate('/supplier-orders')} style={{ borderLeft: '4px solid #8b5cf6', cursor: 'pointer' }} title="View Purchase Orders">
+      {/* Row 1: KPI Cards */}
+      <div className="card-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        <div className="kpi-card" onClick={() => setPoFilter('ALL')} style={{ borderLeft: '4px solid #0284c7', cursor: 'pointer' }} title="Filter to all POs">
           <div>
             <div className="kpi-title">Purchases This Month</div>
-            <div className="kpi-value" style={{ color: '#a78bfa' }}>{purchasesThisMonth} Orders</div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-              {receivedCount} Received · {shippedCount} In Transit · {pendingCount} Pending
+            <div className="kpi-value" style={{ color: '#0284c7' }}>{purchasesThisMonth} Orders</div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+              {pendingCount > 0 ? `${pendingCount} awaiting delivery` : 'All deliveries settled'}
             </div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa' }}>
-            <ShoppingCart size={24} />
+          <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7' }}>
+            <ClipboardList size={24} />
           </div>
         </div>
 
-        {/* Spend This Month */}
-        <div className="kpi-card" onClick={() => navigate('/supplier-orders')} style={{ borderLeft: '4px solid #ec4899', cursor: 'pointer' }} title="View Procurement Spend">
+        <div className="kpi-card" style={{ borderLeft: '4px solid #ec4899' }}>
           <div>
             <div className="kpi-title">Restock Spend This Month</div>
-            <div className="kpi-value" style={{ color: '#f472b6' }}>
+            <div className="kpi-value" style={{ color: '#db2777' }}>
               ₹{spendThisMonth.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
               Procured from {suppliers.length || 4} verified suppliers
             </div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(236, 72, 153, 0.12)', color: '#db2777' }}>
             <IndianRupee size={24} />
           </div>
         </div>
 
-        {/* Counter Sales Revenue */}
         <div className="kpi-card" onClick={() => navigate('/sales')} style={{ borderLeft: '4px solid #10b981', cursor: 'pointer' }} title="Open POS & Sales">
           <div>
             <div className="kpi-title">Counter Sales Revenue</div>
-            <div className="kpi-value" style={{ color: '#34d399' }}>
+            <div className="kpi-value" style={{ color: '#059669' }}>
               ₹{monthlySalesTotal > 0 ? monthlySalesTotal.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '15,400.00'}
             </div>
-            <div style={{ fontSize: '12px', color: '#10b981', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontSize: '12px', color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <TrendingUp size={12} /> Positive Retail Margin
             </div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669' }}>
             <TrendingUp size={24} />
           </div>
         </div>
 
-        {/* Low Stock Alerts */}
         <div className="kpi-card" onClick={() => navigate('/low-stock')} style={{ borderLeft: '4px solid #f59e0b', cursor: 'pointer' }} title="Open Low Stock Alert Center">
           <div>
             <div className="kpi-title">Low Stock Reorders</div>
-            <div className="kpi-value" style={{ color: '#fbbf24' }}>{lowStock} Items</div>
-            <div style={{ fontSize: '12px', color: '#fbbf24', marginTop: '4px' }}>
+            <div className="kpi-value" style={{ color: '#d97706' }}>{lowStock} Items</div>
+            <div style={{ fontSize: '12px', color: '#d97706', marginTop: '4px' }}>
               {lowStock > 0 ? 'Requires immediate restock' : 'All stock above threshold'}
             </div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706' }}>
             <AlertTriangle size={24} />
           </div>
         </div>
       </div>
 
-      {/* ── Row 2: Purchase Order Tracking & Restock Manager ── */}
-      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '24px', marginBottom: '28px' }}>
+      {/* Row 2: PO Tracking */}
+      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', marginBottom: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
           <div>
-            <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-              <Truck size={20} color="#8b5cf6" /> Monthly Procurement & Restock Orders Tracker
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Truck size={20} color="#7c3aed" /> Monthly Procurement & Restock Orders Tracker
             </h3>
-            <p style={{ color: '#94a3b8', fontSize: '13px', margin: '4px 0 0 0' }}>Track status from supplier dispatch to hospital inventory delivery</p>
+            <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0 0' }}>Track status from supplier dispatch to hospital inventory delivery</p>
           </div>
 
-          {/* Filter tabs */}
-          <div style={{ display: 'flex', gap: '6px', background: '#0f172a', padding: '4px', borderRadius: '10px', border: '1px solid #334155' }}>
+          <div style={{ display: 'flex', gap: '6px', background: '#f8fafc', padding: '4px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
             {['ALL', 'PENDING', 'APPROVED', 'SHIPPED', 'RECEIVED'].map((st) => (
               <button
                 key={st}
                 onClick={() => setPoFilter(st)}
                 style={{
-                  background: poFilter === st ? '#38bdf8' : 'transparent',
-                  color: poFilter === st ? '#0f172a' : '#94a3b8',
+                  background: poFilter === st ? '#0284c7' : 'transparent',
+                  color: poFilter === st ? '#ffffff' : '#64748b',
                   border: 'none',
                   borderRadius: '6px',
                   padding: '6px 12px',
@@ -576,7 +566,6 @@ const PharmacistDashboard = ({ summary }) => {
           </div>
         </div>
 
-        {/* PO Table */}
         <div style={{ overflowX: 'auto' }}>
           <table className="custom-table">
             <thead>
@@ -591,17 +580,17 @@ const PharmacistDashboard = ({ summary }) => {
             </thead>
             <tbody>
               {poLoading ? (
-                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>Loading monthly purchase orders...</td></tr>
+                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>Loading monthly purchase orders...</td></tr>
               ) : filteredOrders.length === 0 ? (
-                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No purchase orders matching filter "{poFilter}"</td></tr>
+                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>No purchase orders matching filter "{poFilter}"</td></tr>
               ) : (
                 filteredOrders.map((po) => (
                   <tr key={po.id}>
-                    <td style={{ fontWeight: 700, color: '#a78bfa' }}>{po.orderNumber}</td>
-                    <td style={{ fontWeight: 600, color: '#f8fafc' }}>{po.supplierName || `Supplier #${po.supplierId}`}</td>
-                    <td style={{ color: '#94a3b8', fontSize: '13px' }}>{po.orderDate || (po.createdAt ? po.createdAt.split('T')[0] : '—')}</td>
-                    <td style={{ color: '#94a3b8', fontSize: '13px' }}>{po.expectedDelivery || 'Within 7 Days'}</td>
-                    <td style={{ fontWeight: 800, color: '#f472b6', fontSize: '14px' }}>
+                    <td style={{ fontWeight: 700, color: '#7c3aed' }}>{po.orderNumber}</td>
+                    <td style={{ fontWeight: 600, color: '#1e293b' }}>{po.supplierName || `Supplier #${po.supplierId}`}</td>
+                    <td style={{ color: '#64748b', fontSize: '13px' }}>{po.orderDate || (po.createdAt ? po.createdAt.split('T')[0] : '—')}</td>
+                    <td style={{ color: '#64748b', fontSize: '13px' }}>{po.expectedDelivery || 'Within 7 Days'}</td>
+                    <td style={{ fontWeight: 800, color: '#db2777', fontSize: '14px' }}>
                       ₹{Number(po.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                     <td>
@@ -624,25 +613,24 @@ const PharmacistDashboard = ({ summary }) => {
         </div>
       </div>
 
-      {/* ── Row 3: Spend vs Sales Analytics Chart & Live Medicine Search ── */}
+      {/* Row 3: Spend vs Sales Analytics Chart & Live Medicine Search */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '28px' }}>
-        {/* Restock Spend vs Sales Bar Chart */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BarChart3 size={18} color="#ec4899" /> Monthly Spend vs Sales Revenue (₹)
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BarChart3 size={18} color="#db2777" /> Monthly Spend vs Sales Revenue (₹)
           </h3>
           <div style={{ height: '230px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={comparisonData}>
-                <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }} />
+                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} />
+                <YAxis stroke="#94a3b8" fontSize={12} />
+                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
                 <Bar dataKey="RestockSpend" fill="#ec4899" name="Restock Spend (₹)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="SalesRevenue" fill="#10b981" name="Sales Revenue (₹)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px', marginTop: '12px', color: '#94a3b8' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', fontSize: '12px', marginTop: '12px', color: '#64748b' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#ec4899' }} /> Restock Spend
             </span>
@@ -653,9 +641,9 @@ const PharmacistDashboard = ({ summary }) => {
         </div>
 
         {/* Medicine Search & Stock Lookup */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Search size={18} color="#38bdf8" /> Instant Medicine & Stock Lookup
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Search size={18} color="#0284c7" /> Instant Medicine & Stock Lookup
           </h3>
           <div style={{ position: 'relative', marginBottom: '14px' }}>
             <Search size={18} style={{ position: 'absolute', left: '14px', top: '12px', color: '#64748b' }} />
@@ -668,23 +656,23 @@ const PharmacistDashboard = ({ summary }) => {
               style={{ paddingLeft: '42px' }}
             />
           </div>
-          {searchLoading && <div style={{ color: '#94a3b8', fontSize: '13px', padding: '8px 0' }}>Searching catalogue...</div>}
+          {searchLoading && <div style={{ color: '#64748b', fontSize: '13px', padding: '8px 0' }}>Searching catalogue...</div>}
           {medResults.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
               {medResults.map((med) => (
                 <div key={med.id} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  background: '#0f172a', padding: '10px 14px', borderRadius: '10px', border: '1px solid #334155'
+                  background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0'
                 }}>
                   <div>
-                    <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '13.5px' }}>{med.medicineName}</div>
-                    <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>
+                    <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '13.5px' }}>{med.medicineName}</div>
+                    <div style={{ fontSize: '11.5px', color: '#64748b' }}>
                       {med.category || 'General'} · Unit Price: ₹{med.unitPrice} · Selling: ₹{med.sellingPrice}
                     </div>
                   </div>
                   <div style={{
                     fontWeight: 800, fontSize: '13.5px',
-                    color: (med.quantity || 0) < 20 ? '#fbbf24' : '#34d399'
+                    color: (med.quantity || 0) < 20 ? '#d97706' : '#059669'
                   }}>
                     {med.quantity ?? 0} units
                   </div>
@@ -693,36 +681,36 @@ const PharmacistDashboard = ({ summary }) => {
             </div>
           )}
           {medSearch.length >= 2 && !searchLoading && medResults.length === 0 && (
-            <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>No matching medicines found</div>
+            <div style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>No matching medicines found</div>
           )}
           {medSearch.length < 2 && (
-            <div style={{ color: '#64748b', fontSize: '12.5px', textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ color: '#94a3b8', fontSize: '12.5px', textAlign: 'center', padding: '24px 0' }}>
               Type medicine or generic name to verify live stock level
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Create Restock PO Modal ── */}
+      {/* Quick Restock Modal */}
       {isPoModalOpen && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px'
         }}>
           <div style={{
-            background: '#1e293b', border: '1px solid #334155', borderRadius: '16px',
-            width: '100%', maxWidth: '480px', padding: '28px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)'
+            background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px',
+            width: '100%', maxWidth: '480px', padding: '28px', boxShadow: '0 25px 50px rgba(0,0,0,0.15)'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#f8fafc', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShoppingCart size={20} color="#8b5cf6" /> Create Restock Purchase Order
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShoppingCart size={20} color="#7c3aed" /> Create Restock Purchase Order
             </h3>
-            <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '20px' }}>
+            <p style={{ color: '#64748b', fontSize: '13px', marginBottom: '20px' }}>
               Issue a restock order to supplier. Order will automatically be tracked on your dashboard.
             </p>
 
             <form onSubmit={handleCreateRestockPO} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Select Supplier *</label>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Select Supplier *</label>
                 <select
                   required
                   value={selectedSupplier}
@@ -737,7 +725,7 @@ const PharmacistDashboard = ({ summary }) => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Select Medicine *</label>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Select Medicine *</label>
                 <select
                   required
                   value={selectedMedId}
@@ -757,7 +745,7 @@ const PharmacistDashboard = ({ summary }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Quantity *</label>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Quantity *</label>
                   <input
                     type="number"
                     min="1"
@@ -768,7 +756,7 @@ const PharmacistDashboard = ({ summary }) => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Unit Price (₹) *</label>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Unit Price (₹) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -781,15 +769,15 @@ const PharmacistDashboard = ({ summary }) => {
                 </div>
               </div>
 
-              <div style={{ background: '#0f172a', padding: '12px 14px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 600 }}>Estimated Total Spend:</span>
-                <span style={{ fontWeight: 800, color: '#f472b6', fontSize: '16px' }}>
+              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#64748b', fontSize: '13px', fontWeight: 600 }}>Estimated Total Spend:</span>
+                <span style={{ fontWeight: 800, color: '#db2777', fontSize: '16px' }}>
                   ₹{(Number(poQuantity || 0) * Number(poUnitPrice || 0)).toFixed(2)}
                 </span>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>Order Notes (Optional)</label>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Order Notes (Optional)</label>
                 <input
                   type="text"
                   placeholder="e.g. Urgent antibiotic restock"
@@ -812,7 +800,7 @@ const PharmacistDashboard = ({ summary }) => {
                   type="submit"
                   disabled={poSubmitting}
                   className="btn btn-primary"
-                  style={{ flex: 1, justifyContent: 'center', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)' }}
+                  style={{ flex: 1, justifyContent: 'center' }}
                 >
                   {poSubmitting ? 'Submitting...' : 'Issue Order'}
                 </button>
@@ -824,7 +812,6 @@ const PharmacistDashboard = ({ summary }) => {
     </>
   );
 };
-
 
 /* ───────────────────────────────────────────────
    STAFF Dashboard (VIEWER / STAFF)
@@ -856,10 +843,10 @@ const StaffDashboard = ({ summary }) => {
   return (
     <>
       <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <BarChart3 size={24} color="#38bdf8" /> Staff Dashboard
+        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <BarChart3 size={24} color="#0284c7" /> Staff Pharmacy Dashboard
         </h1>
-        <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>Medicine inventory overview and quick lookup</p>
+        <p style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>Medicine inventory overview, shelf levels, and quick lookup</p>
       </div>
 
       {/* Summary Cards */}
@@ -869,7 +856,7 @@ const StaffDashboard = ({ summary }) => {
             <div className="kpi-title">Total Medicines</div>
             <div className="kpi-value">{totalMedicines}</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7' }}>
             <Pill size={24} />
           </div>
         </div>
@@ -877,9 +864,9 @@ const StaffDashboard = ({ summary }) => {
         <div className="kpi-card" onClick={() => navigate('/inventory')} style={{ borderLeft: '4px solid #10b981', cursor: 'pointer' }} title="View Inventory Stock">
           <div>
             <div className="kpi-title">Available Stock</div>
-            <div className="kpi-value" style={{ color: '#34d399' }}>{available}</div>
+            <div className="kpi-value" style={{ color: '#059669' }}>{available}</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669' }}>
             <Package size={24} />
           </div>
         </div>
@@ -887,18 +874,18 @@ const StaffDashboard = ({ summary }) => {
         <div className="kpi-card" onClick={() => navigate('/low-stock')} style={{ borderLeft: '4px solid #f59e0b', cursor: 'pointer' }} title="View Low Stock Items">
           <div>
             <div className="kpi-title">Low Stock Items</div>
-            <div className="kpi-value" style={{ color: '#fbbf24' }}>{lowStock}</div>
+            <div className="kpi-value" style={{ color: '#d97706' }}>{lowStock}</div>
           </div>
-          <div className="kpi-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+          <div className="kpi-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706' }}>
             <AlertTriangle size={24} />
           </div>
         </div>
       </div>
 
       {/* Medicine Search / List */}
-      <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '24px', marginBottom: '28px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Search size={18} color="#38bdf8" /> Medicine Search
+      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', marginBottom: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Search size={18} color="#0284c7" /> Medicine Search
         </h3>
         <div style={{ position: 'relative', marginBottom: '16px' }}>
           <Search size={18} style={{ position: 'absolute', left: '14px', top: '12px', color: '#64748b' }} />
@@ -911,43 +898,43 @@ const StaffDashboard = ({ summary }) => {
             style={{ paddingLeft: '42px' }}
           />
         </div>
-        {searchLoading && <div style={{ color: '#94a3b8', fontSize: '13px', padding: '8px 0' }}>Searching...</div>}
+        {searchLoading && <div style={{ color: '#64748b', fontSize: '13px', padding: '8px 0' }}>Searching...</div>}
         {medResults.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px', maxHeight: '350px', overflowY: 'auto' }}>
             {medResults.map((med) => (
               <div key={med.id} style={{
-                background: '#0f172a', padding: '16px', borderRadius: '12px',
-                border: '1px solid #334155', transition: 'transform 0.15s ease'
+                background: '#f8fafc', padding: '16px', borderRadius: '12px',
+                border: '1px solid #e2e8f0', transition: 'transform 0.15s ease'
               }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                <div style={{ fontWeight: 700, color: '#f8fafc', fontSize: '14px', marginBottom: '4px' }}>{med.medicineName}</div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>{med.category || 'General'}</div>
+                <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '14px', marginBottom: '4px' }}>{med.medicineName}</div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>{med.category || 'General'}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span className={`badge ${(med.quantity || 0) < 20 ? 'badge-warning' : 'badge-success'}`}>
                     {(med.quantity || 0) < 20 ? <AlertTriangle size={12} /> : <CheckCircle size={12} />}
                     {(med.quantity || 0) < 20 ? 'Low Stock' : 'In Stock'}
                   </span>
-                  <span style={{ fontWeight: 800, fontSize: '14px', color: '#f8fafc' }}>{med.quantity ?? 0} units</span>
+                  <span style={{ fontWeight: 800, fontSize: '14px', color: '#1e293b' }}>{med.quantity ?? 0} units</span>
                 </div>
               </div>
             ))}
           </div>
         )}
         {medSearch.length >= 2 && !searchLoading && medResults.length === 0 && (
-          <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>No medicines found matching your search.</div>
+          <div style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>No medicines found matching your search.</div>
         )}
         {medSearch.length < 2 && (
-          <div style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>Type at least 2 characters to search for medicines</div>
+          <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>Type at least 2 characters to search for medicines</div>
         )}
       </div>
 
-      {/* Recent Activity (read-only) */}
+      {/* Recent Activity */}
       <div className="table-container">
         <div className="table-header">
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Clock size={18} color="#f59e0b" /> Recent Inventory Activity
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Clock size={18} color="#d97706" /> Recent Inventory Activity
           </h3>
         </div>
         <table className="custom-table">
@@ -962,7 +949,7 @@ const StaffDashboard = ({ summary }) => {
           </thead>
           <tbody>
             {(summary?.recentActivities || []).length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No recent activity</td></tr>
+              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>No recent activity</td></tr>
             ) : (
               summary.recentActivities.map((act) => (
                 <tr key={act.id}>
@@ -977,8 +964,8 @@ const StaffDashboard = ({ summary }) => {
                     </span>
                   </td>
                   <td style={{ fontWeight: 700 }}>{act.quantity} units</td>
-                  <td style={{ color: '#94a3b8' }}>{act.performedBy || 'System'}</td>
-                  <td style={{ color: '#94a3b8', fontSize: '13px' }}>{act.createdAt ? new Date(act.createdAt).toLocaleString() : '—'}</td>
+                  <td style={{ color: '#64748b' }}>{act.performedBy || 'System'}</td>
+                  <td style={{ color: '#64748b', fontSize: '13px' }}>{act.createdAt ? new Date(act.createdAt).toLocaleString() : '—'}</td>
                 </tr>
               ))
             )}
@@ -1003,14 +990,17 @@ const SupplierDashboard = ({ supplierData }) => {
     <>
       <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Truck size={24} color="#f59e0b" /> Supplier Portal & Dashboard
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Truck size={24} color="#0284c7" /> Supplier Portal & Operations
           </h1>
-          <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>Vendor profile, assigned purchase orders, supplied medicine inventory, and fulfillment metrics</p>
+          <p style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>Vendor profile, assigned purchase orders, supplied medicine inventory, and fulfillment metrics</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <a href="/supplier-orders" className="btn btn-primary">
             <Truck size={16} /> Open Dispatch Portal
+          </a>
+          <a href="/reports" className="btn btn-secondary">
+            <FileText size={16} /> Supplier Reports
           </a>
           <a href="/messages" className="btn btn-secondary">
             <MessageSquare size={16} /> Message Admin
@@ -1018,27 +1008,26 @@ const SupplierDashboard = ({ supplierData }) => {
         </div>
       </div>
 
-      {/* ── Row 1: Profile & Performance KPIs ── */}
+      {/* Profile & Performance KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '28px' }}>
-        {/* Supplier Profile Card */}
-        <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '16px', padding: '24px' }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Users size={18} color="#14b8a6" /> Supplier Profile
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Users size={18} color="#0d9488" /> Supplier Profile
             </h3>
             <span className="badge badge-success">{profile.status || 'ACTIVE'}</span>
           </div>
 
-          <div style={{ background: '#0f172a', borderRadius: '12px', padding: '16px', border: '1px solid #334155' }}>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: '#38bdf8', marginBottom: '4px' }}>{profile.supplierName || 'Cipla Distributors'}</div>
-            <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '12px' }}>Contact: {profile.contactPerson || 'Rajesh Kumar'}</div>
+          <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', border: '1px solid #e2e8f0' }}>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: '#0284c7', marginBottom: '4px' }}>{profile.supplierName || 'Cipla Distributors'}</div>
+            <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px' }}>Contact: {profile.contactPerson || 'Rajesh Kumar'}</div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', borderTop: '1px solid #334155', paddingTop: '12px' }}>
-              <div><strong style={{ color: '#cbd5e1' }}>Email:</strong> <div style={{ color: '#94a3b8' }}>{profile.email || 'contact@cipla.com'}</div></div>
-              <div><strong style={{ color: '#cbd5e1' }}>Phone:</strong> <div style={{ color: '#94a3b8' }}>{profile.phone || '9876543210'}</div></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+              <div><strong style={{ color: '#334155' }}>Email:</strong> <div style={{ color: '#64748b' }}>{profile.email || 'contact@cipla.com'}</div></div>
+              <div><strong style={{ color: '#334155' }}>Phone:</strong> <div style={{ color: '#64748b' }}>{profile.phone || '9876543210'}</div></div>
               <div style={{ gridColumn: 'span 2' }}>
-                <strong style={{ color: '#cbd5e1' }}>Address:</strong>
-                <div style={{ color: '#94a3b8' }}>
+                <strong style={{ color: '#334155' }}>Address:</strong>
+                <div style={{ color: '#64748b' }}>
                   {profile.address ? `${profile.address}, ${profile.city}, ${profile.state}, ${profile.country}` : 'MIDC Area, Mumbai, Maharashtra, India'}
                 </div>
               </div>
@@ -1053,7 +1042,7 @@ const SupplierDashboard = ({ supplierData }) => {
               <div className="kpi-title">Supplied Medicines</div>
               <div className="kpi-value">{supplierData?.totalSuppliedMedicines || medicines.length}</div>
             </div>
-            <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.15)', color: '#38bdf8' }}>
+            <div className="kpi-icon" style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7' }}>
               <Pill size={22} />
             </div>
           </div>
@@ -1061,9 +1050,9 @@ const SupplierDashboard = ({ supplierData }) => {
           <div className="kpi-card" style={{ borderLeft: '4px solid #f59e0b' }}>
             <div>
               <div className="kpi-title">Assigned POs</div>
-              <div className="kpi-value" style={{ color: '#fbbf24' }}>{supplierData?.totalOrdersCount || orders.length}</div>
+              <div className="kpi-value" style={{ color: '#d97706' }}>{supplierData?.totalOrdersCount || orders.length}</div>
             </div>
-            <div className="kpi-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+            <div className="kpi-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706' }}>
               <ClipboardList size={22} />
             </div>
           </div>
@@ -1071,11 +1060,11 @@ const SupplierDashboard = ({ supplierData }) => {
           <div className="kpi-card" style={{ borderLeft: '4px solid #10b981' }}>
             <div>
               <div className="kpi-title">Revenue Supplied</div>
-              <div className="kpi-value" style={{ color: '#34d399', fontSize: '18px' }}>
+              <div className="kpi-value" style={{ color: '#059669', fontSize: '18px' }}>
                 ₹{totalRev.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
             </div>
-            <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+            <div className="kpi-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669' }}>
               <IndianRupee size={22} />
             </div>
           </div>
@@ -1083,22 +1072,22 @@ const SupplierDashboard = ({ supplierData }) => {
           <div className="kpi-card" style={{ borderLeft: '4px solid #8b5cf6' }}>
             <div>
               <div className="kpi-title">Fulfillment Rate</div>
-              <div className="kpi-value" style={{ color: '#a78bfa' }}>{fulfillment}%</div>
+              <div className="kpi-value" style={{ color: '#7c3aed' }}>{fulfillment}%</div>
             </div>
-            <div className="kpi-icon" style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa' }}>
+            <div className="kpi-icon" style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#7c3aed' }}>
               <CheckCircle size={22} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Row 2: Supplied Medicines Table ── */}
+      {/* Supplied Medicines Table */}
       <div className="table-container" style={{ marginBottom: '28px' }}>
         <div className="table-header">
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Pill size={18} color="#38bdf8" /> Authorized Supplied Medicines
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Pill size={18} color="#0284c7" /> Authorized Supplied Medicines
           </h3>
-          <span style={{ color: '#94a3b8', fontSize: '13px' }}>Medicines supplied by this vendor and authorized inventory status</span>
+          <span style={{ color: '#64748b', fontSize: '13px' }}>Medicines supplied by this vendor and authorized inventory status</span>
         </div>
         <table className="custom-table">
           <thead>
@@ -1112,17 +1101,17 @@ const SupplierDashboard = ({ supplierData }) => {
           </thead>
           <tbody>
             {medicines.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No supplied medicines linked to this supplier.</td></tr>
+              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>No supplied medicines linked to this supplier.</td></tr>
             ) : (
               medicines.map((m) => (
                 <tr key={m.id}>
                   <td>
-                    <div style={{ fontWeight: 700, color: '#f8fafc' }}>{m.medicineName}</div>
-                    <div style={{ fontSize: '12px', color: '#38bdf8' }}>{m.medicineCode} {m.genericName ? `• ${m.genericName}` : ''}</div>
+                    <div style={{ fontWeight: 700, color: '#1e293b' }}>{m.medicineName}</div>
+                    <div style={{ fontSize: '12px', color: '#0284c7' }}>{m.medicineCode} {m.genericName ? `• ${m.genericName}` : ''}</div>
                   </td>
                   <td><span className="badge badge-info">{m.category || 'General'}</span></td>
-                  <td style={{ color: '#94a3b8', fontSize: '13px' }}>{m.batchNumber || '-'}</td>
-                  <td style={{ fontWeight: 700, color: '#10b981' }}>₹{m.unitPrice}</td>
+                  <td style={{ color: '#64748b', fontSize: '13px' }}>{m.batchNumber || '-'}</td>
+                  <td style={{ fontWeight: 700, color: '#059669' }}>₹{m.unitPrice}</td>
                   <td>
                     <span className={`badge ${(m.quantity || 0) < 20 ? 'badge-warning' : 'badge-success'}`}>
                       {m.quantity ?? 0} units in stock
@@ -1135,11 +1124,11 @@ const SupplierDashboard = ({ supplierData }) => {
         </table>
       </div>
 
-      {/* ── Row 3: Active Purchases / PO Table ── */}
+      {/* Active Purchases / PO Table */}
       <div className="table-container" style={{ marginBottom: '28px' }}>
         <div className="table-header">
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ClipboardList size={18} color="#a78bfa" /> Assigned Purchase Orders & Status
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ClipboardList size={18} color="#7c3aed" /> Assigned Purchase Orders & Status
           </h3>
         </div>
         <table className="custom-table">
@@ -1154,12 +1143,12 @@ const SupplierDashboard = ({ supplierData }) => {
           </thead>
           <tbody>
             {orders.length === 0 ? (
-              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>No purchase orders assigned to this supplier.</td></tr>
+              <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>No purchase orders assigned to this supplier.</td></tr>
             ) : (
               orders.map((po) => (
                 <tr key={po.id}>
-                  <td style={{ fontWeight: 700, color: '#a78bfa' }}>{po.orderNumber}</td>
-                  <td style={{ color: '#94a3b8' }}>{po.orderDate ? new Date(po.orderDate).toLocaleDateString() : '—'}</td>
+                  <td style={{ fontWeight: 700, color: '#7c3aed' }}>{po.orderNumber}</td>
+                  <td style={{ color: '#64748b' }}>{po.orderDate ? new Date(po.orderDate).toLocaleDateString() : '—'}</td>
                   <td style={{ fontWeight: 700 }}>₹{Number(po.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   <td>
                     <span className={`badge ${
@@ -1253,12 +1242,12 @@ export const Dashboard = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{
-            width: '48px', height: '48px', border: '4px solid #334155',
-            borderTopColor: '#38bdf8', borderRadius: '50%', margin: '0 auto 16px',
+            width: '48px', height: '48px', border: '4px solid #e2e8f0',
+            borderTopColor: '#0284c7', borderRadius: '50%', margin: '0 auto 16px',
             animation: 'spin 1s linear infinite'
           }} />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <div style={{ color: '#94a3b8', fontSize: '14px' }}>Loading dashboard data...</div>
+          <div style={{ color: '#64748b', fontSize: '14px' }}>Loading dashboard data...</div>
         </div>
       </div>
     );
@@ -1268,11 +1257,11 @@ export const Dashboard = () => {
     <>
       {error && (
         <div style={{
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
+          background: 'rgba(239, 68, 68, 0.08)',
+          border: '1px solid rgba(239, 68, 68, 0.25)',
           borderRadius: '12px',
           padding: '14px 20px',
-          color: '#f87171',
+          color: '#dc2626',
           fontSize: '14px',
           fontWeight: 600,
           marginBottom: '20px',
@@ -1287,7 +1276,6 @@ export const Dashboard = () => {
       {(() => {
         switch (role) {
           case 'ADMIN':
-          case 'STORE_MANAGER':
             return <AdminDashboard summary={summary} />;
           case 'PHARMACIST':
             return <PharmacistDashboard summary={summary} />;
