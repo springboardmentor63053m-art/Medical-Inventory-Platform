@@ -498,7 +498,7 @@ export default function StoreCounterPurchasePage() {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 rounded-3xl p-6 lg:p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-50 via-white to-slate-50 dark:from-slate-900 dark:via-emerald-950 dark:to-slate-900 rounded-3xl p-6 lg:p-8 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -507,22 +507,22 @@ export default function StoreCounterPurchasePage() {
             </div>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-black text-white tracking-tight">In-Store Pharmacist POS Counter</h1>
+                <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">In-Store Pharmacist POS Counter</h1>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                   Direct Store Sales
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 Process walk-in non-prescription / OTC customer purchases directly at the pharmacy counter with instant digital receipts.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800">
+          <div className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
             <button
               onClick={() => setActiveTab('pos')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'pos' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+                activeTab === 'pos' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-600 hover:text-emerald-700 dark:text-slate-400 dark:hover:text-white'
               }`}
             >
               <ShoppingCart className="w-4 h-4" /> POS Counter Sale
@@ -530,7 +530,7 @@ export default function StoreCounterPurchasePage() {
             <button
               onClick={() => setActiveTab('history')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-                activeTab === 'history' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+                activeTab === 'history' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-600 hover:text-emerald-700 dark:text-slate-400 dark:hover:text-white'
               }`}
             >
               <Receipt className="w-4 h-4" /> Store Receipts History ({pastPurchases.length})
@@ -543,9 +543,9 @@ export default function StoreCounterPurchasePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* LEFT: Medicine Selection (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 border border-slate-800/80 shadow-xl">
+            <div className="bg-white dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 dark:border-slate-800/80 shadow-xl">
               <div className="flex items-center justify-between gap-4 mb-4">
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <Search className="w-4 h-4 text-emerald-400" /> Walk-in Stock Selector
                 </h2>
                 <div className="relative flex-1 max-w-xs">
@@ -555,7 +555,7 @@ export default function StoreCounterPurchasePage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search medicine..."
-                    className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -571,13 +571,15 @@ export default function StoreCounterPurchasePage() {
                     return (
                       <div
                         key={med.id}
-                        className={`p-3.5 rounded-2xl bg-slate-950/40 border transition flex items-center justify-between gap-3 group ${
-                          isOutOfStock ? 'border-rose-900/40 opacity-75' : 'border-slate-800/80 hover:border-emerald-500/30'
+                        className={`p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border transition flex items-center justify-between gap-3 group ${
+                          isOutOfStock
+                            ? 'border-rose-300 dark:border-rose-900/40 opacity-75'
+                            : 'border-slate-200 dark:border-slate-800/80 hover:border-emerald-500/30'
                         }`}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-xs font-bold text-white group-hover:text-emerald-400 transition">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
                               {med.name}
                             </p>
                             {isOutOfStock ? (
@@ -623,8 +625,8 @@ export default function StoreCounterPurchasePage() {
 
           {/* RIGHT: Counter POS Checkout Form (5 cols) */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 border border-slate-800/80 shadow-xl space-y-5">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+            <div className="bg-white dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 dark:border-slate-800/80 shadow-xl space-y-5">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <ShoppingCart className="w-4 h-4 text-emerald-400" /> Walk-in Basket ({cart.length})
               </h2>
 
@@ -635,16 +637,16 @@ export default function StoreCounterPurchasePage() {
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {cart.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-2.5 bg-slate-950/60 rounded-xl border border-slate-800 text-xs">
+                    <div key={item.id} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
                       <div className="flex-1 min-w-0 pr-2">
-                        <p className="font-semibold text-slate-200 truncate">{item.name}</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">{item.name}</p>
                         <p className="text-[10px] text-slate-400">₹{(item.unitPrice || 0).toFixed(2)} each</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="px-2 py-0.5 text-slate-400 hover:text-white">-</button>
-                          <span className="px-2 text-slate-200 font-bold">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, 1)} className="px-2 py-0.5 text-slate-400 hover:text-white">+</button>
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg">
+                          <button onClick={() => updateQuantity(item.id, -1)} className="px-2 py-0.5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">-</button>
+                          <span className="px-2 text-slate-800 dark:text-slate-200 font-bold">{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.id, 1)} className="px-2 py-0.5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">+</button>
                         </div>
                         <button onClick={() => removeFromCart(item.id)} className="text-slate-500 hover:text-rose-400 transition">
                           <Trash2 className="w-4 h-4" />
@@ -653,7 +655,7 @@ export default function StoreCounterPurchasePage() {
                     </div>
                   ))}
 
-                  <div className="pt-2 flex justify-between text-sm font-bold text-white border-t border-slate-800">
+                  <div className="pt-2 flex justify-between text-sm font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-800">
                     <span>Total Amount:</span>
                     <span className="text-emerald-400">₹{calculateTotal()}</span>
                   </div>
@@ -661,10 +663,10 @@ export default function StoreCounterPurchasePage() {
               )}
 
               {/* Customer & Payment Form */}
-              <form onSubmit={handlePOSCheckout} className="space-y-4 pt-2 border-t border-slate-800">
-                <div className="space-y-3 bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/80">
+              <form onSubmit={handlePOSCheckout} className="space-y-4 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <div className="space-y-3 bg-slate-50 dark:bg-slate-950/40 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800/80">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-blue-400" /> Customer
                     </label>
                     {selectedCustomer && (
@@ -696,7 +698,7 @@ export default function StoreCounterPurchasePage() {
                           }
                         }}
                         placeholder="📞 e.g. +91 98765 43210 or 9876543210"
-                        className="w-full pl-9 pr-9 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        className="w-full pl-9 pr-9 py-2 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-mono text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                       />
                       {searchingCustomer && (
                         <Loader2 className="w-4 h-4 text-blue-400 animate-spin absolute right-3 top-1/2 -translate-y-1/2" />
@@ -744,14 +746,14 @@ export default function StoreCounterPurchasePage() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder={isNewCustomer ? "Enter customer full name..." : "Enter guest name..."}
-                        className="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                       />
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Payment Method</label>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Payment Method</label>
                   <div className="grid grid-cols-3 gap-2">
                     {['CASH', 'CARD', 'UPI'].map((mode) => (
                       <button
@@ -761,7 +763,7 @@ export default function StoreCounterPurchasePage() {
                         className={`py-2 rounded-xl text-xs font-bold border transition ${
                           paymentMethod === mode
                             ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'
+                            : 'bg-white dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-white'
                         }`}
                       >
                         {mode}
@@ -791,8 +793,8 @@ export default function StoreCounterPurchasePage() {
         </div>
       ) : (
         /* PAST RECEIPTS HISTORY TAB */
-        <div className="bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 border border-slate-800/80 shadow-xl space-y-4">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+        <div className="bg-white dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl p-6 border border-slate-200 dark:border-slate-800/80 shadow-xl space-y-4">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
             <Receipt className="w-4 h-4 text-emerald-400" /> Walk-in Store Sales History
           </h2>
 
@@ -807,10 +809,10 @@ export default function StoreCounterPurchasePage() {
           ) : (
             <div className="space-y-3">
               {pastPurchases.map((p) => (
-                <div key={p.id} className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between gap-4">
+                <div key={p.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-white">{p.receiptNumber}</span>
+                      <span className="text-xs font-black text-slate-900 dark:text-white">{p.receiptNumber}</span>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         {p.paymentMethod}
                       </span>
@@ -827,7 +829,7 @@ export default function StoreCounterPurchasePage() {
                         setCompletedReceipt(p);
                         setReceiptModalOpen(true);
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 transition flex items-center gap-1"
                     >
                       <Printer className="w-3.5 h-3.5" /> View Receipt
                     </button>

@@ -558,40 +558,33 @@ export default function MedicineListPage() {
                     {renderSortIcon('manufacturer')}
                   </div>
                 </th>
-                <th
-                  onClick={() => handleSort('unitPrice')}
-                  className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    {canViewCostPrice && (
-                      <th
-                        onClick={() => handleSort('costPrice')}
-                        className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
-                      >
-                        <div className="flex items-center gap-1">
-                          <span>Cost Price</span>
-                          {renderSortIcon('costPrice')}
-                        </div>
-                      </th>
-                    )}
+                {canViewCostPrice && (
+                  <th
+                    onClick={() => handleSort('costPrice')}
+                    className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Cost Price</span>
+                      {renderSortIcon('costPrice')}
+                    </div>
+                  </th>
+                )}
 
-                    {canViewSellingPrice && (
-                      <th
-                        onClick={() => handleSort('sellingPrice')}
-                        className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
-                      >
-                        <div className="flex items-center gap-1">
-                          <span>Selling Price</span>
-                          {renderSortIcon('sellingPrice')}
-                        </div>
-                      </th>
-                    )}
+                {canViewSellingPrice && (
+                  <th
+                    onClick={() => handleSort('sellingPrice')}
+                    className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Selling Price</span>
+                      {renderSortIcon('sellingPrice')}
+                    </div>
+                  </th>
+                )}
 
-                    {canViewProfit && (
-                      <th className="py-3.5 px-6">Profit / Unit</th>
-                    )}
-                  </div>
-                </th>
+                {canViewProfit && (
+                  <th className="py-3.5 px-6">Profit / Unit</th>
+                )}
                 <th className="py-3.5 px-6">Status</th>
                 <th className="py-3.5 px-6 text-right">{canManage ? 'ACTIONS' : 'VIEW'}</th>
               </tr>
