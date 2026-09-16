@@ -23,6 +23,7 @@ public class MedicineRequest {
     @NotNull @PositiveOrZero
     private Integer quantity;
 
+    @PositiveOrZero
     private Integer reorderLevel;
 
     private LocalDate manufacturingDate;
@@ -31,6 +32,7 @@ public class MedicineRequest {
     private LocalDate expiryDate;
 
     @NotNull
+    @PositiveOrZero
     private BigDecimal price;
 
     /** Optional real product photo URLs — box/packaging and blister sheet. */
