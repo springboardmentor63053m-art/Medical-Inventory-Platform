@@ -355,7 +355,6 @@ public class DataInitializer implements CommandLineRunner {
                     .expectedDelivery(expDelivery)
                     .status(status)
                     .totalAmount(total)
-                    .notes("Stock procurement from " + supplier.getSupplierName())
                     .createdAt(LocalDateTime.now().minusDays(3))
                     .build();
             po.addItem(com.medistock.entity.PurchaseOrderItem.builder()

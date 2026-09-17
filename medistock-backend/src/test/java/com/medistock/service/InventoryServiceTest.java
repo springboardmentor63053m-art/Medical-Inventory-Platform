@@ -94,6 +94,12 @@ public class InventoryServiceTest {
 
         inventoryService.adjustStock(1L, 2, ActionType.OUT, "Tester", "Dispensed");
 
-        verify(notificationService, times(1)).createNotification(anyString(), anyString(), eq(NotificationType.LOW_STOCK));
+        verify(notificationService, times(1)).createNotification(
+                anyString(),
+                anyString(),
+                eq(NotificationType.LOW_STOCK),
+                eq(com.medistock.enums.NotificationSeverity.WARNING),
+                eq(1L)
+        );
     }
 }
