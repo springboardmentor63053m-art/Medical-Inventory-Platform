@@ -14,6 +14,8 @@ public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
 
     List<Purchase> findAllByOrderByPurchaseDateDesc();
 
+    List<Purchase> findTop15ByOrderByPurchaseDateDesc();
+
     /** This supplier's own purchase/order history — powers the Supplier dashboard. */
     List<Purchase> findBySupplier_IdOrderByPurchaseDateDesc(Long supplierId);
 
@@ -28,4 +30,24 @@ public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
 
     @Query("SELECT p.supplier.name, COUNT(p), COALESCE(SUM(p.totalAmount), 0) FROM Purchase p GROUP BY p.supplier.name ORDER BY SUM(p.totalAmount) DESC")
     List<Object[]> supplyInsightBySupplier();
+
+    @Query("""
+        SELECT COALESCE(SUM(p.totalAmount), 0)
+        FROM Purchase p
+        """)
+    java.math.BigDecimal totalPurchaseValueAllTime();
+
+    @Query("SELECT COUNT(p) FROM Purchase p")
+    long countAllPurchases();
+
+    @Query("""
+        SELECT p.purchaseDate, p.totalAmount
+        FROM Purchase p
+        WHERE p.purchaseDate >= :start
+          AND p.purchaseDate < :end
+        ORDER BY p.purchaseDate DESC
+        """)
+    List<Object[]> findPurchaseDatesAndAmountsBetween(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

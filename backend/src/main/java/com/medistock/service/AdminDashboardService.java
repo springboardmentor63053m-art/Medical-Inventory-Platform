@@ -21,7 +21,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminDashboardService {
 
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter FMT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final MedicineRepository medicineRepository;
     private final SupplierRepository supplierRepository;
@@ -36,47 +37,128 @@ public class AdminDashboardService {
     private final CurrentUserProvider currentUserProvider;
 
     public AdminDashboardResponse getStats() {
+
         var salesOverview = salesAnalyticsService.getSalesOverview();
-        List<Purchase> recentPurchases = purchaseRepository.findAllByOrderByPurchaseDateDesc();
-        List<StockMovement> recentMovements = stockMovementService.getAll();
-        BigDecimal totalPurchaseValueAllTime = recentPurchases.stream()
-                .map(Purchase::getTotalAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Load only the latest 15 purchases for the recent purchases section.
+        List<Purchase> recentPurchases =
+                purchaseRepository.findTop15ByOrderByPurchaseDateDesc();
+
+        List<StockMovement> recentMovements =
+                stockMovementService.getRecent();
+
+        // These values must represent ALL purchases, not only the latest 15.
+        BigDecimal totalPurchaseValueAllTime =
+                purchaseRepository.totalPurchaseValueAllTime();
+
+        long totalPurchasesAllTime =
+                purchaseRepository.countAllPurchases();
 
         return AdminDashboardResponse.builder()
                 .totalMedicines(medicineRepository.count())
                 .totalSuppliers(supplierRepository.count())
                 .totalUsers(userRepository.count())
-                .totalInventoryValue(medicineRepository.totalInventoryValue())
-                .lowStockCount(medicineRepository.findLowStock().size())
-                .outOfStockCount(medicineRepository.findOutOfStock().size())
-                .nearExpiryCount(medicineRepository.findNearExpiry(LocalDate.now().plusDays(30)).size())
-                .expiredCount(medicineRepository.findExpired().size())
-                .totalSpendThisMonth(purchaseService.spendThisMonth())
-                .purchasesThisMonth(purchaseService.countThisMonth())
-                .totalPurchaseValueAllTime(totalPurchaseValueAllTime)
-                .totalPurchasesAllTime(recentPurchases.size())
-                .ordersAwaitingAction(recentPurchases.stream()
-                        .filter(p -> p.getOrderStatus() == com.medistock.model.PurchaseOrderStatus.PENDING
-                                || p.getOrderStatus() == com.medistock.model.PurchaseOrderStatus.ACCEPTED
-                                || p.getOrderStatus() == com.medistock.model.PurchaseOrderStatus.DISPATCHED)
-                        .count())
-                .recentPurchases(recentPurchases.stream().limit(15).map(dashboardMapper::toPurchaseSummary).toList())
-                .totalActiveSuppliers(supplierRepository.count())
-                .supplierInsights(purchaseService.supplyInsights())
-                .recentStockMovements(recentMovements.stream().limit(12).map(dashboardMapper::toMovementSummary).toList())
-                .salesToday(salesOverview.getSalesToday())
-                .salesThisMonth(salesOverview.getSalesThisMonth())
-                .billsGeneratedThisMonth(salesOverview.getBillsGeneratedThisMonth())
-                .medicinesSoldThisMonth(salesOverview.getMedicinesSoldThisMonth())
-                .recentSales(salesOverview.getRecentSales())
-                .topSellingMedicines(salesOverview.getTopSellingMedicines())
-                .quarterlySales(salesOverview.getQuarterlySales())
-                .quarterlyPurchaseValue(salesAnalyticsService.quarterlyPurchaseValue(LocalDate.now().getYear()))
-                .activeUsers(activeUserTrackingService.getSummary())
-                .unreadNotifications(notificationService.unreadCountForRole("ADMIN",
-                        currentUserProvider.getCurrentUser() != null ? currentUserProvider.getCurrentUser().getId() : null))
+
+                .totalInventoryValue(
+                        medicineRepository.totalInventoryValue())
+
+                .lowStockCount(
+                        medicineRepository.findLowStock().size())
+
+                .outOfStockCount(
+                        medicineRepository.findOutOfStock().size())
+
+                .nearExpiryCount(
+                        medicineRepository
+                                .findNearExpiry(LocalDate.now().plusDays(30))
+                                .size())
+
+                .expiredCount(
+                        medicineRepository.findExpired().size())
+
+                .totalSpendThisMonth(
+                        purchaseService.spendThisMonth())
+
+                .purchasesThisMonth(
+                        purchaseService.countThisMonth())
+
+                .totalPurchaseValueAllTime(
+                        totalPurchaseValueAllTime)
+
+                .totalPurchasesAllTime(
+                        totalPurchasesAllTime)
+
+                .ordersAwaitingAction(
+                        recentPurchases.stream()
+                                .filter(p ->
+                                        p.getOrderStatus()
+                                                == com.medistock.model.PurchaseOrderStatus.PENDING
+                                        || p.getOrderStatus()
+                                                == com.medistock.model.PurchaseOrderStatus.ACCEPTED
+                                        || p.getOrderStatus()
+                                                == com.medistock.model.PurchaseOrderStatus.DISPATCHED)
+                                .count())
+
+                .recentPurchases(
+                        recentPurchases.stream()
+                                .map(dashboardMapper::toPurchaseSummary)
+                                .toList())
+
+                .totalActiveSuppliers(
+                        supplierRepository.count())
+
+                .supplierInsights(
+                        purchaseService.supplyInsights())
+
+                .recentStockMovements(
+                        recentMovements.stream()
+                                .limit(12)
+                                .map(dashboardMapper::toMovementSummary)
+                                .toList())
+
+                .salesToday(
+                        salesOverview.getSalesToday())
+
+                .salesThisMonth(
+                        salesOverview.getSalesThisMonth())
+
+                .billsGeneratedThisMonth(
+                        salesOverview.getBillsGeneratedThisMonth())
+
+                .medicinesSoldThisMonth(
+                        salesOverview.getMedicinesSoldThisMonth())
+
+                .recentSales(
+                        salesOverview.getRecentSales())
+
+                .topSellingMedicines(
+                        salesOverview.getTopSellingMedicines())
+
+                .quarterlySales(
+                        salesOverview.getQuarterlySales())
+
+                .quarterlyPurchaseValue(
+                        salesAnalyticsService
+                                .quarterlyPurchaseValue(
+                                        LocalDate.now().getYear()))
+
+                .activeUsers(
+                        activeUserTrackingService.getSummary())
+
+                .unreadNotifications(
+                        notificationService.unreadCountForRole(
+                                "ADMIN",
+                                currentUserProvider.getCurrentUser() != null
+                                        ? currentUserProvider
+                                                .getCurrentUser()
+                                                .getId()
+                                        : null))
+
                 .systemStatus("OPERATIONAL")
-                .serverTime(LocalDateTime.now().format(FMT))
+
+                .serverTime(
+                        LocalDateTime.now().format(FMT))
+
                 .build();
     }
 }

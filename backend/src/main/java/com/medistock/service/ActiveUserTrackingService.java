@@ -44,14 +44,21 @@ public class ActiveUserTrackingService {
     }
 
     /** Called on every authenticated request (see JwtAuthFilter) to keep last-activity fresh. */
-    @Transactional
-    public void touch(String email) {
-        userRepository.findByEmail(email).ifPresent(user -> {
-            user.setLastActivityAt(LocalDateTime.now());
-            userRepository.save(user);
-        });
-    }
+   /** Called on every authenticated request (see JwtAuthFilter) to keep last-activity fresh. */
+@Transactional
+public void touch(String email) {
+    userRepository.findByEmail(email).ifPresent(user -> {
 
+        LocalDateTime now = LocalDateTime.now();
+
+        if (user.getLastActivityAt() == null
+                || user.getLastActivityAt().isBefore(now.minusMinutes(1))) {
+
+            user.setLastActivityAt(now);
+            userRepository.save(user);
+        }
+    });
+}
     public ActiveUsersSummary getSummary() {
         List<User> users = userRepository.findAll();
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(INACTIVITY_TIMEOUT_MINUTES);

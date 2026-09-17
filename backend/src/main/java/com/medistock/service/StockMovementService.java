@@ -30,8 +30,12 @@ public class StockMovementService {
     }
 
     public List<StockMovement> getAll() {
-        return stockMovementRepository.findAllByOrderByTimestampDesc();
-    }
+    return stockMovementRepository.findAllByOrderByTimestampDesc();
+}
+
+public List<StockMovement> getRecent() {
+    return stockMovementRepository.findTop12ByOrderByTimestampDesc();
+}
 
     public List<StockMovement> getForMedicine(Long medicineId) {
         return stockMovementRepository.findByMedicine_IdOrderByTimestampDesc(medicineId);
