@@ -2,6 +2,7 @@ package com.medistock.repository;
 
 import com.medistock.model.StockMovement;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
@@ -9,7 +10,15 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
 
     List<StockMovement> findAllByOrderByTimestampDesc();
 
-    List<StockMovement> findTop12ByOrderByTimestampDesc();
+    @Query("""
+    SELECT sm
+    FROM StockMovement sm
+    LEFT JOIN FETCH sm.medicine
+    LEFT JOIN FETCH sm.performedBy
+    ORDER BY sm.timestamp DESC
+    """)
+List<StockMovement> findRecentStockMovementsWithDetails(
+        org.springframework.data.domain.Pageable pageable);
 
     List<StockMovement> findByMedicine_IdOrderByTimestampDesc(Long medicineId);
 

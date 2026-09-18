@@ -9,6 +9,8 @@ import com.medistock.repository.SupplierRepository;
 import com.medistock.repository.UserRepository;
 import com.medistock.security.CurrentUserProvider;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -42,7 +44,8 @@ public class AdminDashboardService {
 
         // Load only the latest 15 purchases for the recent purchases section.
         List<Purchase> recentPurchases =
-                purchaseRepository.findTop15ByOrderByPurchaseDateDesc();
+        purchaseRepository.findRecentPurchasesWithDetails(
+                PageRequest.of(0, 15));
 
         List<StockMovement> recentMovements =
                 stockMovementService.getRecent();

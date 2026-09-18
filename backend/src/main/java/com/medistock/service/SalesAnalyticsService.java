@@ -41,10 +41,14 @@ public class SalesAnalyticsService {
 
         LocalDateTime startOfYear =
                 LocalDate.of(today.getYear(), 1, 1).atStartOfDay();
+
         LocalDateTime startOfNextYear =
                 LocalDate.of(today.getYear() + 1, 1, 1).atStartOfDay();
 
-        // Database calculates totals instead of loading every Sale entity.
+        /*
+         * Database calculates totals directly instead of loading
+         * complete Sale entities into memory.
+         */
         BigDecimal salesToday = saleRepository.sumSalesBetween(
                 startOfToday,
                 startOfTomorrow);
@@ -67,14 +71,28 @@ public class SalesAnalyticsService {
                         startOfMonth,
                         startOfNextMonth);
 
-        // Only the latest 10 sales are required for the dashboard.
-        List<Sale> recentSales =
-                saleRepository.findTop10ByOrderBySaleDateDesc();
+        /*
+         * Only the latest 10 sales are required.
+         *
+         * Keep this query limited at repository level. The repository
+         * should provide the required associations efficiently so that
+         * converting these sales does not cause an unbounded query load.
+         */
+        // Only the latest 10 sale IDs are retrieved first.
+// This keeps the LIMIT at the database level and avoids
+// JOIN FETCH + collection pagination problems.
+List<Long> recentSaleIds =
+        saleRepository.findRecentSaleIds(
+                org.springframework.data.domain.PageRequest.of(0, 10));
 
-        List<com.medistock.dto.SaleResponse> recent =
-                recentSales.stream()
-                        .map(this::toSaleResponse)
-                        .toList();
+List<Sale> recentSales = recentSaleIds.isEmpty()
+        ? List.of()
+        : saleRepository.findSalesWithDetails(recentSaleIds);
+
+List<com.medistock.dto.SaleResponse> recent =
+        recentSales.stream()
+                .map(this::toSaleResponse)
+                .toList();
 
         return SalesOverviewResponse.builder()
                 .salesToday(salesToday)
@@ -83,11 +101,8 @@ public class SalesAnalyticsService {
                 .medicinesSoldThisMonth(medicinesSoldThisMonth)
                 .billsGeneratedThisMonth(billsGeneratedThisMonth)
                 .recentSales(recent)
-                .topSellingMedicines(
-                        topSellingMedicines(5))
-                .quarterlySales(
-                        quarterlyFromSales(
-                                today.getYear()))
+                .topSellingMedicines(topSellingMedicines(5))
+                .quarterlySales(quarterlyFromSales(today.getYear()))
                 .build();
     }
 
@@ -108,8 +123,7 @@ public class SalesAnalyticsService {
     }
 
     /**
-     * Kept for compatibility with any other service that may call
-     * topSellingMedicines(List<Sale>, int).
+     * Compatibility method for existing callers.
      */
     public List<TopMedicineResponse> topSellingMedicines(
             List<Sale> sales,
@@ -121,49 +135,49 @@ public class SalesAnalyticsService {
     /**
      * Quarterly sales total for the given year.
      *
-     * This uses sales from the requested year rather than loading
-     * the complete historical sales table.
+     * Only saleDate and totalAmount are retrieved from the database.
      */
     public List<ChartPoint> quarterlyFromSales(int year) {
 
-    LocalDateTime startOfYear =
-            LocalDate.of(year, 1, 1).atStartOfDay();
+        LocalDateTime startOfYear =
+                LocalDate.of(year, 1, 1).atStartOfDay();
 
-    LocalDateTime startOfNextYear =
-            LocalDate.of(year + 1, 1, 1).atStartOfDay();
+        LocalDateTime startOfNextYear =
+                LocalDate.of(year + 1, 1, 1).atStartOfDay();
 
-    List<Object[]> sales =
-            saleRepository.findSaleDatesAndAmountsBetween(
-                    startOfYear,
-                    startOfNextYear);
+        List<Object[]> sales =
+                saleRepository.findSaleDatesAndAmountsBetween(
+                        startOfYear,
+                        startOfNextYear);
 
-    BigDecimal[] totals = new BigDecimal[]{
-            BigDecimal.ZERO,
-            BigDecimal.ZERO,
-            BigDecimal.ZERO,
-            BigDecimal.ZERO
-    };
+        BigDecimal[] totals = new BigDecimal[]{
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO
+        };
 
-    for (Object[] sale : sales) {
+        for (Object[] sale : sales) {
 
-        LocalDateTime date =
-                (LocalDateTime) sale[0];
+            LocalDateTime date =
+                    (LocalDateTime) sale[0];
 
-        BigDecimal amount =
-                (BigDecimal) sale[1];
+            BigDecimal amount =
+                    (BigDecimal) sale[1];
 
-        if (date == null || amount == null) {
-            continue;
+            if (date == null || amount == null) {
+                continue;
+            }
+
+            int quarter = quarterOf(date.getMonth());
+
+            totals[quarter - 1] =
+                    totals[quarter - 1].add(amount);
         }
 
-        int q = quarterOf(date.getMonth());
-
-        totals[q - 1] =
-                totals[q - 1].add(amount);
+        return buildQuarterPoints(totals);
     }
 
-    return buildQuarterPoints(totals);
-}
     /**
      * Compatibility method for existing callers.
      */
@@ -180,16 +194,22 @@ public class SalesAnalyticsService {
 
         for (Sale sale : sales) {
 
+            if (sale == null || sale.getSaleDate() == null) {
+                continue;
+            }
+
             if (sale.getSaleDate().getYear() != year) {
                 continue;
             }
 
-            int q = quarterOf(
-                    sale.getSaleDate().getMonth());
+            int quarter =
+                    quarterOf(sale.getSaleDate().getMonth());
 
-            totals[q - 1] =
-                    totals[q - 1].add(
-                            sale.getTotalAmount());
+            if (sale.getTotalAmount() != null) {
+                totals[quarter - 1] =
+                        totals[quarter - 1]
+                                .add(sale.getTotalAmount());
+            }
         }
 
         return buildQuarterPoints(totals);
@@ -232,10 +252,11 @@ public class SalesAnalyticsService {
                 continue;
             }
 
-            int q = quarterOf(date.getMonth());
+            int quarter =
+                    quarterOf(date.getMonth());
 
-            totals[q - 1] =
-                    totals[q - 1].add(amount);
+            totals[quarter - 1] =
+                    totals[quarter - 1].add(amount);
         }
 
         return buildQuarterPoints(totals);
@@ -245,7 +266,7 @@ public class SalesAnalyticsService {
             BigDecimal[] totals) {
 
         List<ChartPoint> points =
-                new ArrayList<>();
+                new ArrayList<>(4);
 
         for (int i = 0; i < 4; i++) {
 

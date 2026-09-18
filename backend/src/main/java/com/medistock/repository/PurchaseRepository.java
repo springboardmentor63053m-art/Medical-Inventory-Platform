@@ -14,7 +14,16 @@ public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
 
     List<Purchase> findAllByOrderByPurchaseDateDesc();
 
-    List<Purchase> findTop15ByOrderByPurchaseDateDesc();
+    @Query("""
+    SELECT p
+    FROM Purchase p
+    LEFT JOIN FETCH p.medicine
+    LEFT JOIN FETCH p.supplier
+    LEFT JOIN FETCH p.purchasedBy
+    ORDER BY p.purchaseDate DESC
+    """)
+List<Purchase> findRecentPurchasesWithDetails(
+        org.springframework.data.domain.Pageable pageable);
 
     /** This supplier's own purchase/order history — powers the Supplier dashboard. */
     List<Purchase> findBySupplier_IdOrderByPurchaseDateDesc(Long supplierId);

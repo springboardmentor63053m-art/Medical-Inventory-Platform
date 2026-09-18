@@ -3,6 +3,8 @@ package com.medistock.service;
 import com.medistock.model.*;
 import com.medistock.repository.StockMovementRepository;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +36,8 @@ public class StockMovementService {
 }
 
 public List<StockMovement> getRecent() {
-    return stockMovementRepository.findTop12ByOrderByTimestampDesc();
+    return stockMovementRepository.findRecentStockMovementsWithDetails(
+            PageRequest.of(0, 12));
 }
 
     public List<StockMovement> getForMedicine(Long medicineId) {
