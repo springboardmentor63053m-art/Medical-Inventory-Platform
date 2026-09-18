@@ -47,7 +47,7 @@ jwt:
 
 # CORS
 cors:
-  allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
+  allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000,https://medical-inventory-management-mkit8n3xu.vercel.app,https://medical-inventory-management-zeta.vercel.app,https://*.vercel.app}
 
 # Logging
 logging:

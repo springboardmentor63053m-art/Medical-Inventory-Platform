@@ -21,19 +21,19 @@ export default function ThemeToggle({ variant = 'icon' }) {
 
     return (
       <div
-        className="relative inline-flex items-center p-0.5 rounded-full
-                   bg-slate-200 dark:bg-[#131B2E]
-                   border border-slate-300 dark:border-[#23324C]
+        className="relative inline-flex items-center p-1 rounded-full
+                   bg-slate-100 dark:bg-slate-800
+                   border border-slate-200 dark:border-slate-700
                    shadow-inner"
-        style={{ minWidth: 68 }}
+        style={{ minWidth: 80 }}
         role="group"
         aria-label="Theme selection"
       >
         {/* Animated sliding background */}
         <span
-          className="absolute top-0.5 bottom-0.5 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-                     bg-white dark:bg-[#202B3C]
-                     rounded-full shadow-sm"
+          className="absolute top-1 bottom-1 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+                     bg-white dark:bg-slate-600
+                     rounded-full shadow-md border border-slate-200 dark:border-slate-500"
           style={{ width: `calc(50% - 2px)`, left: `calc(${sliderLeft} + 1px)` }}
           aria-hidden
         />
@@ -44,11 +44,11 @@ export default function ThemeToggle({ variant = 'icon' }) {
             onClick={() => setTheme(value)}
             title={label}
             aria-label={`Switch to ${label} theme`}
-            className={`relative z-10 flex items-center justify-center w-8 h-6 rounded-full
+            className={`relative z-10 flex items-center justify-center w-9 h-7 rounded-full
                         text-xs font-medium transition-colors duration-200
                         ${isDark === (value === 'dark')
-                          ? (value === 'dark' ? 'text-cyan-400' : 'text-amber-500 font-bold')
-                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                          ? 'text-blue-600 dark:text-blue-300'
+                          : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                         }`}
           >
             <Icon className="w-3.5 h-3.5" />
@@ -69,7 +69,7 @@ export default function ThemeToggle({ variant = 'icon' }) {
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-semibold
                         transition-all duration-200
                         ${theme === value
-                          ? 'bg-white dark:bg-slate-700 text-[#FF5500] shadow-md border border-slate-200 dark:border-slate-600'
+                          ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-md border border-slate-200 dark:border-slate-600'
                           : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                         }`}
             title={label}
@@ -86,23 +86,27 @@ export default function ThemeToggle({ variant = 'icon' }) {
   return (
     <button
       onClick={toggleTheme}
-      className="
-        w-8 h-8 rounded-lg
-        bg-slate-100 dark:bg-[#141A26]
-        border border-slate-200 dark:border-[#202B3C]
-        flex items-center justify-center
-        text-slate-600 dark:text-slate-400
-        hover:text-slate-900 dark:hover:text-white
-        transition-all duration-200 active:scale-95
-      "
+      className="relative p-2.5 rounded-xl overflow-hidden
+                 text-slate-500 dark:text-slate-400
+                 hover:text-slate-700 dark:hover:text-slate-200
+                 hover:bg-slate-100 dark:hover:bg-slate-800
+                 transition-all duration-200 active:scale-90 group"
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       aria-label="Toggle theme"
     >
-      {isDark ? (
-        <Sun className="w-4 h-4 text-amber-400" />
-      ) : (
-        <Moon className="w-4 h-4 text-slate-700" />
-      )}
+      {/* Ripple bg on hover */}
+      <span className="absolute inset-0 rounded-xl bg-gradient-to-br from-amber-400/0 to-amber-400/0
+                       group-hover:from-amber-400/5 group-hover:to-orange-400/5
+                       dark:group-hover:from-blue-400/5 dark:group-hover:to-indigo-400/5
+                       transition-all duration-300" />
+
+      <span className="relative block transition-transform duration-500"
+            style={{ transform: isDark ? 'rotate(0deg)' : 'rotate(30deg)' }}>
+        {isDark
+          ? <Sun  className="w-5 h-5 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)]" />
+          : <Moon className="w-5 h-5 text-indigo-500 drop-shadow-[0_0_6px_rgba(99,102,241,0.5)]" />
+        }
+      </span>
     </button>
   )
 }

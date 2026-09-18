@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout'
 import AuthLayout from './layouts/AuthLayout'
 import PrivateRoute from './routes/PrivateRoute'
 import CommandPalette from './components/CommandPalette'
+import MedStockAIAssistant from './components/ai-assistant/MedStockAIAssistant'
 
 // Auth Pages
 import Login    from './pages/auth/Login'
@@ -40,6 +41,7 @@ export default function App() {
   return (
     <>
       {user && <CommandPalette />}
+      {user && <MedStockAIAssistant />}
       <Routes>
         {/* Auth Routes */}
         <Route element={<AuthLayout />}>

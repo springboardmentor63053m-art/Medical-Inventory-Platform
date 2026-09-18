@@ -1,9 +1,9 @@
 import axios from 'axios'
 
 const axiosInstance = axios.create({
-  baseURL: '/api',
+  baseURL: 'https://medical-inventory-platform-qe5s.onrender.com/api',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 60000,
 })
 
 // Request interceptor — attach JWT token
@@ -18,14 +18,16 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Response interceptor — handle 401 globally
+// Response interceptor — handle 401 & 403 globally
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 || error.response?.status === 403) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

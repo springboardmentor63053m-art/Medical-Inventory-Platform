@@ -7,8 +7,165 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+// Default 10 purchase orders (9 RECEIVED, 1 PENDING) matching enterprise database
+const DEFAULT_PURCHASES = [
+  {
+    id: 1,
+    invoiceNumber: 'INV-2024-0001',
+    supplier: { id: 1, name: 'Sun Pharma Distributors', contactPerson: 'Rajesh Kumar' },
+    purchaseDate: '2026-01-20',
+    totalAmount: 8500.0,
+    discount: 500.0,
+    taxAmount: 360.0,
+    netAmount: 8360.0,
+    status: 'RECEIVED',
+    items: [
+      { id: 1, medicine: { id: 1, name: 'Amoxicillin 500mg' }, batchNumber: 'AMX-2026-001', quantity: 500, unitCost: 7.5, totalCost: 3750.0, expiryDate: '2027-01-14' },
+      { id: 2, medicine: { id: 4, name: 'Paracetamol 650mg' }, batchNumber: 'PAR-2026-004', quantity: 600, unitCost: 2.0, totalCost: 1200.0, expiryDate: '2027-08-31' },
+      { id: 3, medicine: { id: 9, name: 'Vitamin C 500mg' }, batchNumber: 'VTC-2026-009', quantity: 700, unitCost: 2.5, totalCost: 1750.0, expiryDate: '2027-12-31' }
+    ]
+  },
+  {
+    id: 2,
+    invoiceNumber: 'INV-2024-0002',
+    supplier: { id: 2, name: 'Cipla MedCorp', contactPerson: 'Priya Sharma' },
+    purchaseDate: '2026-02-10',
+    totalAmount: 12000.0,
+    discount: 600.0,
+    taxAmount: 540.0,
+    netAmount: 11940.0,
+    status: 'RECEIVED',
+    items: [
+      { id: 4, medicine: { id: 2, name: 'Azithromycin 250mg' }, batchNumber: 'AZI-2026-002', quantity: 300, unitCost: 26.0, totalCost: 7800.0, expiryDate: '2027-01-31' },
+      { id: 5, medicine: { id: 5, name: 'Ibuprofen 400mg' }, batchNumber: 'IBU-2026-005', quantity: 500, unitCost: 4.2, totalCost: 2100.0, expiryDate: '2027-02-14' }
+    ]
+  },
+  {
+    id: 3,
+    invoiceNumber: 'INV-2024-0003',
+    supplier: { id: 3, name: "Dr. Reddy's Pharma Supply", contactPerson: 'Venkat Reddy' },
+    purchaseDate: '2026-03-05',
+    totalAmount: 6800.0,
+    discount: 200.0,
+    taxAmount: 324.0,
+    netAmount: 6924.0,
+    status: 'RECEIVED',
+    items: [
+      { id: 6, medicine: { id: 7, name: 'Omeprazole 20mg' }, batchNumber: 'OME-2026-007', quantity: 400, unitCost: 8.0, totalCost: 3200.0, expiryDate: '2027-03-31' },
+      { id: 7, medicine: { id: 1, name: 'Metformin 500mg' }, batchNumber: 'MET-2026-011', quantity: 500, unitCost: 4.0, totalCost: 2000.0, expiryDate: '2027-02-28' }
+    ]
+  },
+  {
+    id: 4,
+    invoiceNumber: 'INV-2024-0004',
+    supplier: { id: 4, name: 'Mankind Pharma Ltd', contactPerson: 'Suresh Patel' },
+    purchaseDate: '2026-04-12',
+    totalAmount: 15000.0,
+    discount: 750.0,
+    taxAmount: 676.5,
+    netAmount: 14926.5,
+    status: 'RECEIVED',
+    items: [
+      { id: 8, medicine: { id: 10, name: 'Vitamin D3 60000 IU' }, batchNumber: 'VTD-2026-010', quantity: 200, unitCost: 32.0, totalCost: 6400.0, expiryDate: '2027-01-31' },
+      { id: 9, medicine: { id: 17, name: 'Atorvastatin 10mg' }, batchNumber: 'ATO-2026-017', quantity: 250, unitCost: 16.0, totalCost: 4000.0, expiryDate: '2027-02-04' },
+      { id: 10, medicine: { id: 14, name: 'Telmisartan 40mg' }, batchNumber: 'TEL-2026-014', quantity: 300, unitCost: 12.0, totalCost: 3600.0, expiryDate: '2027-02-19' }
+    ]
+  },
+  {
+    id: 5,
+    invoiceNumber: 'INV-2024-0005',
+    supplier: { id: 5, name: 'Lupin Healthcare Distributors', contactPerson: 'Meena Joshi' },
+    purchaseDate: '2026-05-18',
+    totalAmount: 9200.0,
+    discount: 400.0,
+    taxAmount: 432.0,
+    netAmount: 9232.0,
+    status: 'RECEIVED',
+    items: [
+      { id: 11, medicine: { id: 3, name: 'Amlodipine 5mg' }, batchNumber: 'AML-2026-013', quantity: 400, unitCost: 7.0, totalCost: 2800.0, expiryDate: '2027-03-31' },
+      { id: 12, medicine: { id: 5, name: 'Cetirizine 10mg' }, batchNumber: 'CET-2026-015', quantity: 450, unitCost: 3.5, totalCost: 1575.0, expiryDate: '2027-03-09' }
+    ]
+  },
+  {
+    id: 6,
+    invoiceNumber: 'INV-2024-0006',
+    supplier: { id: 1, name: 'Sun Pharma Distributors', contactPerson: 'Rajesh Kumar' },
+    purchaseDate: '2026-06-22',
+    totalAmount: 11000.0,
+    discount: 550.0,
+    taxAmount: 495.0,
+    netAmount: 10945.0,
+    status: 'RECEIVED',
+    items: [
+      { id: 13, medicine: { id: 3, name: 'Ciprofloxacin 500mg' }, batchNumber: 'CIP-2026-003', quantity: 350, unitCost: 10.5, totalCost: 3675.0, expiryDate: '2027-01-09' },
+      { id: 14, medicine: { id: 8, name: 'Pantoprazole 40mg' }, batchNumber: 'PAN-2026-008', quantity: 300, unitCost: 10.5, totalCost: 3150.0, expiryDate: '2027-03-14' }
+    ]
+  },
+  {
+    id: 7,
+    invoiceNumber: 'INV-2024-0007',
+    supplier: { id: 2, name: 'Cipla MedCorp', contactPerson: 'Priya Sharma' },
+    purchaseDate: '2026-07-08',
+    totalAmount: 7600.0,
+    discount: 380.0,
+    taxAmount: 342.0,
+    netAmount: 7562.0,
+    status: 'RECEIVED',
+    items: [
+      { id: 15, medicine: { id: 6, name: 'Diclofenac 50mg' }, batchNumber: 'DIC-2026-006', quantity: 250, unitCost: 5.8, totalCost: 1450.0, expiryDate: '2026-08-31' },
+      { id: 16, medicine: { id: 1, name: 'Glimepiride 2mg' }, batchNumber: 'GLI-2026-012', quantity: 200, unitCost: 13.5, totalCost: 2700.0, expiryDate: '2026-09-30' },
+      { id: 17, medicine: { id: 7, name: 'Doxycycline 100mg' }, batchNumber: 'DOX-2026-018', quantity: 150, unitCost: 20.0, totalCost: 3000.0, expiryDate: '2026-10-31' }
+    ]
+  },
+  {
+    id: 8,
+    invoiceNumber: 'INV-2024-0008',
+    supplier: { id: 3, name: "Dr. Reddy's Pharma Supply", contactPerson: 'Venkat Reddy' },
+    purchaseDate: '2026-08-01',
+    totalAmount: 13500.0,
+    discount: 675.0,
+    taxAmount: 607.5,
+    netAmount: 13432.5,
+    status: 'PENDING', // 1 pending order as requested
+    items: [
+      { id: 18, medicine: { id: 3, name: 'Atorvastatin 10mg' }, batchNumber: 'LIP-2026-035', quantity: 250, unitCost: 22.0, totalCost: 5500.0, expiryDate: '2027-08-01' },
+      { id: 19, medicine: { id: 7, name: 'Amlodipine 5mg' }, batchNumber: 'NOR-2026-042', quantity: 400, unitCost: 20.0, totalCost: 8000.0, expiryDate: '2027-10-15' }
+    ]
+  },
+  {
+    id: 9,
+    invoiceNumber: 'INV-2026-0009',
+    supplier: { id: 1, name: 'Sun Pharma Distributors', contactPerson: 'Rajesh Kumar' },
+    purchaseDate: '2026-09-02',
+    totalAmount: 8500.0,
+    discount: 425.0,
+    taxAmount: 382.5,
+    netAmount: 8457.5,
+    status: 'RECEIVED',
+    items: [
+      { id: 20, medicine: { id: 1, name: 'Amoxicillin 500mg' }, batchNumber: 'AMX-2026-021', quantity: 300, unitCost: 7.5, totalCost: 2250.0, expiryDate: '2027-09-15' },
+      { id: 21, medicine: { id: 4, name: 'Paracetamol 650mg' }, batchNumber: 'PAR-2026-022', quantity: 400, unitCost: 2.0, totalCost: 800.0, expiryDate: '2027-09-30' }
+    ]
+  },
+  {
+    id: 10,
+    invoiceNumber: 'INV-2026-0010',
+    supplier: { id: 4, name: 'Mankind Pharma Ltd', contactPerson: 'Suresh Patel' },
+    purchaseDate: '2026-09-12',
+    totalAmount: 10500.0,
+    discount: 500.0,
+    taxAmount: 472.5,
+    netAmount: 10472.5,
+    status: 'RECEIVED',
+    items: [
+      { id: 22, medicine: { id: 5, name: 'Vitamin D3 60000 IU' }, batchNumber: 'DRS-2026-031', quantity: 300, unitCost: 18.0, totalCost: 5400.0, expiryDate: '2028-02-20' },
+      { id: 23, medicine: { id: 9, name: 'Ibuprofen 400mg' }, batchNumber: 'BRU-2026-052', quantity: 350, unitCost: 3.0, totalCost: 1050.0, expiryDate: '2027-11-10' }
+    ]
+  }
+]
+
 export default function Purchases() {
-  const [purchases,      setPurchases]      = useState([])
+  const [purchases,      setPurchases]      = useState(DEFAULT_PURCHASES)
   const [suppliers,      setSuppliers]      = useState([])
   const [medicines,      setMedicines]      = useState([])
   const [loading,        setLoading]        = useState(true)
@@ -44,11 +201,16 @@ export default function Purchases() {
         supplierAPI.getAll().catch(() => ({ data: [] })),
         medicineAPI.getAll().catch(() => ({ data: [] }))
       ])
-      setPurchases(Array.isArray(pRes.data) ? pRes.data : [])
+      if (Array.isArray(pRes.data) && pRes.data.length > 0) {
+        setPurchases(pRes.data)
+      } else {
+        setPurchases(DEFAULT_PURCHASES)
+      }
       setSuppliers(Array.isArray(sRes.data) ? sRes.data : [])
       setMedicines(Array.isArray(mRes.data) ? mRes.data : [])
     } catch {
       toast.error('Failed to load purchase orders')
+      setPurchases(DEFAULT_PURCHASES)
     } finally {
       setLoading(false)
     }
@@ -224,7 +386,7 @@ export default function Purchases() {
         <body>
           <div class="header">
             <div>
-              <div class="title">MediStock — Purchase Order</div>
+              <div class="title">MediStock AI — Purchase Order</div>
               <div style="font-size: 12px; color: #64748b;">Order Ref: ${po.invoiceNumber}</div>
             </div>
             <div class="badge">${po.status}</div>

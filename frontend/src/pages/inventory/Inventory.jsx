@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { inventoryAPI, medicineAPI } from '../../api/services'
+import { supplierAPI } from '../../api/services'
 import {
   Boxes, AlertTriangle, Calendar, TrendingDown, X, Plus, Pencil,
   Trash2, MapPin, RefreshCw, Search, CheckCircle2,
@@ -17,7 +18,7 @@ const DEFAULT_INVENTORY_BATCHES = [
     quantity: 20,
     minQuantity: 40,
     location: 'Shelf A-11',
-    expiryDate: '2026-10-09'
+    expiryDate: '2026-10-02' // ~16 days remaining — Critical in < 30 Days window
   },
   {
     id: 2,
@@ -26,7 +27,7 @@ const DEFAULT_INVENTORY_BATCHES = [
     quantity: 138,
     minQuantity: 40,
     location: 'Shelf B-05',
-    expiryDate: '2026-08-29'
+    expiryDate: '2026-09-10' // EXPIRED — 1 medicine in expired status
   },
   {
     id: 3,
@@ -35,7 +36,7 @@ const DEFAULT_INVENTORY_BATCHES = [
     quantity: 12,
     minQuantity: 55,
     location: 'Shelf B-11',
-    expiryDate: '2027-07-01'
+    expiryDate: '2026-12-05' // ~80 days remaining — Caution in < 90 Days window
   },
   {
     id: 4,
@@ -44,7 +45,7 @@ const DEFAULT_INVENTORY_BATCHES = [
     quantity: 433,
     minQuantity: 32,
     location: 'Shelf A-03',
-    expiryDate: '2026-09-25'
+    expiryDate: '2026-11-04' // ~49 days remaining — Warning in < 60 Days window
   },
   {
     id: 5,
@@ -89,7 +90,7 @@ const DEFAULT_INVENTORY_BATCHES = [
     quantity: 66,
     minQuantity: 30,
     location: 'Shelf A-03',
-    expiryDate: '2026-08-01'
+    expiryDate: '2027-08-01'
   },
   {
     id: 10,
@@ -98,7 +99,7 @@ const DEFAULT_INVENTORY_BATCHES = [
     quantity: 18,
     minQuantity: 30,
     location: 'Refrigerator R1',
-    expiryDate: '2026-11-02' // 78 days remaining -> Caution (< 90 Days)
+    expiryDate: '2027-11-02'
   }
 ]
 
@@ -419,10 +420,14 @@ export default function Inventory() {
   const load = async () => {
     setLoading(true)
     try {
-      const [medRes, supRes] = await Promise.allSettled([
+      const [invRes, medRes, supRes] = await Promise.allSettled([
+        inventoryAPI.getAll(),
         medicineAPI.getAll(),
         supplierAPI.getAll()
       ])
+      if (invRes.status === 'fulfilled' && Array.isArray(invRes.value.data) && invRes.value.data.length > 0) {
+        setInventory(invRes.value.data)
+      }
       if (medRes.status === 'fulfilled' && Array.isArray(medRes.value.data) && medRes.value.data.length > 0) {
         setMedicines(medRes.value.data)
       }
@@ -449,13 +454,14 @@ export default function Inventory() {
     setDeleteConf(null)
   }
 
-  // Calculate days remaining helper
+  // Calculate days remaining helper — uses actual current date
   const getDaysRemaining = (expiryDateStr) => {
     if (!expiryDateStr) return 999
-    // Simulated anchor date: August 16, 2026
-    const baseDate = new Date(2026, 7, 16).getTime()
-    const expDate = new Date(expiryDateStr).getTime()
-    const diffDays = Math.ceil((expDate - baseDate) / (1000 * 60 * 60 * 24))
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // normalize to start of day
+    const expDate = new Date(expiryDateStr)
+    expDate.setHours(0, 0, 0, 0)
+    const diffDays = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     return diffDays
   }
 

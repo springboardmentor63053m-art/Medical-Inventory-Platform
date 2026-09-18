@@ -195,7 +195,7 @@ export default function AuditLogs() {
           <div class="cert-box">
             <div class="header">
               <div>
-                <div class="title">MediStock — Compliance Audit Certificate</div>
+                <div class="title">MediStock AI — Compliance Audit Certificate</div>
                 <div style="font-size: 12px; color: #64748b;">SHA-256 Immutable Audit Trail Verification</div>
               </div>
               <div class="badge">EVENT #${target.id} — VERIFIED</div>
@@ -572,7 +572,7 @@ export default function AuditLogs() {
                             </div>
                           </div>
                         ) : (
-                          <span className="badge badge-gray text-[10px]">System record</span>
+                          <span className="badge badge-gray text-[10px]">Automated System</span>
                         )}
                       </td>
 

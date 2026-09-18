@@ -31,17 +31,6 @@ export default {
           700: '#334155',
           600: '#475569',
         },
-        command: {
-          bg: '#0B101B',
-          surface: '#111827',
-          card: '#111827',
-          border: '#1F293D',
-          hover: '#182338',
-          orange: '#FF5B04',
-          'orange-hover': '#E04E00',
-          teal: '#10B981',
-          cyan: '#06B6D4',
-        },
         surface: {
           DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
           elevated: 'rgb(var(--surface-elevated) / <alpha-value>)',

@@ -156,7 +156,7 @@ export default function OCRUpload({ isOpen, onClose, onApplyExtracted }) {
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3 animate-fade-in">
               <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
                 <span className="flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-orange-500 animate-spin" /> Reading the prescription and matching medicines...
+                  <Cpu className="w-4 h-4 text-blue-500 animate-spin" /> Neural Text Extraction & Medicine Detection...
                 </span>
                 <span className="font-mono text-blue-600 dark:text-blue-400">{progress}%</span>
               </div>

@@ -1,33 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description"
-    content="MediStock AI — Intelligent Pharmacy Management, Prescription & Inventory Analytics Platform" />
-  <meta name="keywords"
-    content="MediStock AI, medical inventory, pharmacy intelligence, prescription management, OCR extraction, AI demand forecasting, stockout prediction, anomaly detection" />
-  <title>MediStock AI — Intelligent Pharmacy Management, Prescription & Inventory Analytics Platform</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-</head>
-
-<body>
-  <script>
-    (function () {
-      var t = localStorage.getItem('medinv-theme') || 'system';
-      var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      if (dark) document.documentElement.classList.add('dark');
-      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    })();
-  </script>
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
-</body>
-
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="MediStock AI — Intelligent Pharmacy Management, Prescription & Inventory Analytics Platform" />
+    <meta name="keywords" content="MediStock AI, medical inventory, pharmacy intelligence, prescription management, OCR extraction, AI demand forecasting, stockout prediction, anomaly detection" />
+    <title>MediStock AI — Intelligent Pharmacy Management, Prescription & Inventory Analytics Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  </head>
+  <body>
+    <script>
+      (function() {
+        var t = localStorage.getItem('medinv-theme') || 'system';
+        var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

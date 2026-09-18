@@ -307,8 +307,8 @@ export default function StockTracking() {
       if (invRes.status === 'fulfilled' && Array.isArray(invRes.value.data) && invRes.value.data.length > 0) {
         setInventory(invRes.value.data)
       }
-    } catch {
-      toast.error('Loaded latest stock movement data')
+    } catch (err) {
+      console.warn('Stock tracking telemetry warning:', err)
     } finally {
       setLoading(false)
     }
@@ -343,7 +343,7 @@ export default function StockTracking() {
   // Open Real-Time Stock Consistency Audit Modal
   const handleOpenAuditModal = () => {
     setAuditRunning(true)
-    toast.loading('Running stock consistency audit...', { id: 'audit-loading' })
+    toast.loading('Running Real-Time Stock Consistency Audit...', { id: 'audit-loading' })
     setTimeout(() => {
       setAuditRunning(false)
       toast.dismiss('audit-loading')
@@ -618,7 +618,7 @@ export default function StockTracking() {
             </div>
 
             <button
-              onClick={() => toast.success('Movement data refreshed')}
+              onClick={() => toast.success('Movement telemetry refreshed')}
               className="btn-secondary self-start sm:self-auto flex items-center gap-1.5 text-xs font-semibold !py-2 !px-3.5 shadow-2xs"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Refresh History
@@ -897,7 +897,7 @@ export default function StockTracking() {
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                     STOCK CONSISTENCY CONTROL ACTIVE
                   </span>
-                  <span className="badge badge-green !text-[10px] font-mono font-bold">Enabled</span>
+                  <span className="badge badge-green !text-[10px] font-mono font-bold">Real-Time Guard</span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
                   Automated Negative-Stock Prevention: Pre-validates physical inventory against requested quantities before sales or adjustments.

@@ -8,7 +8,8 @@
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3-06B6D4?logo=tailwindcss&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
+![Swagger UI](https://img.shields.io/badge/Swagger-OpenAPI%203-85EA2D?logo=swagger&logoColor=black)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT-Auth-000000?logo=jsonwebtokens&logoColor=white)
 
@@ -59,7 +60,7 @@
 | **Frontend** | React 18, Vite 5, TailwindCSS 3, Recharts, Lucide Icons, Axios |
 | **Backend** | Java 21, Spring Boot 3.2.5, Spring Security, Spring Data JPA |
 | **Security** | JWT (JJWT 0.12.5), BCrypt, CORS configuration |
-| **Database** | H2 in-memory (dev) / PostgreSQL 16, Hibernate ORM, HikariCP |
+| **Database** | H2 in-memory (dev) / MySQL 8.0, Hibernate ORM, HikariCP |
 | **DevOps** | Docker, Docker Compose, Maven 3.9, Node.js 20+ |
 | **Scheduler** | Spring `@Scheduled` — daily alert engine at 6 AM |
 
@@ -162,34 +163,60 @@ docker-compose up --build
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:5173
+| Frontend | http://localhost:5173 |
 | Backend API | http://localhost:8080/api |
-| PostgreSQL | localhost:5432 |
+| Swagger UI | http://localhost:8080/api/swagger-ui.html |
+| MySQL Database | localhost:3306 |
 
-### Option C: PostgreSQL Manual Setup
+### Option C: MySQL 8.0 Manual Setup
 
 ```sql
 CREATE DATABASE medical_inventory_db
-  WITH ENCODING 'UTF8'
-       LC_COLLATE = 'en_US.UTF-8'
-       LC_CTYPE   = 'en_US.UTF-8';
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
 
-CREATE USER medinv_user WITH PASSWORD 'MedInv@2024';
-GRANT ALL PRIVILEGES ON DATABASE medical_inventory_db TO medinv_user;
+CREATE USER 'medinv_user'@'localhost' IDENTIFIED BY 'MedInv@2024';
+GRANT ALL PRIVILEGES ON medical_inventory_db.* TO 'medinv_user'@'localhost';
+FLUSH PRIVILEGES;
 ```
 
 ```bash
-psql -U postgres -d medical_inventory_db -f database/schema.sql
-psql -U postgres -d medical_inventory_db -f database/sample_data.sql
+mysql -u medinv_user -p medical_inventory_db < database/schema.sql
+mysql -u medinv_user -p medical_inventory_db < database/sample_data.sql
 ```
 
 Then set environment variables:
-```
-DB_URL=jdbc:postgresql://localhost:5432/medical_inventory_db
+```bash
+DB_URL=jdbc:mysql://localhost:3306/medical_inventory_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 DB_USERNAME=medinv_user
 DB_PASSWORD=MedInv@2024
-DB_DRIVER=org.postgresql.Driver
+DB_DRIVER=com.mysql.cj.jdbc.Driver
 ```
+
+---
+
+## 🧪 Automated Testing Suite
+
+MediStock Pro includes a comprehensive test suite across backend and frontend layers:
+
+### Backend Unit & Integration Tests (JUnit 5 + Mockito + MockMvc)
+```bash
+cd backend
+mvn test
+```
+- `JwtUtilTest` — JWT creation, claim parsing, expiration, tampering checks.
+- `InventoryServiceTest` — stock adjustment bounds, low-stock threshold triggers, audit movements.
+- `SaleServiceTest` — multi-item billing calculations, tax/discount logic, automatic inventory decrement.
+- `AuthControllerTest` — MockMvc testing of `/api/auth/login` token generation.
+- `MedicineControllerTest` — MockMvc testing of catalog search and retrieval endpoints.
+
+### Frontend Component Tests (Vitest + React Testing Library)
+```bash
+cd frontend
+npm test
+```
+- Component smoke tests, ThemeContext light/dark mode toggling, Breadcrumbs navigation routing.
+
 
 ---
 

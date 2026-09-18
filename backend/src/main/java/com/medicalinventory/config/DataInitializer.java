@@ -325,14 +325,14 @@ public class DataInitializer implements CommandLineRunner {
         // ── 10 Inventory Records (matching sample_data.sql lines 85-95) ────
         log.info("Seeding 10 inventory records...");
         inventoryRepository.saveAll(List.of(
-                Inventory.builder().medicine(med1).batchNumber("AMX-2026-001").quantity(500).minQuantity(100).expiryDate(LocalDate.of(2027,1,30)).location("Shelf A1").build(),
-                Inventory.builder().medicine(med2).batchNumber("DOL-2026-088").quantity( 45).minQuantity(200).expiryDate(LocalDate.of(2026,8,29)).location("Shelf B2").build(),
-                Inventory.builder().medicine(med3).batchNumber("LIP-2026-012").quantity(300).minQuantity( 50).expiryDate(LocalDate.of(2027,8, 4)).location("Shelf C3").build(),
+                Inventory.builder().medicine(med1).batchNumber("AMX-2026-001").quantity(500).minQuantity(100).expiryDate(LocalDate.now().plusDays(16)).location("Shelf A1").build(), // 1 critical in < 30 days
+                Inventory.builder().medicine(med2).batchNumber("DOL-2026-088").quantity( 45).minQuantity(200).expiryDate(LocalDate.now().minusDays(6)).location("Shelf B2").build(), // 1 expired
+                Inventory.builder().medicine(med3).batchNumber("LIP-2026-012").quantity(300).minQuantity( 50).expiryDate(LocalDate.now().plusDays(80)).location("Shelf C3").build(), // 1 caution in < 90 days
                 Inventory.builder().medicine(med4).batchNumber("GLI-2026-045").quantity(620).minQuantity(150).expiryDate(LocalDate.of(2027,5, 1)).location("Shelf D1").build(),
                 Inventory.builder().medicine(med5).batchNumber("DRS-2026-019").quantity(200).minQuantity( 80).expiryDate(LocalDate.of(2028,1,26)).location("Shelf E2").build(),
-                Inventory.builder().medicine(med6).batchNumber("ZIT-2026-033").quantity( 25).minQuantity( 60).expiryDate(LocalDate.of(2026,8,19)).location("Shelf A3").build(),
+                Inventory.builder().medicine(med6).batchNumber("ZIT-2026-033").quantity( 25).minQuantity( 60).expiryDate(LocalDate.of(2027,6,19)).location("Shelf A3").build(),
                 Inventory.builder().medicine(med7).batchNumber("NOR-2026-007").quantity(480).minQuantity(120).expiryDate(LocalDate.of(2027,9, 8)).location("Shelf C1").build(),
-                Inventory.builder().medicine(med8).batchNumber("LAN-2026-062").quantity( 18).minQuantity( 30).expiryDate(LocalDate.of(2026,11,2)).location("Refrigerator R1").build(),
+                Inventory.builder().medicine(med8).batchNumber("LAN-2026-062").quantity( 18).minQuantity( 30).expiryDate(LocalDate.now().plusDays(49)).location("Refrigerator R1").build(), // 1 warning in < 60 days
                 Inventory.builder().medicine(med9).batchNumber("BRU-2026-041").quantity(750).minQuantity(180).expiryDate(LocalDate.of(2027,5,31)).location("Shelf B4").build(),
                 Inventory.builder().medicine(med10).batchNumber("SUP-2026-028").quantity(310).minQuantity(100).expiryDate(LocalDate.of(2028,8, 3)).location("Shelf F1").build()
         ));
@@ -420,111 +420,170 @@ public class DataInitializer implements CommandLineRunner {
                 .totalAmount(new BigDecimal("13500.00")).discount(new BigDecimal("675.00"))
                 .taxAmount(new BigDecimal("607.50")).netAmount(new BigDecimal("13432.50"))
                 .status(Purchase.PurchaseStatus.PENDING).createdBy(ravi).build();
+        p8.setItems(List.of(
+                PurchaseItem.builder().purchase(p8).medicine(m[2]).batchNumber("LIP-2026-035").quantity(250).unitCost(new BigDecimal("22.00")).totalCost(new BigDecimal("5500.00")).expiryDate(LocalDate.of(2027,8,1)).build(),
+                PurchaseItem.builder().purchase(p8).medicine(m[6]).batchNumber("NOR-2026-042").quantity(400).unitCost(new BigDecimal("20.00")).totalCost(new BigDecimal("8000.00")).expiryDate(LocalDate.of(2027,10,15)).build()
+        ));
 
-        purchaseRepository.saveAll(List.of(p1, p2, p3, p4, p5, p6, p7, p8));
+        Purchase p9 = Purchase.builder()
+                .invoiceNumber("INV-2026-0009").supplier(sup1).purchaseDate(LocalDate.of(2026,9,2))
+                .totalAmount(new BigDecimal("8500.00")).discount(new BigDecimal("425.00"))
+                .taxAmount(new BigDecimal("382.50")).netAmount(new BigDecimal("8457.50"))
+                .status(Purchase.PurchaseStatus.RECEIVED).createdBy(ravi).build();
+        p9.setItems(List.of(
+                PurchaseItem.builder().purchase(p9).medicine(m[0]).batchNumber("AMX-2026-021").quantity(300).unitCost(new BigDecimal("7.50")).totalCost(new BigDecimal("2250.00")).expiryDate(LocalDate.of(2027,9,15)).build(),
+                PurchaseItem.builder().purchase(p9).medicine(m[3]).batchNumber("PAR-2026-022").quantity(400).unitCost(new BigDecimal("2.00")).totalCost(new BigDecimal("800.00")).expiryDate(LocalDate.of(2027,9,30)).build()
+        ));
 
-        // ── 10 Sales & Items (matching sample_data.sql lines 135-173) ──────
-        log.info("Seeding 10 sales...");
+        Purchase p10 = Purchase.builder()
+                .invoiceNumber("INV-2026-0010").supplier(sup4).purchaseDate(LocalDate.of(2026,9,12))
+                .totalAmount(new BigDecimal("10500.00")).discount(new BigDecimal("500.00"))
+                .taxAmount(new BigDecimal("472.50")).netAmount(new BigDecimal("10472.50"))
+                .status(Purchase.PurchaseStatus.RECEIVED).createdBy(admin).build();
+        p10.setItems(List.of(
+                PurchaseItem.builder().purchase(p10).medicine(m[4]).batchNumber("DRS-2026-031").quantity(300).unitCost(new BigDecimal("18.00")).totalCost(new BigDecimal("5400.00")).expiryDate(LocalDate.of(2028,2,20)).build(),
+                PurchaseItem.builder().purchase(p10).medicine(m[8]).batchNumber("BRU-2026-052").quantity(350).unitCost(new BigDecimal("3.00")).totalCost(new BigDecimal("1050.00")).expiryDate(LocalDate.of(2027,11,10)).build()
+        ));
+
+        purchaseRepository.saveAll(List.of(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10));
+
+        // ── Real Sales & Items covering Jan to Sep 2026 (matching wave split) ──
+        log.info("Seeding realistic sales from Jan to Sep 2026...");
         User patel = userRepository.findByUsername("dr_patel").orElse(null);
         User sneha = userRepository.findByUsername("sneha_ph").orElse(null);
 
-        Sale sale1 = Sale.builder().saleNumber("SALE-2024-0001").customerName("Anita Desai").customerPhone("9001122334")
-                .saleDate(LocalDate.of(2026,2,1)).totalAmount(new BigDecimal("285.00")).discount(new BigDecimal("0.00"))
-                .taxAmount(new BigDecimal("14.25")).netAmount(new BigDecimal("299.25"))
+        // Jan 2026: 600.00
+        Sale sale1 = Sale.builder().saleNumber("SALE-2026-0001").customerName("Rajesh Sharma").customerPhone("9876543211")
+                .saleDate(LocalDate.of(2026,1,14)).totalAmount(new BigDecimal("570.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("30.00")).netAmount(new BigDecimal("600.00"))
                 .paymentMethod(Sale.PaymentMethod.CASH).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
         sale1.setItems(List.of(
-                SaleItem.builder().sale(sale1).medicine(m[3]).quantity(30).unitPrice(new BigDecimal("4.00")).totalPrice(new BigDecimal("120.00")).build(),
-                SaleItem.builder().sale(sale1).medicine(m[8]).quantity(15).unitPrice(new BigDecimal("5.00")).totalPrice(new BigDecimal("75.00")).build(),
-                SaleItem.builder().sale(sale1).medicine(m[4]).quantity(10).unitPrice(new BigDecimal("6.50")).totalPrice(new BigDecimal("65.00")).build(),
-                SaleItem.builder().sale(sale1).medicine(m[6]).quantity(3).unitPrice(new BigDecimal("8.50")).totalPrice(new BigDecimal("25.00")).build()
+                SaleItem.builder().sale(sale1).medicine(m[3]).quantity(50).unitPrice(new BigDecimal("4.00")).totalPrice(new BigDecimal("200.00")).build(),
+                SaleItem.builder().sale(sale1).medicine(m[0]).quantity(25).unitPrice(new BigDecimal("14.80")).totalPrice(new BigDecimal("370.00")).build()
         ));
 
-        Sale sale2 = Sale.builder().saleNumber("SALE-2024-0002").customerName("Ramesh Verma").customerPhone("9002233445")
-                .saleDate(LocalDate.of(2026,2,5)).totalAmount(new BigDecimal("540.00")).discount(new BigDecimal("20.00"))
-                .taxAmount(new BigDecimal("26.00")).netAmount(new BigDecimal("546.00"))
+        // Feb 2026: 4200.00 (2000 + 2200)
+        Sale sale2 = Sale.builder().saleNumber("SALE-2026-0002").customerName("Anita Desai").customerPhone("9001122334")
+                .saleDate(LocalDate.of(2026,2,8)).totalAmount(new BigDecimal("1900.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("100.00")).netAmount(new BigDecimal("2000.00"))
                 .paymentMethod(Sale.PaymentMethod.CARD).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
         sale2.setItems(List.of(
-                SaleItem.builder().sale(sale2).medicine(m[1]).quantity(10).unitPrice(new BigDecimal("45.00")).totalPrice(new BigDecimal("450.00")).build(),
-                SaleItem.builder().sale(sale2).medicine(m[9]).quantity(2).unitPrice(new BigDecimal("55.00")).totalPrice(new BigDecimal("90.00")).build()
+                SaleItem.builder().sale(sale2).medicine(m[1]).quantity(40).unitPrice(new BigDecimal("45.00")).totalPrice(new BigDecimal("1800.00")).build(),
+                SaleItem.builder().sale(sale2).medicine(m[9]).quantity(2).unitPrice(new BigDecimal("50.00")).totalPrice(new BigDecimal("100.00")).build()
         ));
 
-        Sale sale3 = Sale.builder().saleNumber("SALE-2024-0003").customerName("Kavita Joshi").customerPhone("9003344556")
-                .saleDate(LocalDate.of(2026,2,15)).totalAmount(new BigDecimal("124.00")).discount(new BigDecimal("0.00"))
-                .taxAmount(new BigDecimal("6.20")).netAmount(new BigDecimal("130.20"))
+        Sale sale3 = Sale.builder().saleNumber("SALE-2026-0003").customerName("Ramesh Verma").customerPhone("9002233445")
+                .saleDate(LocalDate.of(2026,2,22)).totalAmount(new BigDecimal("2100.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("100.00")).netAmount(new BigDecimal("2200.00"))
                 .paymentMethod(Sale.PaymentMethod.UPI).status(Sale.SaleStatus.COMPLETED).createdBy(sneha).build();
         sale3.setItems(List.of(
-                SaleItem.builder().sale(sale3).medicine(m[3]).quantity(20).unitPrice(new BigDecimal("4.00")).totalPrice(new BigDecimal("80.00")).build(),
-                SaleItem.builder().sale(sale3).medicine(m[4]).quantity(6).unitPrice(new BigDecimal("8.00")).totalPrice(new BigDecimal("44.00")).build()
+                SaleItem.builder().sale(sale3).medicine(m[2]).quantity(100).unitPrice(new BigDecimal("15.00")).totalPrice(new BigDecimal("1500.00")).build(),
+                SaleItem.builder().sale(sale3).medicine(m[4]).quantity(75).unitPrice(new BigDecimal("8.00")).totalPrice(new BigDecimal("600.00")).build()
         ));
 
-        Sale sale4 = Sale.builder().saleNumber("SALE-2024-0004").customerName("Mohan Pillai").customerPhone("9004455667")
-                .saleDate(LocalDate.of(2026,3,2)).totalAmount(new BigDecimal("670.00")).discount(new BigDecimal("30.00"))
-                .taxAmount(new BigDecimal("32.00")).netAmount(new BigDecimal("672.00"))
+        // Mar 2026: 4500.00 (2500 + 2000)
+        Sale sale4 = Sale.builder().saleNumber("SALE-2026-0004").customerName("Kavita Joshi").customerPhone("9003344556")
+                .saleDate(LocalDate.of(2026,3,10)).totalAmount(new BigDecimal("2380.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("120.00")).netAmount(new BigDecimal("2500.00"))
                 .paymentMethod(Sale.PaymentMethod.CASH).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
         sale4.setItems(List.of(
-                SaleItem.builder().sale(sale4).medicine(m[0]).quantity(60).unitPrice(new BigDecimal("7.50")).totalPrice(new BigDecimal("450.00")).build(),
-                SaleItem.builder().sale(sale4).medicine(m[2]).quantity(30).unitPrice(new BigDecimal("7.33")).totalPrice(new BigDecimal("220.00")).build()
+                SaleItem.builder().sale(sale4).medicine(m[0]).quantity(200).unitPrice(new BigDecimal("8.00")).totalPrice(new BigDecimal("1600.00")).build(),
+                SaleItem.builder().sale(sale4).medicine(m[2]).quantity(100).unitPrice(new BigDecimal("7.80")).totalPrice(new BigDecimal("780.00")).build()
         ));
 
-        Sale sale5 = Sale.builder().saleNumber("SALE-2024-0005").customerName("Sunita Bose").customerPhone("9005566778")
-                .saleDate(LocalDate.of(2026,3,18)).totalAmount(new BigDecimal("320.00")).discount(new BigDecimal("0.00"))
-                .taxAmount(new BigDecimal("16.00")).netAmount(new BigDecimal("336.00"))
+        Sale sale5 = Sale.builder().saleNumber("SALE-2026-0005").customerName("Mohan Pillai").customerPhone("9004455667")
+                .saleDate(LocalDate.of(2026,3,25)).totalAmount(new BigDecimal("1900.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("100.00")).netAmount(new BigDecimal("2000.00"))
                 .paymentMethod(Sale.PaymentMethod.UPI).status(Sale.SaleStatus.COMPLETED).createdBy(sneha).build();
         sale5.setItems(List.of(
-                SaleItem.builder().sale(sale5).medicine(m[6]).quantity(10).unitPrice(new BigDecimal("28.00")).totalPrice(new BigDecimal("280.00")).build(),
-                SaleItem.builder().sale(sale5).medicine(m[0]).quantity(5).unitPrice(new BigDecimal("8.00")).totalPrice(new BigDecimal("40.00")).build()
+                SaleItem.builder().sale(sale5).medicine(m[6]).quantity(50).unitPrice(new BigDecimal("28.00")).totalPrice(new BigDecimal("1400.00")).build(),
+                SaleItem.builder().sale(sale5).medicine(m[3]).quantity(125).unitPrice(new BigDecimal("4.00")).totalPrice(new BigDecimal("500.00")).build()
         ));
 
-        Sale sale6 = Sale.builder().saleNumber("SALE-2024-0006").customerName("Arun Krishnan").customerPhone("9006677889")
-                .saleDate(LocalDate.of(2026,4,10)).totalAmount(new BigDecimal("180.00")).discount(new BigDecimal("0.00"))
-                .taxAmount(new BigDecimal("9.00")).netAmount(new BigDecimal("189.00"))
+        // Apr 2026: 1200.00
+        Sale sale6 = Sale.builder().saleNumber("SALE-2026-0006").customerName("Sunita Bose").customerPhone("9005566778")
+                .saleDate(LocalDate.of(2026,4,15)).totalAmount(new BigDecimal("1140.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("60.00")).netAmount(new BigDecimal("1200.00"))
                 .paymentMethod(Sale.PaymentMethod.CASH).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
         sale6.setItems(List.of(
-                SaleItem.builder().sale(sale6).medicine(m[4]).quantity(20).unitPrice(new BigDecimal("6.50")).totalPrice(new BigDecimal("130.00")).build(),
-                SaleItem.builder().sale(sale6).medicine(m[5]).quantity(10).unitPrice(new BigDecimal("8.50")).totalPrice(new BigDecimal("85.00")).build()
+                SaleItem.builder().sale(sale6).medicine(m[4]).quantity(100).unitPrice(new BigDecimal("7.00")).totalPrice(new BigDecimal("700.00")).build(),
+                SaleItem.builder().sale(sale6).medicine(m[5]).quantity(50).unitPrice(new BigDecimal("8.80")).totalPrice(new BigDecimal("440.00")).build()
         ));
 
-        Sale sale7 = Sale.builder().saleNumber("SALE-2024-0007").customerName("Divya Menon").customerPhone("9007788990")
-                .saleDate(LocalDate.of(2026,5,1)).totalAmount(new BigDecimal("1100.00")).discount(new BigDecimal("50.00"))
-                .taxAmount(new BigDecimal("52.50")).netAmount(new BigDecimal("1102.50"))
+        // May 2026: 9000.00 (4900 + 4100)
+        Sale sale7 = Sale.builder().saleNumber("SALE-2026-0007").customerName("Arun Krishnan").customerPhone("9006677889")
+                .saleDate(LocalDate.of(2026,5,8)).totalAmount(new BigDecimal("4650.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("250.00")).netAmount(new BigDecimal("4900.00"))
                 .paymentMethod(Sale.PaymentMethod.CARD).status(Sale.SaleStatus.COMPLETED).createdBy(sneha).build();
         sale7.setItems(List.of(
-                SaleItem.builder().sale(sale7).medicine(m[3]).quantity(30).unitPrice(new BigDecimal("22.00")).totalPrice(new BigDecimal("660.00")).build(),
-                SaleItem.builder().sale(sale7).medicine(m[7]).quantity(20).unitPrice(new BigDecimal("18.00")).totalPrice(new BigDecimal("360.00")).build(),
-                SaleItem.builder().sale(sale7).medicine(m[8]).quantity(10).unitPrice(new BigDecimal("17.00")).totalPrice(new BigDecimal("80.00")).build()
+                SaleItem.builder().sale(sale7).medicine(m[1]).quantity(70).unitPrice(new BigDecimal("45.00")).totalPrice(new BigDecimal("3150.00")).build(),
+                SaleItem.builder().sale(sale7).medicine(m[7]).quantity(75).unitPrice(new BigDecimal("20.00")).totalPrice(new BigDecimal("1500.00")).build()
         ));
 
-        Sale sale8 = Sale.builder().saleNumber("SALE-2024-0008").customerName("Vikram Singh").customerPhone("9008899001")
-                .saleDate(LocalDate.of(2026,5,20)).totalAmount(new BigDecimal("450.00")).discount(new BigDecimal("0.00"))
-                .taxAmount(new BigDecimal("22.50")).netAmount(new BigDecimal("472.50"))
+        Sale sale8 = Sale.builder().saleNumber("SALE-2026-0008").customerName("Divya Menon").customerPhone("9007788990")
+                .saleDate(LocalDate.of(2026,5,22)).totalAmount(new BigDecimal("3900.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("200.00")).netAmount(new BigDecimal("4100.00"))
                 .paymentMethod(Sale.PaymentMethod.UPI).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
         sale8.setItems(List.of(
-                SaleItem.builder().sale(sale8).medicine(m[2]).quantity(20).unitPrice(new BigDecimal("18.50")).totalPrice(new BigDecimal("370.00")).build(),
-                SaleItem.builder().sale(sale8).medicine(m[5]).quantity(10).unitPrice(new BigDecimal("8.00")).totalPrice(new BigDecimal("80.00")).build()
+                SaleItem.builder().sale(sale8).medicine(m[2]).quantity(150).unitPrice(new BigDecimal("18.00")).totalPrice(new BigDecimal("2700.00")).build(),
+                SaleItem.builder().sale(sale8).medicine(m[8]).quantity(150).unitPrice(new BigDecimal("8.00")).totalPrice(new BigDecimal("1200.00")).build()
         ));
 
-        Sale sale9 = Sale.builder().saleNumber("SALE-2026-0009").customerName("Meera Agarwal").customerPhone("9009900112")
-                .saleDate(LocalDate.of(2026,6,8)).totalAmount(new BigDecimal("240.00")).discount(new BigDecimal("10.00"))
-                .taxAmount(new BigDecimal("11.50")).netAmount(new BigDecimal("241.50"))
+        // Jun 2026: 1500.00
+        Sale sale9 = Sale.builder().saleNumber("SALE-2026-0009").customerName("Vikram Singh").customerPhone("9008899001")
+                .saleDate(LocalDate.of(2026,6,12)).totalAmount(new BigDecimal("1425.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("75.00")).netAmount(new BigDecimal("1500.00"))
                 .paymentMethod(Sale.PaymentMethod.CASH).status(Sale.SaleStatus.COMPLETED).createdBy(sneha).build();
         sale9.setItems(List.of(
-                SaleItem.builder().sale(sale9).medicine(m[8]).quantity(20).unitPrice(new BigDecimal("5.00")).totalPrice(new BigDecimal("100.00")).build(),
-                SaleItem.builder().sale(sale9).medicine(m[9]).quantity(15).unitPrice(new BigDecimal("9.33")).totalPrice(new BigDecimal("140.00")).build()
+                SaleItem.builder().sale(sale9).medicine(m[8]).quantity(150).unitPrice(new BigDecimal("5.50")).totalPrice(new BigDecimal("825.00")).build(),
+                SaleItem.builder().sale(sale9).medicine(m[9]).quantity(60).unitPrice(new BigDecimal("10.00")).totalPrice(new BigDecimal("600.00")).build()
         ));
 
-        Sale sale10 = Sale.builder().saleNumber("SALE-2026-0010").customerName("Kiran Rao").customerPhone("9010011223")
-                .saleDate(LocalDate.of(2026,7,25)).totalAmount(new BigDecimal("780.00")).discount(new BigDecimal("0.00"))
-                .taxAmount(new BigDecimal("39.00")).netAmount(new BigDecimal("819.00"))
-                .paymentMethod(Sale.PaymentMethod.INSURANCE).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
+        // Jul 2026: 4500.00 (2300 + 2200)
+        Sale sale10 = Sale.builder().saleNumber("SALE-2026-0010").customerName("Meera Agarwal").customerPhone("9009900112")
+                .saleDate(LocalDate.of(2026,7,11)).totalAmount(new BigDecimal("2185.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("115.00")).netAmount(new BigDecimal("2300.00"))
+                .paymentMethod(Sale.PaymentMethod.CARD).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
         sale10.setItems(List.of(
-                SaleItem.builder().sale(sale10).medicine(m[1]).quantity(20).unitPrice(new BigDecimal("25.00")).totalPrice(new BigDecimal("500.00")).build(),
-                SaleItem.builder().sale(sale10).medicine(m[6]).quantity(10).unitPrice(new BigDecimal("28.00")).totalPrice(new BigDecimal("280.00")).build()
+                SaleItem.builder().sale(sale10).medicine(m[1]).quantity(50).unitPrice(new BigDecimal("25.00")).totalPrice(new BigDecimal("1250.00")).build(),
+                SaleItem.builder().sale(sale10).medicine(m[6]).quantity(35).unitPrice(new BigDecimal("26.70")).totalPrice(new BigDecimal("935.00")).build()
         ));
 
-        saleRepository.saveAll(List.of(sale1, sale2, sale3, sale4, sale5, sale6, sale7, sale8, sale9, sale10));
+        Sale sale11 = Sale.builder().saleNumber("SALE-2026-0011").customerName("Kiran Rao").customerPhone("9010011223")
+                .saleDate(LocalDate.of(2026,7,26)).totalAmount(new BigDecimal("2090.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("110.00")).netAmount(new BigDecimal("2200.00"))
+                .paymentMethod(Sale.PaymentMethod.UPI).status(Sale.SaleStatus.COMPLETED).createdBy(sneha).build();
+        sale11.setItems(List.of(
+                SaleItem.builder().sale(sale11).medicine(m[0]).quantity(150).unitPrice(new BigDecimal("8.00")).totalPrice(new BigDecimal("1200.00")).build(),
+                SaleItem.builder().sale(sale11).medicine(m[4]).quantity(110).unitPrice(new BigDecimal("8.09")).totalPrice(new BigDecimal("890.00")).build()
+        ));
+
+        // Aug 2026: 1800.00
+        Sale sale12 = Sale.builder().saleNumber("SALE-2026-0012").customerName("Pooja Hegde").customerPhone("9011122334")
+                .saleDate(LocalDate.of(2026,8,16)).totalAmount(new BigDecimal("1710.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("90.00")).netAmount(new BigDecimal("1800.00"))
+                .paymentMethod(Sale.PaymentMethod.CASH).status(Sale.SaleStatus.COMPLETED).createdBy(patel).build();
+        sale12.setItems(List.of(
+                SaleItem.builder().sale(sale12).medicine(m[2]).quantity(70).unitPrice(new BigDecimal("15.00")).totalPrice(new BigDecimal("1050.00")).build(),
+                SaleItem.builder().sale(sale12).medicine(m[5]).quantity(60).unitPrice(new BigDecimal("11.00")).totalPrice(new BigDecimal("660.00")).build()
+        ));
+
+        // Sep 2026: 1500.00
+        Sale sale13 = Sale.builder().saleNumber("SALE-2026-0013").customerName("Sanjay Gupta").customerPhone("9012233445")
+                .saleDate(LocalDate.of(2026,9,3)).totalAmount(new BigDecimal("1425.00")).discount(new BigDecimal("0.00"))
+                .taxAmount(new BigDecimal("75.00")).netAmount(new BigDecimal("1500.00"))
+                .paymentMethod(Sale.PaymentMethod.UPI).status(Sale.SaleStatus.COMPLETED).createdBy(sneha).build();
+        sale13.setItems(List.of(
+                SaleItem.builder().sale(sale13).medicine(m[3]).quantity(150).unitPrice(new BigDecimal("5.00")).totalPrice(new BigDecimal("750.00")).build(),
+                SaleItem.builder().sale(sale13).medicine(m[7]).quantity(40).unitPrice(new BigDecimal("16.88")).totalPrice(new BigDecimal("675.00")).build()
+        ));
+
+        saleRepository.saveAll(List.of(
+                sale1, sale2, sale3, sale4, sale5, sale6,
+                sale7, sale8, sale9, sale10, sale11, sale12, sale13
+        ));
 
         // ── 10 Stock Movements (Exact 1:1 mapping for all 10 medicines) ───
-        stockMovementRepository.deleteAll();
         log.info("Seeding 10 distinct stock movements for all 10 medicines...");
         stockMovementRepository.saveAll(List.of(
                 StockMovement.builder().medicine(m[0]).movementType(StockMovement.MovementType.PURCHASE_IN).quantity(500).quantityBefore(0).quantityAfter(500).referenceType("PURCHASE").referenceId(1L).reason("Initial batch procurement from INV-2026-0001").performedBy(ravi).build(),

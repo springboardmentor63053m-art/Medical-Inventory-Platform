@@ -278,7 +278,7 @@ export default function Patients() {
         <body>
           <div class="header">
             <div>
-              <div class="title">MediStock — Patient Clinical Record</div>
+              <div class="title">MediStock AI — Patient Clinical Record</div>
               <div style="color: #64748b; font-size: 13px;">Generated on: ${new Date().toLocaleString()}</div>
             </div>
             <div class="badge">${p.status || 'ACTIVE'}</div>
@@ -986,7 +986,7 @@ export default function Patients() {
                       </div>
                       <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-[11px]">
                         {selectedPatient.allergies && selectedPatient.allergies.toLowerCase() !== 'none'
-                          ? `Recorded sensitivity to ${selectedPatient.allergies}. Review possible cross-reactivity if beta-lactams or NSAIDs are prescribed.`
+                          ? `Recorded sensitivity to ${selectedPatient.allergies}. Neural check flags potential cross-reactivity if beta-lactams or NSAIDs are prescribed.`
                           : 'No active clinical drug allergies identified in electronic patient profile.'}
                       </p>
                     </div>

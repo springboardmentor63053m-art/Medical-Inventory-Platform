@@ -25,7 +25,7 @@ const allPages = [
   { to: '/prescriptions',  label: 'Prescription Management',      category: 'Pages', icon: FileText,        keywords: 'prescriptions rx ocr dispensing review' },
   { to: '/patients',       label: 'Patient Management & History', category: 'Pages', icon: UserCheck,       keywords: 'patients profiles clinical allergies' },
   { to: '/doctors',        label: 'Physician & Doctor Directory', category: 'Pages', icon: Stethoscope,     keywords: 'doctors physicians specialists registry' },
-  { to: '/ai-insights',    label: 'Inventory Insights',           category: 'Pages', icon: Sparkles,        keywords: 'ai forecast demand intelligence chatbot analytics' },
+  { to: '/ai-insights',    label: 'AI Pharmacy Intelligence',     category: 'Pages', icon: Sparkles,        keywords: 'ai forecast demand intelligence chatbot neural analytics' },
   { to: '/suppliers',      label: 'Suppliers & Vendors',          category: 'Pages', icon: Truck,           keywords: 'vendors distributors procurement partners' },
   { to: '/purchases',      label: 'Purchase Orders & Inward',     category: 'Pages', icon: ShoppingCart,    keywords: 'purchase orders procurement invoices incoming' },
   { to: '/sales',          label: 'POS Sales & Dispensing',       category: 'Pages', icon: Receipt,         keywords: 'pos billing invoice cashier checkout' },
@@ -39,7 +39,7 @@ const allPages = [
 
 const quickActions = [
   { to: '/prescriptions',  label: '+ Create New Prescription',       category: 'Quick Actions', icon: Plus,      subtext: 'Issue digital medical prescription', keywords: 'new add prescription rx' },
-  { to: '/prescriptions',  label: '📷 Upload Prescription Scan (OCR)',category: 'Quick Actions', icon: Camera,    subtext: 'Read handwriting and match medicines', keywords: 'ocr upload camera scan' },
+  { to: '/prescriptions',  label: '📷 Upload Prescription Scan (OCR)',category: 'Quick Actions', icon: Camera,    subtext: 'Neural OCR handwriting scanner',     keywords: 'ocr upload camera scan' },
   { to: '/sales',          label: '+ New POS Sale & Dispense',       category: 'Quick Actions', icon: Receipt,   subtext: 'Open point-of-sale checkout register', keywords: 'pos new sale bill' },
   { to: '/patients',       label: '+ Register New Patient',          category: 'Quick Actions', icon: UserCheck, subtext: 'Create electronic patient record', keywords: 'add patient register' },
   { to: '/medicines',      label: '+ Add New Medicine SKU',          category: 'Quick Actions', icon: Pill,      subtext: 'Register new drug formula & barcode', keywords: 'add medicine drug sku' },

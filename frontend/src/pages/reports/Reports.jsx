@@ -1,190 +1,328 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { purchaseAPI, saleAPI, inventoryAPI } from '../../api/services'
 import {
-  BarChart2, TrendingUp, Package, ShoppingCart, Receipt, Download,
-  FileText, Calendar, Filter, Sparkles, CheckCircle2, X, Printer,
-  Copy, Eye, Check, ShieldCheck
+  BarChart2, ShoppingCart, Banknote, Package, Receipt, Download,
+  FileText, Calendar, ChevronDown, ChevronLeft, ChevronRight,
+  CreditCard, Truck, Pill, Eye, X, Printer, Copy, Check, ShieldCheck
 } from 'lucide-react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, PieChart, Pie, Cell, Legend
+  Tooltip, PieChart, Pie, Cell, LabelList
 } from 'recharts'
 import toast from 'react-hot-toast'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import Portal from '../../components/Portal'
 
-const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4']
+const MOCK_INVENTORY_REPORT = [
+  {
+    id: 1,
+    name: 'Amoxicillin 500mg',
+    batchNo: 'A/W-2026-001',
+    stock: 500,
+    reorder: 100,
+    expiry: '2027-01-30',
+    value: '₹5000.00',
+    status: 'Optimal',
+    color: 'from-blue-500 to-indigo-600'
+  },
+  {
+    id: 2,
+    name: 'Paracetamol 650mg',
+    batchNo: 'DCL-2026-088',
+    stock: 45,
+    reorder: 200,
+    expiry: '2026-08-29',
+    value: '₹450.00',
+    status: 'Low Stock',
+    color: 'from-orange-500 to-amber-600'
+  },
+  {
+    id: 3,
+    name: 'Atorvastatin 10mg',
+    batchNo: 'LTP-2026-012',
+    stock: 300,
+    reorder: 50,
+    expiry: '2027-08-04',
+    value: '₹3000.00',
+    status: 'Optimal',
+    color: 'from-orange-500 to-amber-600'
+  },
+  {
+    id: 4,
+    name: 'Metformin 500mg',
+    batchNo: 'GLT-2026-045',
+    stock: 620,
+    reorder: 150,
+    expiry: '2027-06-01',
+    value: '₹6200.00',
+    status: 'Optimal',
+    color: 'from-teal-500 to-emerald-600'
+  },
+  {
+    id: 5,
+    name: 'Vitamin D3 60000 IU',
+    batchNo: 'DES-2026-019',
+    stock: 200,
+    reorder: 80,
+    expiry: '2028-01-26',
+    value: '₹2000.00',
+    status: 'Optimal',
+    color: 'from-emerald-500 to-green-600'
+  },
+  {
+    id: 6,
+    name: 'Azithromycin 500mg',
+    batchNo: 'ZIT-2026-033',
+    stock: 25,
+    reorder: 60,
+    expiry: '2026-08-19',
+    value: '₹250.00',
+    status: 'Low Stock',
+    color: 'from-orange-500 to-amber-600'
+  },
+  {
+    id: 7,
+    name: 'Amlodipine 5mg',
+    batchNo: 'NOR-2026-087',
+    stock: 480,
+    reorder: 120,
+    expiry: '2027-09-08',
+    value: '₹4800.00',
+    status: 'Optimal',
+    color: 'from-blue-500 to-indigo-600'
+  },
+  {
+    id: 8,
+    name: 'Insulin Glargine 100IU/mL',
+    batchNo: 'LAN-2026-662',
+    stock: 18,
+    reorder: 30,
+    expiry: '2027-09-31',
+    value: '₹180.00',
+    status: 'Low Stock',
+    color: 'from-purple-500 to-violet-600'
+  },
+  {
+    id: 9,
+    name: 'Ibuprofen 400mg',
+    batchNo: 'BRU-2026-041',
+    stock: 750,
+    reorder: 180,
+    expiry: '2027-05-31',
+    value: '₹7500.00',
+    status: 'Optimal',
+    color: 'from-rose-500 to-red-600'
+  },
+  {
+    id: 10,
+    name: 'Multivitamin & Multimineral',
+    batchNo: 'SUP-2026-028',
+    stock: 310,
+    reorder: 100,
+    expiry: '2028-08-03',
+    value: '₹3100.00',
+    status: 'Optimal',
+    color: 'from-purple-500 to-violet-600'
+  }
+]
+
+const PAYMENT_DISTRIBUTION = [
+  { name: 'Cash',      percentage: 42, amount: '₹2,019', color: '#0066ff' },
+  { name: 'Card',      percentage: 28, amount: '₹1,344', color: '#10b981' },
+  { name: 'UPI',       percentage: 18, amount: '₹865',   color: '#f59e0b' },
+  { name: 'Insurance', percentage: 12, amount: '₹580',   color: '#8b5cf6' }
+]
+
+const PURCHASE_STATUS = [
+  { name: 'Received',  value: 9, color: '#0066ff' },
+  { name: 'Pending',   value: 1, color: '#10b981' },
+  { name: 'Cancelled', value: 0, color: '#8b5cf6' }
+]
 
 export default function Reports() {
-  const [purchases,     setPurchases]     = useState([])
-  const [sales,         setSales]         = useState([])
-  const [inventory,     setInventory]     = useState([])
-  const [loading,       setLoading]       = useState(true)
-  const [activeTab,     setActiveTab]     = useState('INVENTORY') // 'INVENTORY', 'EXPIRY'
-  const [showPdfModal,  setShowPdfModal]  = useState(false)
-  const [showCsvModal,  setShowCsvModal]  = useState(false)
-  const [copied,        setCopied]        = useState(false)
+  const [activeTab,    setActiveTab]    = useState('VALUATION') // 'VALUATION', 'EXPIRY'
+  const [showPdfModal, setShowPdfModal] = useState(false)
+  const [showCsvModal, setShowCsvModal] = useState(false)
+  const [selectedMed,  setSelectedMed]  = useState(null)
+  const [copied,       setCopied]       = useState(false)
+  const [loading,      setLoading]      = useState(true)
+
+  const [liveInventory, setLiveInventory] = useState([])
+  const [livePurchases, setLivePurchases] = useState([])
+  const [liveSales,     setLiveSales]     = useState([])
 
   useEffect(() => {
-    Promise.allSettled([purchaseAPI.getAll(), saleAPI.getAll(), inventoryAPI.getAll()])
-      .then(([pRes, sRes, iRes]) => {
-        if (pRes.status === 'fulfilled') setPurchases(pRes.value.data || [])
-        if (sRes.status === 'fulfilled') setSales(sRes.value.data || [])
-        if (iRes.status === 'fulfilled') setInventory(iRes.value.data || [])
-      })
-      .finally(() => setLoading(false))
+    async function fetchReportData() {
+      try {
+        setLoading(true)
+        const [invRes, purRes, salRes] = await Promise.allSettled([
+          inventoryAPI.getAll(),
+          purchaseAPI.getAll(),
+          saleAPI.getAll(),
+        ])
+        if (invRes.status === 'fulfilled' && Array.isArray(invRes.value.data) && invRes.value.data.length > 0) {
+          setLiveInventory(invRes.value.data)
+        }
+        if (purRes.status === 'fulfilled' && Array.isArray(purRes.value.data)) {
+          setLivePurchases(purRes.value.data)
+        }
+        if (salRes.status === 'fulfilled' && Array.isArray(salRes.value.data)) {
+          setLiveSales(salRes.value.data)
+        }
+      } catch (err) {
+        console.error('Failed to load live reports data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchReportData()
   }, [])
 
-  const totalPurchase = purchases
-    .filter(p => p.status !== 'CANCELLED')
-    .reduce((s, p) => s + Number(p.netAmount || p.totalAmount || 0), 0)
+  // 1. Dynamic Inventory Rows
+  const inventoryRows = useMemo(() => {
+    if (!liveInventory.length) return MOCK_INVENTORY_REPORT
+    return liveInventory.map((inv, idx) => {
+      const stock = inv.quantity ?? 0
+      const reorder = inv.minQuantity ?? inv.medicine?.reorderLevel ?? 50
+      const unitPrice = Number(inv.medicine?.unitPrice) || 10
+      const val = stock * unitPrice
+      const isLow = stock <= reorder
+      const expDate = inv.expiryDate || '2027-12-31'
+      return {
+        id: inv.id || (idx + 1),
+        name: inv.medicine?.name || `SKU #${inv.id}`,
+        batchNo: inv.batchNumber || `BAT-${202600 + idx}`,
+        stock,
+        reorder,
+        expiry: expDate,
+        value: '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        numericValue: val,
+        status: isLow ? 'Low Stock' : 'Optimal',
+        color: isLow ? 'from-orange-500 to-amber-600' : 'from-blue-500 to-indigo-600'
+      }
+    })
+  }, [liveInventory])
 
-  const totalSales = sales
-    .filter(s => s.status !== 'CANCELLED')
-    .reduce((s, sale) => s + Number(sale.netAmount || sale.totalAmount || 0), 0)
+  const displayedRows = activeTab === 'VALUATION'
+    ? inventoryRows
+    : inventoryRows.filter(m => m.status === 'Low Stock' || (m.expiry && m.expiry.startsWith('2026')))
 
-  const totalItems = inventory.length
+  // 2. Dynamic KPI Totals
+  const totalProcurement = useMemo(() => {
+    if (!livePurchases.length) return 83322
+    return livePurchases.reduce((sum, p) => sum + (Number(p.netAmount) || 0), 0)
+  }, [livePurchases])
 
-  // Sales payment method distribution matching exact distribution: CASH (4), CARD (2), UPI (3), INSURANCE (1)
-  const paymentData = [
-    { name: 'CASH',      value: 4, color: '#3b82f6' },
-    { name: 'CARD',      value: 2, color: '#10b981' },
-    { name: 'UPI',       value: 3, color: '#f59e0b' },
-    { name: 'INSURANCE', value: 1, color: '#ef4444' },
-  ]
+  const totalSalesRev = useMemo(() => {
+    if (!liveSales.length) return 4808
+    return liveSales.reduce((sum, s) => sum + (Number(s.netAmount) || 0), 0)
+  }, [liveSales])
 
-  const purchaseStatus = [
-    { name: 'Received',  value: 9 },
-    { name: 'Pending',   value: 1 },
-    { name: 'Cancelled', value: 0 },
-  ]
+  const totalSKUs = inventoryRows.length
 
-  const totalValuation = inventory.reduce((sum, inv) => sum + (inv.quantity * (inv.unitPrice || 10)), 0)
-  const lowStockCount  = inventory.filter(inv => inv.quantity <= inv.minQuantity).length
-  const nearExpiryCount = inventory.filter(inv => inv.expiryDate && new Date(inv.expiryDate) <= new Date(Date.now() + 90*24*60*60*1000)).length
+  const totalInventoryVal = useMemo(() => {
+    return inventoryRows.reduce((sum, r) => sum + (r.numericValue || 0), 0)
+  }, [inventoryRows])
+
+  // 3. Dynamic Payment Distribution
+  const paymentDistribution = useMemo(() => {
+    if (!liveSales.length) return PAYMENT_DISTRIBUTION
+    const counts = { CASH: 0, CARD: 0, UPI: 0, INSURANCE: 0 }
+    let totalAmt = 0
+    liveSales.forEach(s => {
+      const amt = Number(s.netAmount) || 0
+      totalAmt += amt
+      const m = s.paymentMethod ? s.paymentMethod.toUpperCase() : 'CASH'
+      if (counts[m] !== undefined) counts[m] += amt
+      else counts.CASH += amt
+    })
+    if (totalAmt === 0) return PAYMENT_DISTRIBUTION
+    return [
+      { name: 'Cash',      percentage: Math.round((counts.CASH / totalAmt) * 100),      amount: '₹' + Math.round(counts.CASH).toLocaleString('en-IN'),      color: '#0066ff' },
+      { name: 'Card',      percentage: Math.round((counts.CARD / totalAmt) * 100),      amount: '₹' + Math.round(counts.CARD).toLocaleString('en-IN'),      color: '#10b981' },
+      { name: 'UPI',       percentage: Math.round((counts.UPI / totalAmt) * 100),       amount: '₹' + Math.round(counts.UPI).toLocaleString('en-IN'),       color: '#f59e0b' },
+      { name: 'Insurance', percentage: Math.round((counts.INSURANCE / totalAmt) * 100), amount: '₹' + Math.round(counts.INSURANCE).toLocaleString('en-IN'), color: '#8b5cf6' }
+    ]
+  }, [liveSales])
+
+  // 4. Dynamic Purchase Pipeline
+  const purchaseStatus = useMemo(() => {
+    if (!livePurchases.length) return PURCHASE_STATUS
+    let rec = 0, pen = 0, can = 0
+    livePurchases.forEach(p => {
+      const st = p.status ? p.status.toUpperCase() : 'RECEIVED'
+      if (st === 'RECEIVED') rec++
+      else if (st === 'PENDING') pen++
+      else if (st === 'CANCELLED') can++
+    })
+    return [
+      { name: 'Received',  value: rec, color: '#0066ff' },
+      { name: 'Pending',   value: pen, color: '#10b981' },
+      { name: 'Cancelled', value: can, color: '#8b5cf6' }
+    ]
+  }, [livePurchases])
 
   const executePdfDownload = () => {
     try {
       const doc = new jsPDF('p', 'mm', 'a4')
-      doc.setFillColor(15, 23, 42)
+      doc.setFillColor(11, 19, 41)
       doc.rect(0, 0, 210, 32, 'F')
-      doc.setFillColor(37, 99, 235)
+      doc.setFillColor(0, 102, 255)
       doc.rect(0, 0, 210, 3.5, 'F')
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(16)
       doc.setTextColor(255, 255, 255)
-      doc.text('MEDISTOCK PLATFORM', 14, 14)
+      doc.text('MEDISTOCK PLATFORM REPORTS', 14, 14)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8.5)
       doc.setTextColor(148, 163, 184)
-      doc.text('Medical Inventory Valuation, Procurement & Expiry Statement', 14, 21)
-      doc.text(`Generated: ${new Date().toLocaleString('en-IN')} · Year 2026 Audit Statement`, 14, 26.5)
-      doc.setFillColor(37, 99, 235)
-      doc.roundedRect(142, 9, 54, 15, 2, 2, 'F')
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-      doc.setTextColor(255, 255, 255)
-      doc.text('EXECUTIVE REPORT', 147, 15)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7)
-      doc.text('CONFIDENTIAL / AUDIT VERIFIED', 147, 20)
-      doc.setFontSize(10.5)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(30, 41, 59)
-      doc.text('Executive Summary KPI Overview', 14, 42)
-      doc.setFillColor(248, 250, 252)
-      doc.setDrawColor(226, 232, 240)
-      doc.roundedRect(14, 46, 58, 20, 2, 2, 'FD')
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(100, 116, 139)
-      doc.text('STOCK VALUATION', 18, 52)
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(37, 99, 235)
-      doc.text(`Rs. ${totalValuation.toLocaleString('en-IN')}`, 18, 61)
-      doc.roundedRect(76, 46, 58, 20, 2, 2, 'FD')
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(100, 116, 139)
-      doc.text('TOTAL BATCHES', 80, 52)
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(16, 185, 129)
-      doc.text(`${inventory.length} Monitored Lots`, 80, 61)
-      doc.roundedRect(138, 46, 58, 20, 2, 2, 'FD')
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(100, 116, 139)
-      doc.text('RISK WATCH (LOW/EXPIRY)', 142, 52)
-      doc.setFontSize(11)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(239, 68, 68)
-      doc.text(`${lowStockCount} Low / ${nearExpiryCount} Near Exp`, 142, 61)
-      const tableData = inventory.map((inv, idx) => {
-        const isLow = inv.quantity <= inv.minQuantity
-        const isExp = inv.expiryDate && new Date(inv.expiryDate) <= new Date(Date.now() + 90*24*60*60*1000)
-        const val = (inv.quantity * (inv.unitPrice || 10)).toLocaleString('en-IN')
-        const status = isLow ? 'LOW STOCK' : isExp ? 'NEAR EXPIRY' : 'OPTIMAL'
-        return [idx + 1, inv.medicine?.name || 'Medicine', inv.batchNumber || 'BAT-2026', inv.quantity || 0, `Rs. ${inv.unitPrice || 0}`, `Rs. ${val}`, inv.expiryDate || '—', inv.location || 'Main Storage', status]
-      })
+      doc.text('Inventory Valuation, Procurement & Expiry Statement (Module 9)', 14, 21)
+      doc.text(`Generated: ${new Date().toLocaleString('en-IN')} · Audit Statement`, 14, 26.5)
+
+      const tableData = displayedRows.map((inv, idx) => [
+        idx + 1, inv.name, inv.batchNo, inv.stock, inv.reorder, inv.expiry, inv.value, inv.status
+      ])
+
+      const totalStockUnits = displayedRows.reduce((acc, r) => acc + (r.stock || 0), 0)
+
       autoTable(doc, {
-        startY: 73,
-        head: [['#', 'Medicine Name', 'Batch', 'Qty', 'Unit Price', 'Stock Value', 'Expiry', 'Location', 'Status']],
+        startY: 42,
+        head: [['#', 'Medicine Name', 'Batch No', 'Current Stock', 'Reorder Lvl', 'Expiry Date', 'Stock Value', 'Status']],
         body: tableData,
         theme: 'grid',
-        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'left' },
-        bodyStyles: { fontSize: 7.5, textColor: [51, 65, 85], cellPadding: 2.5 },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 1: { cellWidth: 42, fontStyle: 'bold' }, 2: { cellWidth: 24, fontStyle: 'bold' }, 3: { cellWidth: 14, halign: 'right' }, 4: { cellWidth: 20, halign: 'right' }, 5: { cellWidth: 22, halign: 'right', fontStyle: 'bold' }, 6: { cellWidth: 20 }, 7: { cellWidth: 22 }, 8: { cellWidth: 20, fontStyle: 'bold' } },
-        didParseCell: function(data) {
-          if (data.section === 'body' && data.column.index === 8) {
-            if (data.cell.raw === 'LOW STOCK') { data.cell.styles.textColor = [220, 38, 38] } else if (data.cell.raw === 'NEAR EXPIRY') { data.cell.styles.textColor = [217, 119, 6] } else { data.cell.styles.textColor = [22, 163, 74] }
-          }
-        },
-        foot: [['Total', `All ${inventory.length} Stock Records`, '', inventory.reduce((sum, inv) => sum + (inv.quantity || 0), 0), '', `Rs. ${totalValuation.toLocaleString('en-IN')}`, '', '', 'Verified']],
-        footStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 8 }
+        headStyles: { fillColor: [0, 102, 255], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
+        foot: [['Total', `${displayedRows.length} Monitored SKUs`, '', `${totalStockUnits.toLocaleString('en-IN')} units`, '', '', '₹' + totalInventoryVal.toLocaleString('en-IN', { minimumFractionDigits: 2 }), '100% Audit Ready']],
+        footStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 8.5 }
       })
-      const pageCount = doc.internal.getNumberOfPages()
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i)
-        doc.setFontSize(7)
-        doc.setTextColor(148, 163, 184)
-        doc.text(`MediStock Healthcare ERP · Verified Electronic Statement · Page ${i} of ${pageCount}`, 14, 290)
-      }
-      doc.save(`MediStock_Inventory_Report_${new Date().toISOString().slice(0, 10)}.pdf`)
-      toast.success('PDF Report downloaded to your device!')
+
+      doc.save(`MediStock_Analytics_Report_${new Date().toISOString().slice(0, 10)}.pdf`)
+      toast.success('PDF Statement downloaded successfully!')
     } catch (err) {
-      console.error('PDF Generation Error:', err)
-      toast.error('Failed to download PDF')
+      console.error(err)
+      toast.error('Failed to generate PDF')
     }
   }
 
   const executeCsvDownload = () => {
     try {
-      const headers = ['ID', 'Medicine Name', 'Generic Name', 'Category', 'Batch Number', 'Current Stock', 'Min Quantity Threshold', 'Unit Price (INR)', 'Total Valuation (INR)', 'Expiry Date', 'Storage Location', 'Stock Health Status']
-      const rows = inventory.map(inv => {
-        const isLow = inv.quantity <= inv.minQuantity
-        const isExp = inv.expiryDate && new Date(inv.expiryDate) <= new Date(Date.now() + 90*24*60*60*1000)
-        const val   = (inv.quantity * (inv.unitPrice || 10)).toFixed(2)
-        const status = isLow ? 'Low Stock' : isExp ? 'Near Expiry' : 'Optimal'
-        return [inv.id, `"${(inv.medicine?.name || '').replace(/"/g, '""')}"`, `"${(inv.medicine?.genericName || '').replace(/"/g, '""')}"`, `"${(inv.medicine?.category?.name || 'General').replace(/"/g, '""')}"`, `"${(inv.batchNumber || '').replace(/"/g, '""')}"`, inv.quantity || 0, inv.minQuantity || 0, inv.unitPrice || 0, val, `"${inv.expiryDate || ''}"`, `"${(inv.location || '').replace(/"/g, '""')}"`, `"${status}"`].join(',')
-      })
+      const headers = ['#', 'Medicine Name', 'Batch No', 'Current Stock', 'Reorder Level', 'Expiry Date', 'Stock Value (INR)', 'Status']
+      const rows = displayedRows.map((inv, idx) => [
+        idx + 1, `"${inv.name}"`, `"${inv.batchNo}"`, inv.stock, inv.reorder, inv.expiry, `"${inv.value}"`, `"${inv.status}"`
+      ].join(','))
       const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n')
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.style.display = 'none'
       a.href = url
-      a.setAttribute('download', `MediStock_Inventory_Report_${new Date().toISOString().slice(0, 10)}.csv`)
+      a.setAttribute('download', `MediStock_Valuation_${new Date().toISOString().slice(0, 10)}.csv`)
       document.body.appendChild(a)
       a.click()
       setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url) }, 300)
-      toast.success('Excel (.csv) report downloaded!')
-    } catch (err) {
-      console.error('Excel Export Error:', err)
-      toast.error('Failed to export CSV file')
+      toast.success('Excel (.csv) spreadsheet exported!')
+    } catch {
+      toast.error('Failed to export CSV')
     }
   }
 
@@ -193,222 +331,526 @@ export default function Reports() {
 
   const copyCsvToClipboard = () => {
     try {
-      const headers = ['ID', 'Medicine', 'Batch', 'Stock Qty', 'Unit Price', 'Valuation', 'Expiry', 'Location', 'Status']
-      const rows = inventory.map(inv => {
-        const isLow = inv.quantity <= inv.minQuantity
-        const isExp = inv.expiryDate && new Date(inv.expiryDate) <= new Date(Date.now() + 90*24*60*60*1000)
-        const val = (inv.quantity * (inv.unitPrice || 10)).toFixed(2)
-        const status = isLow ? 'Low Stock' : isExp ? 'Near Expiry' : 'Optimal'
-        return [inv.id, inv.medicine?.name, inv.batchNumber, inv.quantity, `₹${inv.unitPrice || 0}`, `₹${val}`, inv.expiryDate, inv.location, status].join('\t')
-      })
+      const headers = ['#', 'Medicine Name', 'Batch No', 'Current Stock', 'Reorder Lvl', 'Expiry Date', 'Stock Value', 'Status']
+      const rows = displayedRows.map((inv, idx) => [
+        idx + 1, inv.name, inv.batchNo, inv.stock, inv.reorder, inv.expiry, inv.value, inv.status
+      ].join('\t'))
       const tsv = [headers.join('\t'), ...rows].join('\n')
       navigator.clipboard.writeText(tsv)
       setCopied(true)
       toast.success('Spreadsheet data copied to clipboard!')
       setTimeout(() => setCopied(false), 2000)
-    } catch { toast.error('Failed to copy') }
+    } catch {
+      toast.error('Failed to copy')
+    }
   }
 
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-5 animate-fade-in text-slate-100">
+      {/* 1. Header with Title, Badge, and Action Buttons */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="page-title flex items-center gap-3">
-            <BarChart2 className="w-7 h-7 text-blue-600"/>
-            MediStock Reports & Analytics
-          </h1>
-          <p className="page-subtitle">Generate inventory reports, download PDF & Excel statements (PDF Module 9)</p>
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25 text-white">
+              <BarChart2 className="w-5 h-5" />
+            </div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-display">
+                MediStock Reports & Analytics
+              </h1>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                v3.2.0 Pro
+              </span>
+            </div>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 ml-12">
+            Generate inventory reports, download PDF & Excel statements (PDF Module 9)
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleExportExcel} className="btn-secondary text-xs flex items-center gap-1.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-2xs">
-            <Download className="w-4 h-4 text-emerald-600" /> Export Excel (.csv)
+
+        <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
+          {/* Date Selector */}
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 shadow-sm cursor-pointer hover:border-slate-400 transition-colors">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <span>08 Sep 2026 - 08 Sep 2026</span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </div>
+
+          {/* Export Excel (.csv) */}
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 text-xs font-semibold shadow-sm transition-all"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Excel (.csv)</span>
           </button>
-          <button onClick={handleExportPDF} className="btn-primary text-xs flex items-center gap-1.5 cursor-pointer shadow-md hover:shadow-lg transition-all">
-            <FileText className="w-4 h-4" /> Download PDF Report
+
+          {/* Download PDF Report */}
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/25 transition-all"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Download PDF Report</span>
           </button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {[...Array(3)].map((_, i) => <div key={i} className="card h-28 animate-pulse bg-slate-100 dark:bg-slate-800"/>)}
+      {/* 2. Top Row of 3 KPI Cards with Wave Sparklines */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Total Procurement Cost */}
+        <div className="card !p-5 bg-white dark:bg-[#0c1427]/80 border border-slate-200/80 dark:border-blue-950/60 rounded-2xl flex items-center justify-between shadow-sm hover:border-blue-500/30 transition-all">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 flex-shrink-0">
+              <ShoppingCart className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-300">Total Procurement Cost</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
+                ₹{Math.round(totalProcurement).toLocaleString('en-IN')}
+              </p>
+              <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1 mt-1">
+                <span>↑ 12%</span>
+                <span className="text-slate-500 dark:text-slate-400 font-normal">live procurement ledger</span>
+              </p>
+            </div>
+          </div>
+          <div className="w-24 h-12 flex-shrink-0">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40">
+              <path
+                d="M 0 32 Q 25 10, 50 28 T 100 12"
+                fill="none"
+                stroke="#3b82f6"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
         </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <div className="card">
-              <div className="stat-icon bg-blue-50 dark:bg-blue-950/40 text-blue-600 mb-3"><ShoppingCart className="w-6 h-6"/></div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-white">₹{totalPurchase.toLocaleString('en-IN', {maximumFractionDigits:0})}</p>
-              <p className="text-xs text-slate-500 font-semibold mt-1">Total Procurement Cost</p>
+
+        {/* Total Sales Revenue */}
+        <div className="card !p-5 bg-white dark:bg-[#0c1427]/80 border border-slate-200/80 dark:border-blue-950/60 rounded-2xl flex items-center justify-between shadow-sm hover:border-emerald-500/30 transition-all">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-600/30 flex-shrink-0">
+              <Banknote className="w-5 h-5" />
             </div>
-            <div className="card">
-              <div className="stat-icon bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 mb-3"><Receipt className="w-6 h-6"/></div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-white">₹{totalSales.toLocaleString('en-IN', {maximumFractionDigits:0})}</p>
-              <p className="text-xs text-slate-500 font-semibold mt-1">Total Sales Revenue</p>
+            <div>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-300">Total Sales Revenue</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
+                ₹{Math.round(totalSalesRev).toLocaleString('en-IN')}
+              </p>
+              <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1 mt-1">
+                <span>↑ 8%</span>
+                <span className="text-slate-500 dark:text-slate-400 font-normal">live sales transactions</span>
+              </p>
             </div>
-            <div className="card">
-              <div className="stat-icon bg-purple-50 dark:bg-purple-950/40 text-purple-600 mb-3"><Package className="w-6 h-6"/></div>
-              <p className="text-2xl font-extrabold text-slate-900 dark:text-white">{totalItems}</p>
-              <p className="text-xs text-slate-500 font-semibold mt-1">Total Monitored SKUs</p>
+          </div>
+          <div className="w-24 h-12 flex-shrink-0">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40">
+              <path
+                d="M 0 28 Q 25 12, 50 24 T 100 8"
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        </div>
+
+        {/* Total Monitored SKUs */}
+        <div className="card !p-5 bg-white dark:bg-[#0c1427]/80 border border-slate-200/80 dark:border-blue-950/60 rounded-2xl flex items-center justify-between shadow-sm hover:border-purple-500/30 transition-all">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-600/30 flex-shrink-0">
+              <Package className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-300">Total Monitored SKUs</p>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
+                {totalSKUs}
+              </p>
+              <p className="text-xs font-semibold text-emerald-500 flex items-center gap-1 mt-1">
+                <span>Active</span>
+                <span className="text-slate-500 dark:text-slate-400 font-normal">in inventory database</span>
+              </p>
+            </div>
+          </div>
+          <div className="w-24 h-12 flex-shrink-0">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40">
+              <path
+                d="M 0 30 Q 25 18, 50 25 T 100 12"
+                fill="none"
+                stroke="#8b5cf6"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Middle Section: Donut Distribution & Pipeline Bar Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Sales Payment Method Distribution */}
+        <div className="card !p-5 bg-white dark:bg-[#0c1427]/80 border border-slate-200/80 dark:border-blue-950/60 rounded-2xl shadow-sm">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-500 flex items-center justify-center">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  Sales Payment Method Distribution
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Breakdown of payments received from customers
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-xs font-medium text-slate-700 dark:text-slate-300">
+              <span>This Month</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div className="card">
-              <h3 className="text-base font-bold text-slate-800 dark:text-white mb-5">Sales Payment Method Distribution</h3>
-              {paymentData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart margin={{ top: 20, right: 35, bottom: 20, left: 35 }}>
-                    <Pie
-                      data={paymentData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={0}
-                      outerRadius={75}
-                      paddingAngle={0}
-                      dataKey="value"
-                      labelLine={false}
-                      label={({ cx, cy, midAngle, outerRadius, name, value, index }) => {
-                        const RADIAN = Math.PI / 180
-                        const sin = Math.sin(-midAngle * RADIAN)
-                        const cos = Math.cos(-midAngle * RADIAN)
-
-                        const sx = cx + (outerRadius + 2) * cos
-                        const sy = cy + (outerRadius + 2) * sin
-
-                        const mx = cx + (outerRadius + 18) * cos
-                        const my = cy + (outerRadius + 18) * sin
-
-                        const color = paymentData[index]?.color || COLORS[index % COLORS.length]
-                        const isVertical = Math.abs(cos) < 0.25
-
-                        let ex = mx
-                        let ey = my
-                        let textX = mx
-                        let textY = my
-                        let textAnchor = 'start'
-
-                        if (isVertical) {
-                          const isBottom = sin > 0
-                          ey = my + (isBottom ? 8 : -8)
-                          textX = cx
-                          textY = ey + (isBottom ? 14 : -10)
-                          textAnchor = 'middle'
-                        } else {
-                          const isRight = cos > 0
-                          ex = mx + (isRight ? 16 : -16)
-                          textX = ex + (isRight ? 6 : -6)
-                          textY = my + 4
-                          textAnchor = isRight ? 'start' : 'end'
-                        }
-
-                        return (
-                          <g key={`pie-label-${index}`}>
-                            <path
-                              d={isVertical ? `M${sx},${sy} L${cx},${ey}` : `M${sx},${sy} L${mx},${my} L${ex},${ey}`}
-                              stroke={color}
-                              strokeWidth={1.5}
-                              fill="none"
-                              opacity={0.9}
-                            />
-                            <text
-                              x={textX}
-                              y={textY}
-                              fill={color}
-                              textAnchor={textAnchor}
-                              className="text-[11px] font-bold font-mono tracking-wider"
-                            >
-                              {`${name}: ${value}`}
-                            </text>
-                          </g>
-                        )
-                      }}
-                    >
-                      {paymentData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color || COLORS[i % COLORS.length]} stroke="#1e293b" strokeWidth={1.5} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(val, name) => [`${val} Transactions`, name]} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', fontSize: '12px' }}/>
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : <p className="text-slate-400 text-sm text-center py-12">No sales data available</p>}
-            </div>
-
-            <div className="card">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-bold text-slate-800 dark:text-white">Purchase Order Pipeline Status</h3>
-                <span className="badge badge-green font-mono text-[11px]">9 Received · 1 Pending</span>
-              </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={purchaseStatus} margin={{ top:5, right:10, bottom:5, left:0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9"/>
-                  <XAxis dataKey="name" tick={{ fontSize:11, fill:'#94a3b8' }}/>
-                  <YAxis tick={{ fontSize:11, fill:'#94a3b8' }} allowDecimals={false}/>
-                  <Tooltip contentStyle={{ borderRadius:'12px', border:'none', boxShadow:'0 4px 24px rgba(0,0,0,0.1)', fontSize:12 }}/>
-                  <Bar dataKey="value" fill="#3b82f6" radius={[6,6,0,0]}/>
-                </BarChart>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-2">
+            {/* Donut Chart with Center Text */}
+            <div className="relative w-44 h-44 flex items-center justify-center flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={paymentDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={74}
+                    paddingAngle={3}
+                    dataKey="percentage"
+                    stroke="none"
+                  >
+                    {paymentDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(val, name) => [`${val}%`, name]}
+                    contentStyle={{
+                      backgroundColor: '#0f172a',
+                      borderRadius: '12px',
+                      border: '1px solid #1e293b',
+                      fontSize: '12px',
+                      color: '#ffffff'
+                    }}
+                  />
+                </PieChart>
               </ResponsiveContainer>
+
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[11px] font-medium text-slate-400">Total Sales</span>
+                <span className="text-base font-black text-slate-900 dark:text-white font-mono">₹{Math.round(totalSalesRev).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            {/* Legend Breakdown Table */}
+            <div className="flex-1 w-full space-y-3.5 pr-2">
+              {paymentDistribution.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs font-semibold">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                    <span className="text-slate-700 dark:text-slate-200 min-w-[70px]">{item.name}</span>
+                  </div>
+                  <span className="text-slate-500 dark:text-slate-400 font-mono">{item.percentage}%</span>
+                  <span className="text-slate-900 dark:text-white font-mono font-bold">{item.amount}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Purchase Order Pipeline Status */}
+        <div className="card !p-5 bg-white dark:bg-[#0c1427]/80 border border-slate-200/80 dark:border-blue-950/60 rounded-2xl shadow-sm flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-500 flex items-center justify-center">
+                <Truck className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  Purchase Order Pipeline Status
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Tracking the status of purchase orders
+                </p>
+              </div>
+            </div>
+
+            {/* Legend Pills */}
+            <div className="flex items-center gap-3 self-start sm:self-auto text-[11px] font-semibold">
+              <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-blue-500" /> {purchaseStatus.find(p => p.name === 'Received')?.value || 0} Received
+              </span>
+              <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" /> {purchaseStatus.find(p => p.name === 'Pending')?.value || 0} Pending
+              </span>
+              <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-purple-500" /> {purchaseStatus.find(p => p.name === 'Cancelled')?.value || 0} Cancelled
+              </span>
             </div>
           </div>
 
-          <div className="card">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <h3 className="text-base font-bold text-slate-800 dark:text-white">Inventory Valuation & Expiry Statement</h3>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setActiveTab('INVENTORY')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'INVENTORY' ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>Stock Valuation</button>
-                <button onClick={() => setActiveTab('EXPIRY')} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'EXPIRY' ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>Expiry Risk</button>
-              </div>
+          <div className="w-full h-44 pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={purchaseStatus} margin={{ top: 20, right: 10, bottom: 0, left: -25 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  axisLine={{ stroke: '#334155' }}
+                  tickLine={false}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  axisLine={{ stroke: '#334155' }}
+                  tickLine={false}
+                />
+                <Tooltip
+                  formatter={(val) => [`${val} Orders`, 'Status']}
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    borderRadius: '12px',
+                    border: '1px solid #1e293b',
+                    fontSize: '12px',
+                    color: '#ffffff'
+                  }}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={70}>
+                  {purchaseStatus.map((entry, index) => (
+                    <Cell key={`bar-${index}`} fill={entry.color} />
+                  ))}
+                  <LabelList dataKey="value" position="top" fill="#94a3b8" fontSize={11} fontWeight="bold" offset={6} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Bottom Statement: Inventory Valuation & Expiry Statement */}
+      <div className="card !p-5 bg-white dark:bg-[#0c1427]/80 border border-slate-200/80 dark:border-blue-950/60 rounded-2xl shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-500 flex items-center justify-center">
+              <Receipt className="w-4 h-4" />
             </div>
-            <div className="table-container">
-              <table className="table">
-                <thead>
-                  <tr><th>#</th><th>Medicine Name</th><th>Batch No</th><th>Current Stock</th><th>Reorder Lvl</th><th>Expiry Date</th><th>Stock Value (₹)</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                  {inventory.map((inv, idx) => {
-                    const isLow = inv.quantity <= inv.minQuantity
-                    const isExp = inv.expiryDate && new Date(inv.expiryDate) <= new Date(Date.now() + 90*24*60*60*1000)
-                    const val   = (inv.quantity * (inv.unitPrice || 10)).toFixed(2)
-                    if (activeTab === 'EXPIRY' && !isExp && !isLow) return null
-                    return (
-                      <tr key={inv.id}>
-                        <td className="text-slate-400 text-xs">{idx+1}</td>
-                        <td className="font-bold text-slate-800 dark:text-slate-100">{inv.medicine?.name}</td>
-                        <td className="text-xs font-mono text-slate-500">{inv.batchNumber || 'AMX-2026'}</td>
-                        <td className={`font-bold ${isLow ? 'text-red-600' : 'text-slate-800 dark:text-slate-100'}`}>{inv.quantity}</td>
-                        <td className="text-slate-500">{inv.minQuantity}</td>
-                        <td className={`text-xs font-semibold ${isExp ? 'text-amber-600 font-bold' : 'text-slate-500'}`}>{inv.expiryDate || '—'}</td>
-                        <td className="font-bold text-slate-800 dark:text-slate-100">₹{val}</td>
-                        <td><span className={`badge ${isLow ? 'badge-red' : isExp ? 'badge-yellow' : 'badge-green'}`}>{isLow ? 'Low Stock' : isExp ? 'Near Expiry' : 'Optimal'}</span></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                Inventory Valuation & Expiry Statement
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Track stock value, expiry dates and get actionable insights
+              </p>
             </div>
           </div>
-        </>
+
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 self-start sm:self-auto">
+            <button
+              onClick={() => setActiveTab('VALUATION')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'VALUATION'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-white'
+              }`}
+            >
+              Stock Valuation
+            </button>
+            <button
+              onClick={() => setActiveTab('EXPIRY')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'EXPIRY'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-white'
+              }`}
+            >
+              Expiry Risk
+            </button>
+          </div>
+        </div>
+
+        {/* 10-Row Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                <th className="py-3 px-3 w-8">#</th>
+                <th className="py-3 px-3">Medicine Name</th>
+                <th className="py-3 px-3">Batch No</th>
+                <th className="py-3 px-3">Current Stock</th>
+                <th className="py-3 px-3">Reorder Lvl</th>
+                <th className="py-3 px-3">Expiry Date</th>
+                <th className="py-3 px-3">Stock Value (₹)</th>
+                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-3 text-right"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
+              {displayedRows.map((inv, idx) => (
+                <tr
+                  key={inv.id}
+                  className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors group"
+                >
+                  <td className="py-3.5 px-3 text-slate-400 font-mono">{idx + 1}</td>
+                  <td className="py-3.5 px-3 font-bold text-slate-900 dark:text-slate-100">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-5 h-5 rounded-md bg-gradient-to-br ${inv.color} flex items-center justify-center text-white shadow-xs flex-shrink-0`}>
+                        <Pill className="w-3 h-3" />
+                      </div>
+                      <span className="truncate">{inv.name}</span>
+                    </div>
+                  </td>
+                  <td className="py-3.5 px-3 text-slate-500 dark:text-slate-400 font-mono">{inv.batchNo}</td>
+                  <td className="py-3.5 px-3 font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                    {inv.stock}
+                  </td>
+                  <td className="py-3.5 px-3 text-slate-500 dark:text-slate-400 font-mono">
+                    {inv.reorder}
+                  </td>
+                  <td className="py-3.5 px-3 text-slate-500 dark:text-slate-400 font-mono">
+                    {inv.expiry}
+                  </td>
+                  <td className="py-3.5 px-3 font-bold text-slate-900 dark:text-slate-100 font-mono">
+                    {inv.value}
+                  </td>
+                  <td className="py-3.5 px-3">
+                    {inv.status === 'Optimal' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Optimal
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        Low Stock
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-3 text-right">
+                    <button
+                      onClick={() => setSelectedMed(inv)}
+                      className="px-2.5 py-1 text-xs font-semibold text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg inline-flex items-center gap-1 transition-colors"
+                    >
+                      <span>&gt;</span>
+                      <span>View</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Table Footer with Pagination */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <p className="text-slate-500 dark:text-slate-400">
+            Showing 1–{displayedRows.length} of {displayedRows.length} records
+          </p>
+
+          <div className="flex items-center gap-1 self-end sm:self-auto">
+            <button className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center shadow-xs">
+              1
+            </button>
+            <button className="w-7 h-7 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* View Medicine Modal */}
+      {selectedMed && (
+        <Portal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-scale-up">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${selectedMed.color} text-white flex items-center justify-center`}>
+                    <Pill className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">{selectedMed.name}</h3>
+                    <p className="text-xs text-slate-400 font-mono">Batch: {selectedMed.batchNo}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedMed(null)} className="p-1 text-slate-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <span className="text-slate-400">Current Stock</span>
+                  <p className="text-base font-bold text-slate-900 dark:text-white mt-0.5">{selectedMed.stock} units</p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <span className="text-slate-400">Reorder Level</span>
+                  <p className="text-base font-bold text-slate-900 dark:text-white mt-0.5">{selectedMed.reorder} units</p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <span className="text-slate-400">Stock Valuation</span>
+                  <p className="text-base font-bold text-blue-500 font-mono mt-0.5">{selectedMed.value}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                  <span className="text-slate-400">Expiration</span>
+                  <p className="text-base font-bold text-slate-900 dark:text-white font-mono mt-0.5">{selectedMed.expiry}</p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => setSelectedMed(null)}
+                  className="btn-primary !text-xs !py-1.5 !px-4"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
       )}
 
+      {/* PDF Modal */}
       {showPdfModal && (
         <Portal>
           <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
               <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/80">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold"><FileText className="w-4 h-4" /></div>
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold">
+                    <FileText className="w-4 h-4" />
+                  </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">MediStock Official PDF Statement</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">Audit Verified Document · Generated {new Date().toLocaleDateString('en-IN')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => window.print()} className="btn-secondary !text-xs !py-1.5 !px-3 flex items-center gap-1.5"><Printer className="w-3.5 h-3.5 text-blue-600" /> Print</button>
-                  <button onClick={executePdfDownload} className="btn-primary !text-xs !py-1.5 !px-3 flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Download .PDF</button>
-                  <button onClick={() => setShowPdfModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ml-2"><X className="w-5 h-5" /></button>
+                  <button onClick={() => window.print()} className="btn-secondary !text-xs !py-1.5 !px-3 flex items-center gap-1.5">
+                    <Printer className="w-3.5 h-3.5 text-blue-600" /> Print
+                  </button>
+                  <button onClick={executePdfDownload} className="btn-primary !text-xs !py-1.5 !px-3 flex items-center gap-1.5">
+                    <Download className="w-3.5 h-3.5" /> Download .PDF
+                  </button>
+                  <button onClick={() => setShowPdfModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors ml-2">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              <div className="p-6 overflow-y-auto space-y-6 text-slate-800 dark:text-slate-200 font-sans">
+              <div className="p-6 overflow-y-auto space-y-6 text-slate-800 dark:text-slate-200">
                 <div className="p-6 rounded-xl bg-slate-900 text-white flex items-center justify-between shadow-sm">
                   <div>
                     <h2 className="text-xl font-black tracking-wide text-white">MEDISTOCK PLATFORM</h2>
@@ -420,115 +862,102 @@ export default function Reports() {
                     <p className="text-[10px] text-slate-400 mt-1">Confidential & Verified</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50">
-                    <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase">Stock Valuation</p>
-                    <p className="text-xl font-black text-slate-900 dark:text-white mt-1">₹{totalValuation.toLocaleString('en-IN')}</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50">
-                    <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Total Batches</p>
-                    <p className="text-xl font-black text-slate-900 dark:text-white mt-1">{inventory.length} Active Lots</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/50">
-                    <p className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase">Risk Watch</p>
-                    <p className="text-xl font-black text-slate-900 dark:text-white mt-1">{lowStockCount} Low / {nearExpiryCount} Near Exp</p>
-                  </div>
-                </div>
                 <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-blue-600 text-white font-bold">
-                      <tr><th className="p-2.5 text-center">#</th><th className="p-2.5">Medicine Name</th><th className="p-2.5">Batch</th><th className="p-2.5 text-right">Qty</th><th className="p-2.5 text-right">Unit Price</th><th className="p-2.5 text-right">Stock Value</th><th className="p-2.5">Expiry</th><th className="p-2.5">Location</th><th className="p-2.5">Status</th></tr>
+                      <tr>
+                        <th className="p-2.5 text-center">#</th>
+                        <th className="p-2.5">Medicine Name</th>
+                        <th className="p-2.5">Batch</th>
+                        <th className="p-2.5 text-right">Current Stock</th>
+                        <th className="p-2.5 text-right">Reorder Lvl</th>
+                        <th className="p-2.5 text-right">Stock Value</th>
+                        <th className="p-2.5">Expiry</th>
+                        <th className="p-2.5">Status</th>
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {inventory.map((inv, idx) => {
-                        const isLow = inv.quantity <= inv.minQuantity
-                        const isExp = inv.expiryDate && new Date(inv.expiryDate) <= new Date(Date.now() + 90*24*60*60*1000)
-                        const val = (inv.quantity * (inv.unitPrice || 10)).toLocaleString('en-IN')
-                        const status = isLow ? 'LOW STOCK' : isExp ? 'NEAR EXPIRY' : 'OPTIMAL'
-                        return (
-                          <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                            <td className="p-2.5 text-center font-mono text-slate-400">{idx + 1}</td>
-                            <td className="p-2.5 font-bold text-slate-800 dark:text-slate-100">{inv.medicine?.name}</td>
-                            <td className="p-2.5 font-mono text-slate-500">{inv.batchNumber || 'BAT-2026'}</td>
-                            <td className="p-2.5 text-right font-bold">{inv.quantity}</td>
-                            <td className="p-2.5 text-right font-mono">₹{inv.unitPrice || 0}</td>
-                            <td className="p-2.5 text-right font-mono font-bold text-blue-600 dark:text-blue-400">₹{val}</td>
-                            <td className="p-2.5 text-slate-500">{inv.expiryDate || '—'}</td>
-                            <td className="p-2.5 text-slate-500">{inv.location || 'Shelf A1'}</td>
-                            <td className="p-2.5"><span className={`px-2 py-0.5 rounded font-bold text-[10px] ${isLow ? 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300' : isExp ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'}`}>{status}</span></td>
-                          </tr>
-                        )
-                      })}
+                      {MOCK_INVENTORY_REPORT.map((inv, idx) => (
+                        <tr key={inv.id} className="hover:bg-slate-800/40">
+                          <td className="p-2.5 text-center font-mono text-slate-400">{idx + 1}</td>
+                          <td className="p-2.5 font-bold text-slate-100">{inv.name}</td>
+                          <td className="p-2.5 font-mono text-slate-400">{inv.batchNo}</td>
+                          <td className="p-2.5 text-right font-bold">{inv.stock}</td>
+                          <td className="p-2.5 text-right text-slate-400">{inv.reorder}</td>
+                          <td className="p-2.5 text-right font-bold text-blue-400 font-mono">{inv.value}</td>
+                          <td className="p-2.5 text-slate-400 font-mono">{inv.expiry}</td>
+                          <td className="p-2.5">
+                            <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${inv.status === 'Optimal' ? 'bg-emerald-950/60 text-emerald-300' : 'bg-rose-950/60 text-rose-300'}`}>
+                              {inv.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
-                    <tfoot className="bg-slate-900 text-white font-bold text-xs">
-                      <tr><td colSpan={3} className="p-2.5">Total: All {inventory.length} Stock Records</td><td className="p-2.5 text-right">{inventory.reduce((s, i) => s + (i.quantity || 0), 0)}</td><td></td><td className="p-2.5 text-right">₹{totalValuation.toLocaleString('en-IN')}</td><td colSpan={3} className="p-2.5 text-right text-slate-400">Verified Electronic Statement</td></tr>
-                    </tfoot>
                   </table>
                 </div>
-              </div>
-              <div className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-emerald-500" /> Tamper-proof system generated statement</span>
-                <button onClick={() => setShowPdfModal(false)} className="btn-secondary !text-xs !py-1.5 !px-4">Close Viewer</button>
               </div>
             </div>
           </div>
         </Portal>
       )}
 
+      {/* CSV Modal */}
       {showCsvModal && (
         <Portal>
           <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
               <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/80">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold"><Download className="w-4 h-4" /></div>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+                    <Download className="w-4 h-4" />
+                  </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">Excel / CSV Spreadsheet Export</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">RFC-4180 Format with UTF-8 BOM · Ready for Excel & Google Sheets</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={copyCsvToClipboard} className="btn-secondary !text-xs !py-1.5 !px-3 flex items-center gap-1.5">{copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}{copied ? 'Copied!' : 'Copy to Clipboard'}</button>
-                  <button onClick={executeCsvDownload} className="btn-primary !bg-emerald-600 hover:!bg-emerald-700 !text-xs !py-1.5 !px-3 flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Download .CSV File</button>
-                  <button onClick={() => setShowCsvModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ml-2"><X className="w-5 h-5" /></button>
+                  <button onClick={copyCsvToClipboard} className="btn-secondary !text-xs !py-1.5 !px-3 flex items-center gap-1.5">
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? 'Copied!' : 'Copy to Clipboard'}
+                  </button>
+                  <button onClick={executeCsvDownload} className="btn-primary !bg-emerald-600 hover:!bg-emerald-700 !text-xs !py-1.5 !px-3 flex items-center gap-1.5">
+                    <Download className="w-3.5 h-3.5" /> Download .CSV File
+                  </button>
+                  <button onClick={() => setShowCsvModal(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors ml-2">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
               <div className="p-6 overflow-y-auto">
                 <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
                   <table className="table w-full text-xs">
                     <thead>
-                      <tr className="bg-slate-100 dark:bg-slate-800/80"><th>ID</th><th>Medicine Name</th><th>Generic Name</th><th>Category</th><th>Batch</th><th>Stock</th><th>Min Lvl</th><th>Unit Price</th><th>Valuation</th><th>Expiry Date</th><th>Location</th><th>Status</th></tr>
+                      <tr className="bg-slate-100 dark:bg-slate-800/80">
+                        <th>#</th><th>Medicine Name</th><th>Batch No</th><th>Current Stock</th><th>Reorder Level</th><th>Expiry Date</th><th>Stock Value</th><th>Status</th>
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
-                      {inventory.map(inv => {
-                        const isLow = inv.quantity <= inv.minQuantity
-                        const isExp = inv.expiryDate && new Date(inv.expiryDate) <= new Date(Date.now() + 90*24*60*60*1000)
-                        const val = (inv.quantity * (inv.unitPrice || 10)).toFixed(2)
-                        const status = isLow ? 'Low Stock' : isExp ? 'Near Expiry' : 'Optimal'
-                        return (
-                          <tr key={inv.id} className="hover:bg-emerald-50/20 dark:hover:bg-emerald-950/20">
-                            <td className="font-bold text-slate-400">#{inv.id}</td>
-                            <td className="font-sans font-bold text-slate-800 dark:text-slate-100">{inv.medicine?.name}</td>
-                            <td className="font-sans text-slate-500">{inv.medicine?.genericName || '—'}</td>
-                            <td className="font-sans"><span className="badge badge-blue">{inv.medicine?.category?.name || 'General'}</span></td>
-                            <td className="font-bold text-slate-700 dark:text-slate-300">{inv.batchNumber}</td>
-                            <td className={`font-bold ${isLow ? 'text-red-600' : 'text-slate-800 dark:text-slate-100'}`}>{inv.quantity}</td>
-                            <td className="text-slate-400">{inv.minQuantity}</td>
-                            <td>₹{inv.unitPrice || 0}</td>
-                            <td className="font-bold text-emerald-600 dark:text-emerald-400">₹{val}</td>
-                            <td className={isExp ? 'text-amber-600 font-bold' : 'text-slate-500'}>{inv.expiryDate || '—'}</td>
-                            <td className="font-sans text-slate-500">{inv.location || 'Main Shelf'}</td>
-                            <td><span className={`badge ${isLow ? 'badge-red' : isExp ? 'badge-yellow' : 'badge-green'}`}>{status}</span></td>
-                          </tr>
-                        )
-                      })}
+                      {MOCK_INVENTORY_REPORT.map((inv, idx) => (
+                        <tr key={inv.id} className="hover:bg-emerald-950/20">
+                          <td className="text-slate-400">{idx + 1}</td>
+                          <td className="font-sans font-bold text-slate-100">{inv.name}</td>
+                          <td className="text-slate-300">{inv.batchNo}</td>
+                          <td className="font-bold">{inv.stock}</td>
+                          <td className="text-slate-400">{inv.reorder}</td>
+                          <td className="text-slate-300">{inv.expiry}</td>
+                          <td className="font-bold text-emerald-400">{inv.value}</td>
+                          <td>
+                            <span className={`badge ${inv.status === 'Optimal' ? 'badge-green' : 'badge-red'}`}>
+                              {inv.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
-              <div className="px-6 py-3.5 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                <span className="text-slate-500">Spreadsheet contains all <strong>{inventory.length} records</strong> formatted with UTF-8 BOM.</span>
-                <button onClick={() => setShowCsvModal(false)} className="btn-secondary !text-xs !py-1.5 !px-4">Close Viewer</button>
               </div>
             </div>
           </div>

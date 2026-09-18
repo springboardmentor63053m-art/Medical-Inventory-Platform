@@ -228,11 +228,7 @@ public class AIService {
         response.put("query", question);
         response.put("timestamp", LocalDateTime.now().toString());
 
-        if (q.matches(".*\\b(hi|hello|hey|help|what can you do)\\b.*")) {
-            response.put("answer", "I can open any MediStock workspace, explain inventory risks, review expiry dates, suggest reorders, summarize sales, inspect suppliers, check prescriptions, and surface alerts. Try: open inventory, add a medicine, or show stock risks.");
-            response.put("type", "GENERAL_INFO");
-            response.put("data", Map.of("capabilities", List.of("Workspace navigation", "Stockout Risk", "Smart Reordering", "FEFO Expiry Tracking", "Sales Summary", "Prescription Availability", "Alerts")));
-        } else if (q.contains("reorder") || q.contains("restock") || q.contains("buy") || q.contains("order") || q.contains("purchase") || q.contains("procure")) {
+        if (q.contains("reorder") || q.contains("buy") || q.contains("order") || q.contains("purchase")) {
             List<Map<String, Object>> recs = getReorderRecommendations();
             response.put("answer", String.format("MediStock AI identified %d medicines requiring procurement. Top priority is %s with %d units recommended for ordering.",
                     recs.size(),
@@ -240,40 +236,28 @@ public class AIService {
                     recs.isEmpty() ? 0 : recs.get(0).get("recommendedOrderQty")));
             response.put("type", "REORDER_SUGGESTION");
             response.put("data", recs);
-        } else if (q.contains("expire") || q.contains("expiry") || q.contains("near date") || q.contains("batch")) {
+        } else if (q.contains("expire") || q.contains("expiry") || q.contains("date")) {
             response.put("answer", "Analysis of batch schedules shows 2 batches expiring within 30 days (Batch LAN-2025 and AMOX-2024-B1). FEFO (First-Expire, First-Out) auto-rotation is active.");
             response.put("type", "EXPIRY_REPORT");
             response.put("data", Map.of("expiringIn30Days", 2, "expiringIn90Days", 4, "fefoEnforced", true));
-        } else if (q.contains("sale") || q.contains("revenue") || q.contains("turnover") || q.contains("today") || q.contains("pos") || q.contains("billing")) {
+        } else if (q.contains("sale") || q.contains("revenue") || q.contains("today") || q.contains("pos")) {
             response.put("answer", "Current recorded sales total ₹28,800.00 across 10 fulfilled customer orders. Prescription-linked dispensing accounts for 68% of daily turnover.");
             response.put("type", "SALES_METRICS");
             response.put("data", Map.of("totalRevenue", 28800.00, "totalSalesCount", 10, "topPaymentMethod", "UPI / Cash"));
-        } else if (q.contains("supplier") || q.contains("vendor") || q.contains("delivery") || q.contains("delay") || q.contains("fulfil")) {
+        } else if (q.contains("supplier") || q.contains("vendor") || q.contains("delay")) {
             response.put("answer", "You have 10 registered verified suppliers. Sun Pharma Distributors maintains the fastest fulfillment lead time (3 days), while Cipla Healthcare has 1 pending purchase order.");
             response.put("type", "SUPPLIER_INSIGHT");
             response.put("data", Map.of("totalSuppliers", 10, "fastestSupplier", "Sun Pharma Distributors", "averageLeadTime", "4.2 days"));
-        } else if (q.contains("risk") || q.contains("stockout") || q.contains("shortage") || q.contains("low stock") || q.contains("out of stock")) {
+        } else if (q.contains("risk") || q.contains("stockout") || q.contains("shortage")) {
             List<Map<String, Object>> risks = getStockRisk();
             long critCount = risks.stream().filter(r -> "CRITICAL".equals(r.get("riskLevel")) || "HIGH".equals(r.get("riskLevel"))).count();
             response.put("answer", String.format("Stock risk scanner detected %d formulation(s) with elevated stockout risk in the next 7-14 days.", critCount));
             response.put("type", "STOCKOUT_RISK");
             response.put("data", risks);
-        } else if (q.contains("forecast") || q.contains("demand") || q.contains("trend") || q.contains("predict")) {
-            response.put("answer", "Demand forecasting is available in AI Insights. I can help you review projected medicine demand and identify products that may need earlier replenishment.");
-            response.put("type", "DEMAND_FORECAST");
-            response.put("data", getDemandForecast());
-        } else if (q.contains("prescription") || q.contains("dispens") || q.contains("patient")) {
-            response.put("answer", "Prescription and patient workflows are available in MediStock. Open Prescriptions to review, approve, check availability, or dispense an order safely.");
-            response.put("type", "PRESCRIPTION_WORKFLOW");
-            response.put("data", Map.of("availableActions", List.of("Review", "Check availability", "Approve", "Reject", "Dispense")));
-        } else if (q.contains("alert") || q.contains("warning") || q.contains("notification")) {
-            response.put("answer", "Open Alerts to review active low-stock and expiry warnings. Critical alerts should be acknowledged and resolved only after the underlying issue is checked.");
-            response.put("type", "ALERT_WORKFLOW");
-            response.put("data", Map.of("availableActions", List.of("Review", "Acknowledge", "Resolve")));
         } else {
-            response.put("answer", "I can help with that, but I need a little more detail. I can open a workspace, summarize inventory data, suggest reorders, review expiry and stockout risk, explain sales or suppliers, and guide prescription workflows. Try: open medicines, create a purchase order, or summarize alerts.");
+            response.put("answer", "MediStock AI Pharmacy Assistant is ready. You can query stock forecasts, reorder recommendations, expiry timelines, supplier performance, or prescription dispensing status.");
             response.put("type", "GENERAL_INFO");
-            response.put("data", Map.of("capabilities", List.of("Workspace navigation", "Demand Forecasting", "Stockout Risk", "Smart Reordering", "FEFO Expiry Tracking", "Sales Summary", "Prescription Workflows")));
+            response.put("data", Map.of("capabilities", List.of("Demand Forecasting", "Stockout Risk", "Smart Reordering", "FEFO Expiry Tracking", "Prescription Availability")));
         }
 
         return response;
