@@ -8,10 +8,10 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-300 text-xs font-semibold tracking-wider uppercase">Verifying MediStock Credentials...</p>
+          <p className="text-slate-500 dark:text-slate-300 text-xs font-semibold tracking-wider uppercase">Verifying MediStock Credentials...</p>
         </div>
       </div>
     );

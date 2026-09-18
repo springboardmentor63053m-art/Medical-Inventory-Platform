@@ -166,8 +166,8 @@ export default function PurchaseOrderPage() {
     const updated = [...lineItems];
     updated[index][field] = value;
     if (field === 'medicineId') {
-      const medicine = supplierMedicines.find(item => String(item.id) === String(value));
-      updated[index].unitPrice = medicine?.unitPrice || 0;
+      const medicine = supplierMedicines.find(item => String(item.id) === String(value)) || medicines.find(item => String(item.id) === String(value));
+      updated[index].unitPrice = Number(medicine?.costPrice ?? medicine?.unitPrice ?? 0);
     }
     setLineItems(updated);
   };

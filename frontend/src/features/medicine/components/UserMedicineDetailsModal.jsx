@@ -133,28 +133,28 @@ export default function UserMedicineDetailsModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Drug Information: ${name}`}>
-      <div className="space-y-6 text-xs text-slate-700 max-h-[80vh] overflow-y-auto pr-1">
+      <div className="space-y-6 text-xs text-slate-700 dark:text-slate-200 max-h-[80vh] overflow-y-auto pr-1">
         {/* Header Hero Box */}
-        <div className="p-5 bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 rounded-2xl text-white shadow-md border border-slate-800">
+        <div className="p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-white dark:from-blue-950 dark:via-slate-900 dark:to-indigo-950 rounded-2xl text-slate-900 dark:text-white shadow-xs dark:shadow-md border border-blue-100 dark:border-slate-800">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 font-mono text-[10px] font-bold rounded-md uppercase">
+              <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-mono text-[10px] font-bold rounded-md uppercase">
                 {medicineCode}
               </span>
-              <h3 className="text-lg font-black text-white mt-1.5">{name}</h3>
-              <p className="text-xs text-slate-300 italic font-medium">{genericName}</p>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white mt-1.5">{name}</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 italic font-medium">{genericName}</p>
             </div>
             <div>{getAvailabilityBadge(medicine.status)}</div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="text-slate-300 font-medium">
-              Category: <strong className="text-white">{categoryName}</strong>
+          <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="text-slate-600 dark:text-slate-300 font-medium">
+              Category: <strong className="text-slate-900 dark:text-white">{categoryName}</strong>
             </span>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 block uppercase font-bold">Unit Price</span>
-              <span className="text-base font-black text-blue-400">{formatINR(unitPrice)}</span>
-                <span className="text-[10px] text-slate-300 block mt-1">{prescriptionLabel}</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-bold">Unit Price</span>
+              <span className="text-base font-black text-blue-600 dark:text-blue-400">{formatINR(unitPrice)}</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-300 block mt-1">{prescriptionLabel}</span>
             </div>
           </div>
         </div>

@@ -60,6 +60,9 @@ public class MedicineServiceImpl implements MedicineService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
 
+        BigDecimal sellingPrice = request.getSellingPrice() != null ? request.getSellingPrice() : request.getUnitPrice();
+        BigDecimal costPrice = request.getCostPrice() != null ? request.getCostPrice() : BigDecimal.ZERO;
+
         Medicine medicine = Medicine.builder()
                 .category(category)
                 .medicineCode(request.getMedicineCode())
@@ -67,7 +70,9 @@ public class MedicineServiceImpl implements MedicineService {
                 .genericName(request.getGenericName())
                 .manufacturer(request.getManufacturer())
                 .dosage(request.getDosage())
-                .unitPrice(request.getUnitPrice())
+                .sellingPrice(sellingPrice)
+                .costPrice(costPrice)
+                .unitPrice(sellingPrice)
                 .reorderLevel(request.getReorderLevel() != null ? request.getReorderLevel() : 10)
                 .description(request.getDescription())
                 .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
@@ -118,13 +123,22 @@ public class MedicineServiceImpl implements MedicineService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
 
+        BigDecimal sellingPrice = request.getSellingPrice() != null ? request.getSellingPrice() : request.getUnitPrice();
+        BigDecimal costPrice = request.getCostPrice() != null ? request.getCostPrice() : medicine.getCostPrice();
+
         medicine.setCategory(category);
         medicine.setMedicineCode(request.getMedicineCode());
         medicine.setName(request.getName());
         medicine.setGenericName(request.getGenericName());
         medicine.setManufacturer(request.getManufacturer());
         medicine.setDosage(request.getDosage());
-        medicine.setUnitPrice(request.getUnitPrice());
+        if (sellingPrice != null) {
+            medicine.setSellingPrice(sellingPrice);
+            medicine.setUnitPrice(sellingPrice);
+        }
+        if (costPrice != null) {
+            medicine.setCostPrice(costPrice);
+        }
         medicine.setReorderLevel(request.getReorderLevel());
         medicine.setDescription(request.getDescription());
         if (request.getStatus() != null) {
@@ -265,7 +279,11 @@ public class MedicineServiceImpl implements MedicineService {
                 .genericName(medicine.getGenericName())
                 .manufacturer(medicine.getManufacturer())
                 .dosage(medicine.getDosage())
-                .unitPrice(medicine.getUnitPrice())
+                .unitPrice(medicine.getSellingPrice())
+                .sellingPrice(medicine.getSellingPrice())
+                .costPrice(medicine.getCostPrice())
+                .profitPerUnit(medicine.getProfitPerUnit())
+                .profitMargin(medicine.getProfitMargin())
                 .reorderLevel(medicine.getReorderLevel())
                 .description(medicine.getDescription())
                 .status(medicine.getStatus())

@@ -66,6 +66,10 @@ export default function UnifiedMedicineDetailsModal({
   const dosage = medicine.dosage || 'Standard Dosage';
   const manufacturer = medicine.manufacturer || 'Standard Manufacturer';
   const unitPrice = medicine.unitPrice;
+  const sellingPrice = medicine.sellingPrice !== undefined && medicine.sellingPrice !== null ? medicine.sellingPrice : unitPrice;
+  const costPrice = medicine.costPrice !== undefined && medicine.costPrice !== null ? medicine.costPrice : (sellingPrice ? Number((sellingPrice * 0.70).toFixed(2)) : 0);
+  const profitPerUnit = medicine.profitPerUnit !== undefined && medicine.profitPerUnit !== null ? medicine.profitPerUnit : (sellingPrice - costPrice);
+  const profitMargin = medicine.profitMargin !== undefined && medicine.profitMargin !== null ? medicine.profitMargin : (sellingPrice > 0 ? Number(((profitPerUnit / sellingPrice) * 100).toFixed(2)) : 0);
   const description = medicine.description || 'Standard pharmaceutical medicine formulation.';
   const reorderLevel = medicine.reorderLevel || 10;
   const countryOfOrigin = medicine.countryOfOrigin || 'India';
@@ -101,11 +105,11 @@ export default function UnifiedMedicineDetailsModal({
     }
     if (lower.includes('analgesic') || lower.includes('pain') || lower.includes('nsaid')) {
       return {
-        primary: 'Symptomatic relief of mild to moderate acute pain and fever reduction.',
+        primary: 'Relief of mild to moderate musculoskeletal pain and headache.',
         common: [
-          'Management of post-operative soreness and dental pain',
-          'Alleviation of joint stiffness and musculoskeletal discomfort',
-          'Headache and inflammatory pain control'
+          'Fever management and antipyretic relief',
+          'Inflammation management in arthritis and sports injury',
+          'Post-operative mild pain management'
         ]
       };
     }
@@ -130,16 +134,33 @@ export default function UnifiedMedicineDetailsModal({
       };
     }
     return {
-      primary: 'Therapeutic treatment as prescribed by a licensed healthcare physician.',
+      primary: 'Therapeutic treatment as indicated by healthcare provider.',
       common: [
-        'Targeted relief of specific clinical health symptoms',
-        'Maintenance of general health and medical recovery',
-        'Routine clinical regimen compliance'
+        'Management of chronic disease progression',
+        'Supportive wellness and organ function maintenance',
+        'Symptom relief under authorized medical regimen'
       ]
     };
   };
 
-  const usesData = getEducationalUses(categoryName, name);
+  const educationalUses = getEducationalUses(categoryName, name);
+
+  // Safety Warnings Helper
+  const sideEffects = medicine.sideEffects || 'Mild dizziness, nausea, headache, or gastrointestinal discomfort in sensitive individuals.';
+  const contraindications = medicine.contraindications || 'Hypersensitivity to active compound, severe hepatic impairment, or renal insufficiency without dosage adjustment.';
+  const storageInstructions = medicine.storageInstructions || 'Store below 25°C in a dry place. Protect from direct sunlight and moisture. Keep out of reach of children.';
+  const precautions = medicine.precautions || 'Consult physician prior to use during pregnancy or lactation. Avoid alcohol consumption during therapy.';
+
+  // Inventory & Warehouse Specs
+  const currentStock = medicine.currentStock || medicine.stockQuantity || 0;
+  const isLowStock = currentStock > 0 && currentStock <= reorderLevel;
+  const isOutOfStock = currentStock <= 0;
+  const storageLocation = medicine.storageLocation || 'Aisle 3, Shelf B2 (Temperature Controlled)';
+  const purchaseInfo = medicine.purchaseInfo || 'PO-2026-MED-849';
+  const expiryAlert = medicine.expiryAlert || 'Normal (22 Months Remaining)';
+  const supplierName = medicine.supplierName || `${manufacturer} Distribution Network`;
+  const createdByName = medicine.createdBy || 'System Administrator';
+  const updatedByName = medicine.updatedBy || 'Lead Pharmacist';
 
   // Dosage & Administration Info
   const routeOfAdministration = medicine.routeOfAdministration || 'Oral / Standard Route';
@@ -148,7 +169,6 @@ export default function UnifiedMedicineDetailsModal({
   const storageTemperature = medicine.storageTemperature || 'Store below 25°C in a cool, dry place away from direct light.';
 
   // Warnings & Precautions
-  const contraindications = medicine.contraindications || 'Known hypersensitivity or allergic reaction to active ingredient.';
   const pregnancyWarning = medicine.pregnancyWarning || 'Category C: Consult doctor prior to use during pregnancy.';
   const breastfeedingWarning = medicine.breastfeedingWarning || 'Excreted in small amounts in breast milk; use under clinical advice.';
   const alcoholWarning = medicine.alcoholWarning || 'Avoid alcohol consumption while on this medication.';
@@ -159,44 +179,35 @@ export default function UnifiedMedicineDetailsModal({
   const seriousSideEffects = medicine.seriousSideEffects || 'Severe skin rash, facial swelling, breathing difficulty, chest tightness.';
   const consultDoctorWhen = medicine.consultDoctorWhen || 'Symptoms persist beyond 3 days, or if any allergic reaction occurs.';
 
-  // Role-Specific Specs
-  const currentStock = medicine.stockQuantity !== undefined ? medicine.stockQuantity : 450;
-  const storageLocation = medicine.storageLocation || 'Main Pharmacy Rack A-14';
-  const expiryAlert = medicine.expiryAlert || 'Normal (22 Months Remaining)';
-  const supplierName = medicine.supplierName || `${manufacturer} Distribution Network`;
-  const purchaseInfo = medicine.purchaseInfo || 'PO-2025-88912 • Cold Chain Verified Delivery';
-  const createdByName = medicine.createdBy || 'System Administrator';
-  const updatedByName = medicine.updatedBy || 'Lead Pharmacist';
-
   // Filter Related Medicines in same category
   const relatedMedicines = allMedicines
     .filter((m) => m.category?.id === medicine.category?.id && m.id !== medicine.id)
     .slice(0, 3);
 
-  // Status Badge Helper
+  // Helper for Status Badge
   const getStatusBadge = () => {
-    if (statusStr === 'INACTIVE' || statusStr === 'OUT_OF_STOCK') {
+    if (statusStr === 'INACTIVE' || isOutOfStock) {
       return (
-        <span className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-bold rounded-full inline-flex items-center gap-1.5 shadow-xs">
+        <span className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold rounded-full inline-flex items-center gap-1.5">
           <Ban className="w-3.5 h-3.5" /> Out of Stock / Inactive
         </span>
       );
     }
-    if (statusStr === 'LOW_STOCK') {
+    if (isLowStock) {
       return (
-        <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-bold rounded-full inline-flex items-center gap-1.5 shadow-xs">
+        <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold rounded-full inline-flex items-center gap-1.5">
           <AlertTriangle className="w-3.5 h-3.5" /> Low Stock Warning
         </span>
       );
     }
     return (
-      <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold rounded-full inline-flex items-center gap-1.5 shadow-xs">
-        <CheckCircle2 className="w-3.5 h-3.5" /> Active Inventory Item
+      <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold rounded-full inline-flex items-center gap-1.5">
+        <CheckCircle2 className="w-3.5 h-3.5" /> Active in Catalog
       </span>
     );
   };
 
-  // User Role Badge
+  // Helper for Role Tag
   const getRoleBadge = () => {
     if (isAdmin) return <span className="px-2.5 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-extrabold rounded-md uppercase tracking-wider">ADMIN VIEW</span>;
     if (isPharmacist) return <span className="px-2.5 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-extrabold rounded-md uppercase tracking-wider">PHARMACIST VIEW</span>;
@@ -210,22 +221,22 @@ export default function UnifiedMedicineDetailsModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Medicine Details: ${name}`}>
-      <div className="space-y-5 text-xs text-slate-700 max-h-[82vh] overflow-y-auto pr-1 font-sans">
+      <div className="space-y-5 text-xs text-slate-700 dark:text-slate-200 max-h-[82vh] overflow-y-auto pr-1 font-sans">
         
-        {/* RICH HOSPITAL INVENTORY HERO HEADER (REPLACES IMAGE AREA COMPLETELY) */}
-        <div className="p-5 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 rounded-2xl text-white shadow-xl border border-slate-800 relative overflow-hidden">
+        {/* RICH HOSPITAL INVENTORY HERO HEADER */}
+        <div className="p-5 bg-gradient-to-r from-blue-50 via-indigo-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 rounded-2xl text-slate-900 dark:text-white shadow-xs dark:shadow-xl border border-blue-100 dark:border-slate-800 relative overflow-hidden">
           {/* Subtle Background Accent Pattern */}
           <div className="absolute right-0 top-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
 
           <div className="relative z-10 space-y-4">
             {/* Top Bar: Code, Role Badge, Status */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800/80 pb-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/40 text-blue-300 font-mono text-xs font-extrabold rounded-lg tracking-wide uppercase">
+                <span className="px-3 py-1 bg-blue-100 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-400/40 text-blue-700 dark:text-blue-300 font-mono text-xs font-extrabold rounded-lg tracking-wide uppercase">
                   {medicineCode}
                 </span>
                 {getRoleBadge()}
-                <span className="px-2.5 py-1 bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold rounded-lg uppercase">
+                <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-bold rounded-lg uppercase">
                   {rxRequired}
                 </span>
               </div>
@@ -235,46 +246,46 @@ export default function UnifiedMedicineDetailsModal({
             {/* Main Header Content: Name, Brand, Generic */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
               <div className="md:col-span-2 space-y-1">
-                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <Pill className="w-6 h-6 text-blue-400 shrink-0" />
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <Pill className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
                   {name}
                 </h2>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-300 text-xs">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-600 dark:text-slate-300 text-xs">
                   <p className="font-semibold">
-                    Brand: <span className="text-white font-bold">{brandName}</span>
+                    Brand: <span className="text-slate-900 dark:text-white font-bold">{brandName}</span>
                   </p>
-                  <span className="text-slate-600">•</span>
+                  <span className="text-slate-400">•</span>
                   <p className="italic">
-                    Generic: <span className="text-slate-200 font-medium">{genericName}</span>
+                    Generic: <span className="text-slate-700 dark:text-slate-200 font-medium">{genericName}</span>
                   </p>
                 </div>
               </div>
 
               {/* Price & Strength Box */}
-              <div className="bg-slate-800/80 border border-slate-700/80 p-3.5 rounded-xl text-right flex flex-col justify-center">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Unit Price</span>
-                <span className="text-xl font-black text-blue-400 mt-0.5">{formatINR(unitPrice)}</span>
-                <span className="text-[10px] text-slate-400 font-medium mt-0.5">Pack: {packSize}</span>
+              <div className="bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 p-3.5 rounded-xl text-right flex flex-col justify-center shadow-xs">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Selling Price</span>
+                <span className="text-xl font-black text-blue-600 dark:text-blue-400 mt-0.5">{formatINR(sellingPrice)}</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Pack: {packSize}</span>
               </div>
             </div>
 
             {/* Header Specs Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800/60 text-[11px]">
-              <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 text-[9px] uppercase font-bold block">Category</span>
-                <span className="text-white font-semibold line-clamp-1">{categoryName}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-800/60 text-[11px]">
+              <div className="bg-white dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 text-[9px] uppercase font-bold block">Category</span>
+                <span className="text-slate-900 dark:text-white font-semibold line-clamp-1">{categoryName}</span>
               </div>
-              <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 text-[9px] uppercase font-bold block">Therapeutic Class</span>
-                <span className="text-slate-200 font-semibold line-clamp-1">{therapeuticClass}</span>
+              <div className="bg-white dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 text-[9px] uppercase font-bold block">Therapeutic Class</span>
+                <span className="text-slate-700 dark:text-slate-200 font-semibold line-clamp-1">{therapeuticClass}</span>
               </div>
-              <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 text-[9px] uppercase font-bold block">Drug Class / Dosage Form</span>
-                <span className="text-slate-200 font-semibold line-clamp-1">{drugClass} • {dosage}</span>
+              <div className="bg-white dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 text-[9px] uppercase font-bold block">Drug Class / Dosage Form</span>
+                <span className="text-slate-700 dark:text-slate-200 font-semibold line-clamp-1">{drugClass} • {dosage}</span>
               </div>
-              <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                <span className="text-slate-400 text-[9px] uppercase font-bold block">Manufacturer</span>
-                <span className="text-slate-200 font-semibold line-clamp-1">{manufacturer}</span>
+              <div className="bg-white dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-slate-500 dark:text-slate-400 text-[9px] uppercase font-bold block">Manufacturer</span>
+                <span className="text-slate-700 dark:text-slate-200 font-semibold line-clamp-1">{manufacturer}</span>
               </div>
             </div>
           </div>
@@ -611,18 +622,22 @@ export default function UnifiedMedicineDetailsModal({
               <h4 className="text-xs font-extrabold text-purple-950 uppercase tracking-wider flex items-center gap-1.5 border-b border-purple-200/80 pb-2">
                 <Truck className="w-4 h-4 text-purple-600" /> Authorized Supply Partners & Purchase Parameters
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3 bg-white border border-slate-200 rounded-xl">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Primary Manufacturer</span>
-                  <span className="font-bold text-slate-900">{manufacturer}</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{manufacturer}</span>
                 </div>
-                <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Estimated Purchase Cost</span>
-                  <span className="font-bold text-purple-700">{formatINR(unitPrice ? unitPrice * 0.75 : 0)}</span>
+                <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Cost Price (Purchasing)</span>
+                  <span className="font-bold text-purple-700 dark:text-purple-400">{formatINR(costPrice)}</span>
                 </div>
-                <div className="p-3 bg-white border border-slate-200 rounded-xl">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Batch & PO Reference</span>
-                  <span className="font-mono font-bold text-slate-900">{purchaseInfo}</span>
+                <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Selling Price</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatINR(sellingPrice)}</span>
+                </div>
+                <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Unit Profit Margin</span>
+                  <span className="font-bold text-blue-700 dark:text-blue-400">+{profitMargin}% ({formatINR(profitPerUnit)})</span>
                 </div>
               </div>
             </div>

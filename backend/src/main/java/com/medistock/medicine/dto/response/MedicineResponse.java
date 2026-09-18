@@ -21,6 +21,10 @@ public class MedicineResponse {
     private String manufacturer;
     private String dosage;
     private BigDecimal unitPrice;
+    private BigDecimal costPrice;
+    private BigDecimal sellingPrice;
+    private BigDecimal profitPerUnit;
+    private Double profitMargin;
     private Integer reorderLevel;
     private String description;
     private String status;

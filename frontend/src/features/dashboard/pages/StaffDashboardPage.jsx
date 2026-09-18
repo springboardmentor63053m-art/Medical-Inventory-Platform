@@ -65,29 +65,29 @@ export default function StaffDashboardPage() {
   const empId = user?.employeeId || `STF${String(user?.id || '001').padStart(3, '0')}`;
 
   return (
-    <div className="space-y-6 font-sans text-slate-900 pb-10">
+    <div className="space-y-6 font-sans text-slate-900 dark:text-slate-100 pb-10">
       {/* Staff Operational Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-white dark:from-slate-900 dark:via-blue-950 dark:to-slate-900 p-6 rounded-3xl text-slate-900 dark:text-white shadow-xs dark:shadow-xl border border-blue-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 bg-blue-500/20 border border-blue-400/30 text-blue-300 font-mono font-bold text-xs rounded-lg">
+            <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 font-mono font-bold text-xs rounded-lg">
               {empId}
             </span>
-            <span className="px-2.5 py-0.5 bg-sky-500/20 border border-sky-400/30 text-sky-300 font-bold text-xs rounded-full uppercase">
+            <span className="px-2.5 py-0.5 bg-sky-100 dark:bg-sky-500/20 border border-sky-200 dark:border-sky-400/30 text-sky-700 dark:text-sky-300 font-bold text-xs rounded-full uppercase">
               Staff Operational Role
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-2">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white mt-2">
             Operational Inventory Dashboard
           </h1>
-          <p className="text-xs text-slate-300 mt-1">
+          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
             Real-time medicine catalog lookup, inventory stock level monitoring, and operational activity tracking
           </p>
         </div>
 
         <button
           onClick={fetchStaffData}
-          className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 transition flex items-center gap-2 text-xs font-bold shrink-0"
+          className="p-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl border border-slate-200 dark:border-slate-700 transition flex items-center gap-2 text-xs font-bold shrink-0 shadow-xs"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh Operational View
         </button>
@@ -100,14 +100,14 @@ export default function StaffDashboardPage() {
   <button
     type="button"
     onClick={() => navigate('/medicines')}
-    className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+    className="w-full text-left bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
   >
     <div>
-      <p className="text-xs font-semibold text-slate-500">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
         Total Medicines
       </p>
 
-      <h3 className="text-2xl font-black text-slate-900 mt-1">
+      <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">
         {totalMedicines}
       </h3>
 
@@ -116,7 +116,7 @@ export default function StaffDashboardPage() {
       </p>
     </div>
 
-    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+    <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
       <Pill className="w-6 h-6" />
     </div>
   </button>
@@ -126,14 +126,14 @@ export default function StaffDashboardPage() {
   <button
     type="button"
     onClick={() => navigate('/inventory')}
-    className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+    className="w-full text-left bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
   >
     <div>
-      <p className="text-xs font-semibold text-slate-500">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
         Available Stock Batches
       </p>
 
-      <h3 className="text-2xl font-black text-emerald-700 mt-1">
+      <h3 className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1">
         {availableStockCount}
       </h3>
 
@@ -142,7 +142,7 @@ export default function StaffDashboardPage() {
       </p>
     </div>
 
-    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+    <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
       <Package className="w-6 h-6" />
     </div>
   </button>
@@ -152,14 +152,14 @@ export default function StaffDashboardPage() {
   <button
     type="button"
     onClick={() => navigate('/inventory')}
-    className="w-full text-left bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-amber-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+    className="w-full text-left bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between hover:border-amber-300 dark:hover:border-amber-600 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
   >
     <div>
-      <p className="text-xs font-semibold text-amber-700">
+      <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
         Low Stock Alerts
       </p>
 
-      <h3 className="text-2xl font-black text-amber-700 mt-1">
+      <h3 className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1">
         {lowStockCount}
       </h3>
 
@@ -168,7 +168,7 @@ export default function StaffDashboardPage() {
       </p>
     </div>
 
-    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+    <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
       <AlertTriangle className="w-6 h-6" />
     </div>
   </button>
@@ -176,13 +176,13 @@ export default function StaffDashboardPage() {
 </div>
 
       {/* Main Section: Search & Permitted Medicine List */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Boxes className="w-5 h-5 text-blue-600" /> Permitted Medicine Catalog Lookup
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Boxes className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Permitted Medicine Catalog Lookup
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Search formulations by name, generic classification, code, or category
             </p>
           </div>
@@ -194,16 +194,16 @@ export default function StaffDashboardPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search medicine or code..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         {/* Table of Permitted Medicines */}
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <tr className="bg-slate-50 dark:bg-slate-950 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                 <th className="py-3 px-4">Medicine Code</th>
                 <th className="py-3 px-4">Name & Generic</th>
                 <th className="py-3 px-4">Category</th>
@@ -211,7 +211,7 @@ export default function StaffDashboardPage() {
                 <th className="py-3 px-4">Unit Price</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs text-slate-700 dark:text-slate-200">
               {loading ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400">
@@ -221,21 +221,21 @@ export default function StaffDashboardPage() {
                 </tr>
               ) : filteredMedicines.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-500">
+                  <td colSpan={5} className="py-12 text-center text-slate-500 dark:text-slate-400">
                     No medicine formulations found matching query.
                   </td>
                 </tr>
               ) : (
                 filteredMedicines.slice(0, 8).map((med) => (
-                  <tr key={med.id} className="hover:bg-slate-50/80 transition">
-                    <td className="py-3 px-4 font-mono font-bold text-blue-700">{med.medicineCode}</td>
+                  <tr key={med.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+                    <td className="py-3 px-4 font-mono font-bold text-blue-700 dark:text-blue-400">{med.medicineCode}</td>
                     <td className="py-3 px-4">
-                      <span className="font-bold text-slate-900 block">{med.name}</span>
-                      <span className="text-[11px] text-slate-500 italic">{med.genericName || 'Standard Formulation'}</span>
+                      <span className="font-bold text-slate-900 dark:text-white block">{med.name}</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 italic">{med.genericName || 'Standard Formulation'}</span>
                     </td>
-                    <td className="py-3 px-4 font-semibold text-slate-700">{med.category?.name || 'General'}</td>
-                    <td className="py-3 px-4 font-medium text-slate-600">{med.dosage || 'N/A'}</td>
-                    <td className="py-3 px-4 font-bold text-slate-900">₹{Number(med.unitPrice || 0).toFixed(2)}</td>
+                    <td className="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">{med.category?.name || 'General'}</td>
+                    <td className="py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{med.dosage || 'N/A'}</td>
+                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">₹{Number(med.unitPrice || 0).toFixed(2)}</td>
                   </tr>
                 ))
               )}
@@ -245,19 +245,19 @@ export default function StaffDashboardPage() {
       </div>
 
       {/* Permitted Activity & Scope Summary */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-600 dark:text-slate-400">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-100">
+          <div className="p-3 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 rounded-xl border border-blue-100 dark:border-blue-500/20">
             <Activity className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-bold text-slate-900 text-sm">Staff Role Scoping Active</h4>
-            <p className="text-slate-500 mt-0.5">
+            <h4 className="font-bold text-slate-900 dark:text-white text-sm">Staff Role Scoping Active</h4>
+            <p className="text-slate-500 dark:text-slate-400 mt-0.5">
               Access is limited to operational medicine inventory lookup, stock checking, and low-stock monitoring.
             </p>
           </div>
         </div>
-        <span className="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 shrink-0">
+        <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl border border-slate-200 dark:border-slate-700 shrink-0">
           Role ID: STAFF
         </span>
       </div>

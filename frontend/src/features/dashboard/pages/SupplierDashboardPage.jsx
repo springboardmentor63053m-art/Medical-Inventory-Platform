@@ -63,32 +63,32 @@ export default function SupplierDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 md:p-8 text-white shadow-xl border border-slate-800">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-50 via-indigo-50 to-white dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900 p-6 md:p-8 text-slate-900 dark:text-white shadow-xs dark:shadow-xl border border-blue-100 dark:border-slate-800">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-blue-400" /> Supplier Partner Portal
+              <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Supplier Partner Portal
               </span>
-              <span className="text-xs text-slate-400 font-mono">ID: {user?.employeeId || 'SUP001'}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">ID: {user?.employeeId || 'SUP001'}</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-              Welcome back, <span className="text-blue-400">{user?.firstName || 'Partner'}</span>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Welcome back, <span className="text-blue-600 dark:text-blue-400">{user?.firstName || 'Partner'}</span>
             </h1>
-            <p className="text-sm text-slate-300 max-w-xl">
+            <p className="text-sm text-slate-600 dark:text-slate-300 max-w-xl">
               Manage incoming pharmaceutical purchase orders, track supply fulfillment statuses, and streamline enterprise deliveries.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 bg-slate-800/80 p-3.5 rounded-2xl border border-slate-700/60 backdrop-blur-sm self-start md:self-auto">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+          <div className="flex items-center gap-3 bg-white dark:bg-slate-800/80 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-xs backdrop-blur-sm self-start md:self-auto">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
               <Truck className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-200">Supply Network</p>
-              <p className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Supply Network</p>
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Active Logistics Partner
               </p>
             </div>
@@ -132,13 +132,13 @@ export default function SupplierDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Purchase Orders List (2 cols) */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
               <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-600" /> Active Purchase Orders
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Active Purchase Orders
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Orders dispatched by healthcare network facilities
                 </p>
               </div>
@@ -150,7 +150,7 @@ export default function SupplierDashboardPage() {
                   placeholder="Search POs..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48"
+                  className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48"
                 />
               </div>
             </div>
@@ -161,16 +161,16 @@ export default function SupplierDashboardPage() {
                 <p className="text-xs font-medium">Loading purchase order data...</p>
               </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="py-10 text-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
-                <Package className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                <p className="text-sm font-semibold text-slate-600">No purchase orders found</p>
+              <div className="py-10 text-center text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                <Package className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No purchase orders found</p>
                 <p className="text-xs text-slate-400 mt-1">Check back soon for new procurement requests.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                    <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
                       <th className="pb-3 font-semibold">PO Number</th>
                       <th className="pb-3 font-semibold">Order Date</th>
                       <th className="pb-3 font-semibold">Expected Delivery</th>
@@ -178,15 +178,15 @@ export default function SupplierDashboardPage() {
                       <th className="pb-3 font-semibold">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filteredOrders.slice(0, 8).map((order) => (
-                      <tr key={order.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-3 font-bold text-slate-900 font-mono">
+                      <tr key={order.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+                        <td className="py-3 font-bold text-slate-900 dark:text-white font-mono">
                           {order.orderNumber}
                         </td>
-                        <td className="py-3 text-slate-600">{order.orderDate || 'N/A'}</td>
-                        <td className="py-3 text-slate-600">{order.expectedDelivery || 'N/A'}</td>
-                        <td className="py-3 font-bold text-slate-800">
+                        <td className="py-3 text-slate-600 dark:text-slate-400">{order.orderDate || 'N/A'}</td>
+                        <td className="py-3 text-slate-600 dark:text-slate-400">{order.expectedDelivery || 'N/A'}</td>
+                        <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
                           ₹{Number(order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-3">
@@ -230,18 +230,18 @@ export default function SupplierDashboardPage() {
             </ul>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
               Pharmaceutical Catalog Quick Access
             </h3>
             <div className="space-y-2">
               {medicines.slice(0, 5).map((med) => (
-                <div key={med.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                <div key={med.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                   <div>
-                    <p className="font-bold text-slate-800">{med.name}</p>
-                    <p className="text-[10px] text-slate-500">{med.manufacturer || 'Enterprise Supplier'}</p>
+                    <p className="font-bold text-slate-800 dark:text-slate-200">{med.name}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">{med.manufacturer || 'Enterprise Supplier'}</p>
                   </div>
-                  <span className="font-mono text-slate-700 font-semibold">
+                  <span className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
                     ₹{Number(med.unitPrice || 0).toFixed(2)}
                   </span>
                 </div>

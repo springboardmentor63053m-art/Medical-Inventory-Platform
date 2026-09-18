@@ -30,9 +30,13 @@ public class MedicineRequest {
 
     private String dosage;
 
-    @NotNull(message = "Unit price is required")
-    @Positive(message = "Unit price must be positive")
     private BigDecimal unitPrice;
+
+    @PositiveOrZero(message = "Cost price must be zero or positive")
+    private BigDecimal costPrice;
+
+    @PositiveOrZero(message = "Selling price must be zero or positive")
+    private BigDecimal sellingPrice;
 
     @NotNull(message = "Reorder level is required")
     @PositiveOrZero(message = "Reorder level must be zero or positive")

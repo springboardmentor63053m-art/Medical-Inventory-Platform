@@ -75,6 +75,8 @@ export default function MedicineListPage() {
     manufacturer: '',
     dosage: '',
     unitPrice: '',
+    sellingPrice: '',
+    costPrice: '',
     reorderLevel: 10,
     description: '',
     status: 'ACTIVE',
@@ -116,37 +118,38 @@ export default function MedicineListPage() {
     setLoading(true);
     try {
       const data = await medicineService.getAllMedicines(0, 500);
-      const list = data && data.content ? data.content : Array.isArray(data) ? data : [];
-      setMasterMedicines(list);
-      setMedicines(list);
+      const content = data.content || data || [];
+      setMasterMedicines(content);
+      setMedicines(content);
     } catch (err) {
-      console.error('Failed to fetch medicines:', err);
-      toast.error('Failed to fetch medicines');
+      toast.error('Failed to load medicine list');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchDropdownData = async () => {
+  const fetchCategories = async () => {
     try {
-      const [catsResult, supsResult] = await Promise.allSettled([
-        categoryService.getAllCategories(),
-        supplierService.getAllSuppliers()
-      ]);
-      if (catsResult.status === 'fulfilled' && Array.isArray(catsResult.value)) {
-        setCategories(catsResult.value);
-      }
-      if (supsResult.status === 'fulfilled' && Array.isArray(supsResult.value)) {
-        setSuppliers(supsResult.value);
-      }
+      const data = await categoryService.getAllCategories();
+      setCategories(data || []);
     } catch (err) {
-      console.error('Failed to fetch dropdown datasets:', err);
+      toast.error('Failed to load categories');
+    }
+  };
+
+  const fetchSuppliers = async () => {
+    try {
+      const data = await supplierService.getAllSuppliers();
+      setSuppliers(data || []);
+    } catch (err) {
+      console.error('Failed to load suppliers', err);
     }
   };
 
   useEffect(() => {
-    fetchDropdownData();
     fetchMedicines();
+    fetchCategories();
+    fetchSuppliers();
   }, []);
 
   const handleSort = (field) => {
@@ -171,6 +174,8 @@ export default function MedicineListPage() {
 
   const handleOpenEditModal = (med) => {
     setEditingMedicine(med);
+    const sp = med.sellingPrice !== undefined && med.sellingPrice !== null ? med.sellingPrice : (med.unitPrice || '');
+    const cp = med.costPrice !== undefined && med.costPrice !== null ? med.costPrice : (sp ? Number((Number(sp) * 0.70).toFixed(2)) : '');
     setFormData({
       categoryId: med.category?.id || '',
       medicineCode: med.medicineCode || '',
@@ -178,7 +183,9 @@ export default function MedicineListPage() {
       genericName: med.genericName || '',
       manufacturer: med.manufacturer || '',
       dosage: med.dosage || '',
-      unitPrice: med.unitPrice || '',
+      unitPrice: sp,
+      sellingPrice: sp,
+      costPrice: cp,
       reorderLevel: med.reorderLevel ?? 10,
       description: med.description || '',
       status: med.status || 'ACTIVE',
@@ -188,16 +195,23 @@ export default function MedicineListPage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.medicineCode || !formData.categoryId || !formData.manufacturer || !formData.unitPrice) {
+    const finalSp = Number(formData.sellingPrice || formData.unitPrice);
+    if (!formData.name || !formData.medicineCode || !formData.categoryId || !formData.manufacturer || !finalSp) {
       toast.error('Please fill in all required fields marked with *');
       return;
     }
+
+    const finalCp = formData.costPrice !== '' && formData.costPrice !== null && formData.costPrice !== undefined
+      ? Number(formData.costPrice)
+      : Number((finalSp * 0.70).toFixed(2));
 
     setSubmitting(true);
     const payload = {
       ...formData,
       categoryId: Number(formData.categoryId),
-      unitPrice: Number(formData.unitPrice),
+      unitPrice: finalSp,
+      sellingPrice: finalSp,
+      costPrice: finalCp,
       reorderLevel: Number(formData.reorderLevel),
     };
 
@@ -263,6 +277,12 @@ export default function MedicineListPage() {
     if (sortField === 'category') {
       valA = (a.category?.name || '').toLowerCase();
       valB = (b.category?.name || '').toLowerCase();
+    } else if (sortField === 'costPrice') {
+      valA = a.costPrice !== undefined && a.costPrice !== null ? Number(a.costPrice) : (Number(a.unitPrice || 0) * 0.70);
+      valB = b.costPrice !== undefined && b.costPrice !== null ? Number(b.costPrice) : (Number(b.unitPrice || 0) * 0.70);
+    } else if (sortField === 'sellingPrice') {
+      valA = a.sellingPrice !== undefined && a.sellingPrice !== null ? Number(a.sellingPrice) : Number(a.unitPrice || 0);
+      valB = b.sellingPrice !== undefined && b.sellingPrice !== null ? Number(b.sellingPrice) : Number(b.unitPrice || 0);
     } else if (typeof valA === 'string') {
       valA = valA.toLowerCase();
       valB = (valB || '').toLowerCase();
@@ -285,12 +305,12 @@ export default function MedicineListPage() {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Pill className="w-6 h-6 text-blue-600" /> Pharmaceutical Medicine Catalog
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Pill className="w-6 h-6 text-blue-600 dark:text-blue-400" /> Pharmaceutical Medicine Catalog
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Enterprise management for medicine pricing, dosage forms, manufacturer specifications, and categories
           </p>
         </div>
@@ -298,7 +318,7 @@ export default function MedicineListPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchMedicines}
-            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition"
+            className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition"
             title="Refresh medicine list"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -307,9 +327,9 @@ export default function MedicineListPage() {
           {canManage && (
             <button
               onClick={() => navigate('/categories')}
-              className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition flex items-center gap-1.5"
+              className="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 transition flex items-center gap-1.5"
             >
-              <Boxes className="w-4 h-4 text-blue-600" /> Manage Categories
+              <Boxes className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Manage Categories
             </button>
           )}
 
@@ -335,16 +355,16 @@ export default function MedicineListPage() {
       setSearchTerm('');
       setPage(0);
     }}
-    className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-blue-300 hover:shadow-md transition cursor-pointer"
+    className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-left hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition cursor-pointer"
   >
     <div>
-      <p className="text-xs font-semibold text-slate-500">Total Catalog</p>
-      <h3 className="text-xl font-bold text-slate-900 mt-0.5">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Catalog</p>
+      <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
         {masterMedicines.length}
       </h3>
     </div>
 
-    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
       <Pill className="w-5 h-5" />
     </div>
   </button>
@@ -353,16 +373,16 @@ export default function MedicineListPage() {
   {/* Categories */}
   <button
     onClick={() => canManage ? navigate('/categories') : null}
-    className={`bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-purple-300 hover:shadow-md transition ${canManage ? 'cursor-pointer' : 'cursor-default'}`}
+    className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-left hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition ${canManage ? 'cursor-pointer' : 'cursor-default'}`}
   >
     <div>
-      <p className="text-xs font-semibold text-slate-500">Categories</p>
-      <h3 className="text-xl font-bold text-slate-900 mt-0.5">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Categories</p>
+      <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
         {categories.length > 0 ? categories.length : new Set(masterMedicines.map((m) => m.category?.name).filter(Boolean)).size}
       </h3>
     </div>
 
-    <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+    <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
       <Boxes className="w-5 h-5" />
     </div>
   </button>
@@ -374,19 +394,19 @@ export default function MedicineListPage() {
       setSelectedStatus(selectedStatus === 'ACTIVE' ? '' : 'ACTIVE');
       setPage(0);
     }}
-    className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-emerald-300 hover:shadow-md transition cursor-pointer"
+    className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-left hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-md transition cursor-pointer"
   >
     <div>
-      <p className="text-xs font-semibold text-slate-500">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
         Active Formulations
       </p>
 
-      <h3 className="text-xl font-bold text-emerald-600 mt-0.5">
+      <h3 className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
         {masterMedicines.filter((m) => m.status === 'ACTIVE').length}
       </h3>
     </div>
 
-    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
       <Package className="w-5 h-5" />
     </div>
   </button>
@@ -400,19 +420,19 @@ export default function MedicineListPage() {
       setSearchTerm('');
       setPage(0);
     }}
-    className="bg-white p-4 rounded-2xl border border-slate-200 flex items-center justify-between text-left hover:border-amber-300 hover:shadow-md transition cursor-pointer"
+    className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-left hover:border-amber-300 dark:hover:border-amber-600 hover:shadow-md transition cursor-pointer"
   >
     <div>
-      <p className="text-xs font-semibold text-slate-500">
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
         Manufacturers
       </p>
 
-      <h3 className="text-xl font-bold text-slate-900 mt-0.5">
+      <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
         {new Set(masterMedicines.map((m) => m.manufacturer).filter(Boolean)).size}
       </h3>
     </div>
 
-    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+    <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
       <FileText className="w-5 h-5" />
     </div>
   </button>
@@ -420,7 +440,7 @@ export default function MedicineListPage() {
 </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -431,12 +451,12 @@ export default function MedicineListPage() {
               setPage(0);
             }}
             placeholder="Search by code, medicine name or generic name..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
             <Filter className="w-3.5 h-3.5 text-slate-400" /> Filter:
           </div>
 
@@ -446,7 +466,7 @@ export default function MedicineListPage() {
               setSelectedCategory(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Categories</option>
             {categories.map((c) => (
@@ -462,7 +482,7 @@ export default function MedicineListPage() {
               setSelectedSupplier(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Suppliers</option>
             {suppliers.map((s) => (
@@ -478,7 +498,7 @@ export default function MedicineListPage() {
               setSelectedStatus(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">All Statuses</option>
             <option value="ACTIVE">ACTIVE</option>
@@ -488,14 +508,14 @@ export default function MedicineListPage() {
       </div>
 
       {/* Medicines Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 <th
                   onClick={() => handleSort('medicineCode')}
-                  className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
+                  className="py-3.5 px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Medicine Code</span>
@@ -504,7 +524,7 @@ export default function MedicineListPage() {
                 </th>
                 <th
                   onClick={() => handleSort('name')}
-                  className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
+                  className="py-3.5 px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Name & Generic</span>
@@ -513,136 +533,184 @@ export default function MedicineListPage() {
                 </th>
                 <th
                   onClick={() => handleSort('category')}
-                  className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
+                  className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Category</span>
                     {renderSortIcon('category')}
                   </div>
                 </th>
-                <th className="py-3.5 px-6">Dosage Form</th>
+                <th className="py-3.5 px-4">Dosage Form</th>
                 <th
                   onClick={() => handleSort('manufacturer')}
-                  className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
+                  className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>Manufacturer</span>
                     {renderSortIcon('manufacturer')}
                   </div>
                 </th>
-                <th
-                  onClick={() => handleSort('unitPrice')}
-                  className="py-3.5 px-6 cursor-pointer hover:bg-slate-100 transition select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Unit Price</span>
-                    {renderSortIcon('unitPrice')}
-                  </div>
-                </th>
-                <th className="py-3.5 px-6">Status</th>
-                <th className="py-3.5 px-6 text-right">{canManage ? 'ACTIONS' : 'VIEW'}</th>
+                {canManage ? (
+                  <>
+                    <th
+                      onClick={() => handleSort('costPrice')}
+                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Cost Price</span>
+                        {renderSortIcon('costPrice')}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort('sellingPrice')}
+                      className="py-3.5 px-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Selling Price</span>
+                        {renderSortIcon('sellingPrice')}
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-3">Margin</th>
+                  </>
+                ) : (
+                  <th
+                    onClick={() => handleSort('sellingPrice')}
+                    className="py-3.5 px-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Price</span>
+                      {renderSortIcon('sellingPrice')}
+                    </div>
+                  </th>
+                )}
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-5 text-right">{canManage ? 'ACTIONS' : 'VIEW'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={canManage ? 10 : 8} className="py-12 text-center text-slate-500 dark:text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-blue-600 mb-2" />
                     Loading medicine details...
                   </td>
                 </tr>
               ) : paginatedMedicines.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={canManage ? 10 : 8} className="py-12 text-center text-slate-500 dark:text-slate-400">
                     No medicine items found.
                   </td>
                 </tr>
               ) : (
-                paginatedMedicines.map((med) => (
-                  <tr key={med.id} className="hover:bg-slate-50/80 transition">
-                    <td className="py-4 px-6 font-mono font-semibold text-slate-800">
-                      {med.medicineCode}
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="font-bold text-slate-900">{med.name}</div>
-                      {med.genericName && (
-                        <div className="text-[11px] text-slate-400">{med.genericName}</div>
+                paginatedMedicines.map((med) => {
+                  const sPrice = med.sellingPrice !== undefined && med.sellingPrice !== null ? med.sellingPrice : med.unitPrice;
+                  const cPrice = med.costPrice !== undefined && med.costPrice !== null ? med.costPrice : (sPrice ? Number((sPrice * 0.70).toFixed(2)) : 0);
+                  const marginPct = med.profitMargin !== undefined && med.profitMargin !== null ? med.profitMargin : (sPrice > 0 ? Number((((sPrice - cPrice) / sPrice) * 100).toFixed(1)) : 0);
+
+                  return (
+                    <tr key={med.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+                      <td className="py-4 px-5 font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        {med.medicineCode}
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className="font-bold text-slate-900 dark:text-white">{med.name}</div>
+                        {med.genericName && (
+                          <div className="text-[11px] text-slate-400">{med.genericName}</div>
+                        )}
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 font-semibold rounded-full text-[11px] max-w-[200px] truncate" title={med.category?.name || 'Unassigned'}>
+                          {med.category?.name || 'Unassigned'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-slate-600 dark:text-slate-400 font-medium">{med.dosage || 'N/A'}</td>
+                      <td className="py-4 px-4 text-slate-600 dark:text-slate-400">{med.manufacturer}</td>
+                      
+                      {canManage ? (
+                        <>
+                          <td className="py-4 px-4 font-semibold text-slate-600 dark:text-slate-400">
+                            {formatINR(cPrice)}
+                          </td>
+                          <td className="py-4 px-4 font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatINR(sPrice)}
+                          </td>
+                          <td className="py-4 px-3">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                              {marginPct}%
+                            </span>
+                          </td>
+                        </>
+                      ) : (
+                        <td className="py-4 px-5 font-bold text-slate-900 dark:text-white">
+                          {formatINR(sPrice)}
+                        </td>
                       )}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 font-semibold rounded-full text-[11px] max-w-[220px] truncate" title={med.category?.name || 'Unassigned'}>
-                        {med.category?.name || 'Unassigned'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-slate-600 font-medium">{med.dosage || 'N/A'}</td>
-                    <td className="py-4 px-6 text-slate-600">{med.manufacturer}</td>
-                    <td className="py-4 px-6 font-bold text-slate-900">
-                      {formatINR(med.unitPrice)}
-                    </td>
-                    <td className="py-4 px-6">
-                      <StatusBadge status={med.status} />
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setViewMedicine(med);
-                            setViewModalOpen(true);
-                          }}
-                          className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        {(isAdmin || isPharmacist) && (
+
+                      <td className="py-4 px-4">
+                        <StatusBadge status={med.status} />
+                      </td>
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => handleOpenEditModal(med)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                            title="Edit Medicine"
+                            onClick={() => {
+                              setViewMedicine(med);
+                              setViewModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+                            title="View Details"
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </button>
-                        )}
-                        {isAdmin && (
-                          <button
-                            onClick={() => setDeleteId(med.id)}
-                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                            title="Delete Medicine"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {(isAdmin || isPharmacist) && (
+                            <button
+                              onClick={() => handleOpenEditModal(med)}
+                              className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                              title="Edit Medicine"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button
+                              onClick={() => setDeleteId(med.id)}
+                              className="p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition"
+                              title="Delete Medicine"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
         {/* Pagination Bar */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
           <div>
-            Showing Page <span className="font-bold text-slate-800">{page + 1}</span> of{' '}
-            <span className="font-bold text-slate-800">{totalPages}</span> ({totalElements} Total Catalog Items)
+            Showing Page <span className="font-bold text-slate-800 dark:text-slate-200">{page + 1}</span> of{' '}
+            <span className="font-bold text-slate-800 dark:text-slate-200">{totalPages}</span> ({totalElements} Total Catalog Items)
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="p-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-50 transition"
+              className="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition text-slate-700 dark:text-slate-300"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="font-semibold text-slate-700">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
               {page + 1} / {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="p-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-50 transition"
+              className="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition text-slate-700 dark:text-slate-300"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -662,7 +730,7 @@ export default function MedicineListPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl"
             >
               Cancel
             </button>
@@ -681,8 +749,8 @@ export default function MedicineListPage() {
 
           {/* SECTION 1: MEDICINE IDENTIFICATION */}
           <div className="space-y-3">
-            <div className="border-b border-slate-200 pb-1.5 flex items-center justify-between">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="border-b border-slate-200 dark:border-slate-800 pb-1.5 flex items-center justify-between">
+              <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
                 <Pill className="w-4 h-4 text-blue-600" /> 1. Medicine Identification
               </h4>
             </div>
@@ -703,8 +771,8 @@ export default function MedicineListPage() {
                   onChange={(e) => setFormData({ ...formData, medicineCode: e.target.value })}
                   className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold ${
                     editingMedicine
-                      ? 'bg-slate-100 border border-slate-200 text-slate-600 cursor-not-allowed'
-                      : 'bg-slate-50 border border-slate-200 text-slate-900 focus:ring-2 focus:ring-blue-500'
+                      ? 'bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                      : 'bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500'
                   }`}
                 />
               </FormField>
@@ -714,7 +782,7 @@ export default function MedicineListPage() {
                   required
                   value={formData.categoryId}
                   onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Category</option>
                   {categories.map((c) => (
@@ -732,7 +800,7 @@ export default function MedicineListPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Amoxicillin 500 mg"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
               </FormField>
 
@@ -742,7 +810,7 @@ export default function MedicineListPage() {
                   value={formData.genericName}
                   onChange={(e) => setFormData({ ...formData, genericName: e.target.value })}
                   placeholder="e.g. Amoxicillin Trihydrate"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
               </FormField>
             </div>
@@ -750,33 +818,51 @@ export default function MedicineListPage() {
 
           {/* SECTION 2: PRICING & INVENTORY THRESHOLDS */}
           <div className="space-y-3">
-            <div className="border-b border-slate-200 pb-1.5 flex items-center justify-between">
-              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+            <div className="border-b border-slate-200 dark:border-slate-800 pb-1.5 flex items-center justify-between">
+              <h4 className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
                 <IndianRupee className="w-4 h-4 text-emerald-600" /> 2. Pricing & Stock Thresholds
               </h4>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <FormField label="Unit Price (₹)" required>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <FormField label="Cost Price (₹)" required helperText="Pharmacy procurement price">
                 <input
                   type="number"
                   step="0.01"
                   required
-                  value={formData.unitPrice}
-                  onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
-                  placeholder="125.00"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                  value={formData.costPrice}
+                  onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                  placeholder="85.00"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
                 />
               </FormField>
 
-              <FormField label="Reorder Threshold" required helperText="Triggers low-stock warnings">
+              <FormField label="Selling Price / MRP (₹)" required helperText="Retail / dispensing price">
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  min="0"
+                  value={formData.sellingPrice}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, sellingPrice: val, unitPrice: val });
+                  }}
+                  placeholder="125.00"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                />
+              </FormField>
+
+              <FormField label="Reorder Level" required helperText="Triggers low-stock warnings">
                 <input
                   type="number"
                   required
+                  min="0"
                   value={formData.reorderLevel}
                   onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
                   placeholder="10"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
               </FormField>
 
@@ -784,13 +870,30 @@ export default function MedicineListPage() {
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="INACTIVE">INACTIVE</option>
                 </select>
               </FormField>
             </div>
+
+            {/* Real-time Profit Preview Indicator */}
+            {parseFloat(formData.sellingPrice) > 0 && (
+              <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-emerald-800 dark:text-emerald-300">Unit Economics Preview:</span>
+                  <span className="text-slate-600 dark:text-slate-300">
+                    Profit: <strong className="text-emerald-700 dark:text-emerald-400">₹{(Math.max(0, parseFloat(formData.sellingPrice || 0) - parseFloat(formData.costPrice || 0))).toFixed(2)}</strong>
+                  </span>
+                </div>
+                <div className="font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-lg text-[11px]">
+                  Margin: {parseFloat(formData.sellingPrice || 0) > 0
+                    ? `${(((parseFloat(formData.sellingPrice || 0) - parseFloat(formData.costPrice || 0)) / parseFloat(formData.sellingPrice || 1)) * 100).toFixed(1)}%`
+                    : '0%'}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* SECTION 3: DOSAGE & MANUFACTURER */}
