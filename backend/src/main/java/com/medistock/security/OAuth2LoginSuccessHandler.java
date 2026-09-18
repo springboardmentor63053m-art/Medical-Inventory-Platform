@@ -54,6 +54,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                         .password(new BCryptPasswordEncoder().encode(UUID.randomUUID().toString()))
                         .role(Role.STAFF)
                         .active(true)
+                        .emailVerified(true)
                         .build()
         ));
 
@@ -67,11 +68,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 .password(user.getPassword())
                 .authorities("ROLE_" + user.getRole())
                 .build();
+
         String token = jwtUtil.generateToken(userDetails, user.getRole().name());
 
         String redirectUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth2/callback")
                 .queryParam("token", token)
-                .build().toUriString();
+                .build()
+                .toUriString();
+
         response.sendRedirect(redirectUrl);
     }
 }

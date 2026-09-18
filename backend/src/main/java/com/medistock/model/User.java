@@ -38,6 +38,15 @@ public class User {
     private boolean active = true;
 
     /**
+     * Email verification status.
+     * Normal registration users must verify their email before login.
+     * Google OAuth users are treated as verified automatically.
+     */
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    /**
      * Only set for users with role SUPPLIER — links this login to the
      * Supplier record it may view/manage. Null for every other role.
      * Kept as a plain id (not a JPA relationship) so the core User entity
@@ -50,7 +59,10 @@ public class User {
     private LocalDateTime lastLoginAt;
     private LocalDateTime lastActivityAt;
 
-    /** Flipped true on login, false on explicit logout. Combined with lastActivityAt's inactivity window to decide ONLINE/OFFLINE. */
+    /**
+     * Flipped true on login, false on explicit logout.
+     * Combined with lastActivityAt's inactivity window to decide ONLINE/OFFLINE.
+     */
     @Column(nullable = false)
     @Builder.Default
     private boolean sessionActive = false;
