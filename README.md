@@ -12,8 +12,8 @@ MediStock is an enterprise-grade, full-stack **Medical Inventory Management Plat
 
 ## 👥 Team Members / Contributors
 
-1. **Anil Upputuri**
-2. **Chandur Supriya**
+1. **Chandur Supriya**
+2. **Anil Upputuri**
 3. **CHEKKILI USHA SREE**
 
 ---
@@ -200,8 +200,8 @@ npm run dev
 ## 📜 License & Maintainers
 
 - **Project Maintainers:**
-  - Anil Upputuri
   - Chandur Supriya
+  - Anil Upputuri
   - CHEKKILI USHA SREE
 - **License:** Educational & Open Source project developed under **Infosys Springboard Mentorship**.
 
