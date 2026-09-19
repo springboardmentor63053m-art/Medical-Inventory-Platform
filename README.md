@@ -1,114 +1,187 @@
-# 🏥 Medical Inventory Platform — Milestone 3
+# 🏥 MediStock: Medical Inventory Management Platform
 
-An enterprise-grade Medical Inventory & Procurement Management Platform built with **Spring Boot 3 (Java 17)**, **React (Vite + TypeScript)**, and **PostgreSQL**.
-
----
-
-## 🎯 Milestone 3 Focus & Objectives
-
-Milestone 3 expands the platform with **End-to-End Procurement Automation**, **Multi-Role Real-Time Notification Routing**, and **Submitted Bill Verification & Order Approval Workflows**.
+An enterprise-grade, full-stack Medical Inventory & Procurement Management Platform built with **Spring Boot** (Java 17), **React.js** (Vite, TypeScript, Tailwind CSS), and **PostgreSQL** in production.
 
 ---
 
-## ✨ Key Features & Deliverables in Milestone 3
+## 🎯 1. Title & Objective
 
-### 1. 🛒 Admin Multi-Medicine Purchase Order Dispatch
-- **Dynamic Medicine Selection**: Admin can add multiple medicines to a single Purchase Order with custom quantities and dynamic unit price calculations.
-- **Single Notification Rule**: Guarantees **exactly ONE `STOCK_ORDER` notification** is generated per Purchase Order (regardless of ordering 1 or 20 medicines).
-- **Dynamic Amount Calculation**: Automatically computes total order value from item subtotals:
-  $$\text{Total Amount} = \sum (\text{Unit Price} \times \text{Quantity})$$
+### Title
+**MediStock: Medical Inventory Management Platform**
 
----
+### Objective
+Build a full-stack web application (React.js frontend + Spring Boot backend) that allows pharmacies, hospitals, and healthcare organizations to manage medicine inventory, track stock availability, monitor expiry dates, maintain supplier records, and generate inventory analytics.
 
-### 2. 📦 Supplier Notification Isolation & Bill Submission
-- **Targeted Notification Scope**: Notifications are strictly filtered by the authenticated Supplier's `user_id` (Supplier ABC sees only ABC's orders; Supplier Rahul sees only Rahul's orders).
-- **Dynamic Order Review Modal**: Renders live ordered medicines, unit prices, quantities, and calculated subtotals.
-- **Bill Submission Workflow**: Supplier clicks `Submit Bill` to send the total bill value to Admin, setting PO status to `BILL_SUBMITTED` and creating an alert for Admin.
+The system provides real-time stock updates, low-stock notifications, expiry monitoring, supplier management, and inventory dashboards for efficient medicine inventory management.
 
----
-
-### 3. 🧾 Admin Submitted Bill Review & Order Completion
-- **Interactive Notification Action**: Admin clicks **`Review Bill Details →`** on any `BILL_SUBMITTED` alert to open the verification modal.
-- **Complete Bill Breakdown**: Displays Purchase Order ID (`#PO-XX`), Supplier Name, Order Date, Status, Total Bill Amount, and itemized table of ordered medicines & quantities.
-- **One-Click Order Completion**: **`✔ Approve Bill & Complete Order`** action updates order status to `COMPLETED` in the database.
+### Key Outcomes
+- **Full-Stack Application**: Developed and deployed a unified React.js + Spring Boot application.
+- **Secure Authentication**: Implemented role-based access control with JWT and OAuth2 support.
+- **Medicine & Stock Management**: Real-time stock updates, batch tracking, and category management.
+- **Expiry & Alert Systems**: Automated low-stock alerts, near-expiry tracking, and notification routing.
+- **Supplier & Procurement Systems**: Supplier records, purchase order management, and bill verification workflows.
+- **Analytics & Dashboards**: Dedicated Admin and Pharmacist/Staff dashboards for inventory monitoring and reporting.
+- **Search & Filtering**: Comprehensive search by medicine name, category, supplier, batch number, expiry date, and stock status.
+- **Production Deployment**: Containerized with Docker and deployed with PostgreSQL on Render.
 
 ---
 
-### 4. 🔔 Staff Low-Stock Alert Dispatch & Admin Review
-- **Staff Stock Overview**: Staff can view inventory levels and click **`🔔 Notify Admin`** next to any medicine.
-- **Custom Reorder Notes**: Staff can attach custom notes (e.g. reorder urgency, recommended quantities).
-- **Admin Review & Direct Procurement**: Admin receives low-stock alerts with a **`Review Low Stock →`** button opening a modal with direct **`+ Create Purchase Order`** navigation.
-
----
-
-## 🏗️ System Architecture & Tech Stack
-
-- **Backend**: Java 17, Spring Boot 3.3.0, Spring Security (Stateless JWT), Spring Data JPA, Hibernate, PostgreSQL.
-- **Frontend**: React 18, Vite 6, TypeScript, Lucide React Icons, Axios HTTP client with Bearer Token interceptor.
-- **API Documentation**: OpenAPI 3 / Swagger UI (`http://localhost:8081/swagger-ui/index.html`).
-
----
-
-## 📂 Project Structure
+## 🏗️ 2. Architecture Diagram
 
 ```text
-Medical-Inventory-Platform/
-├── README.md                           # Milestone 3 Documentation
-├── medistock-backend/                  # Spring Boot 3 REST API Project
-│   ├── src/main/java/com/medistock/
-│   │   ├── config/                     # Security, CORS & Data Initializers
-│   │   ├── controller/                 # REST Controllers (PO, Notifications, Auth)
-│   │   ├── entity/                     # JPA Entities (PurchaseOrder, PurchaseOrderItem, etc.)
-│   │   ├── repository/                 # Spring Data JPA Repositories
-│   │   └── service/                    # Core Business Logic Services
-│   └── pom.xml
-└── medistock-frontend/                 # React + Vite Frontend Project
-    ├── src/
-    │   ├── pages/
-    │   │   ├── admin/                  # Admin Purchases & Alert Center
-    │   │   ├── staff/                  # Staff Stock Overview & Alert Dispatch
-    │   │   └── supplier/               # Supplier PO Review & Bill Submission
-    │   └── api/                        # Axios Interceptor & HTTP Client
-    └── package.json
+ +-----------------------------------------------------------------------------------+
+ |                                   CLIENT LAYER                                    |
+ |  [ Web Application (React.js) ]           [ Mobile Application (React Native) ]   |
+ |  - Dashboards, Stock Updates, Notifications, Reports & Analytics                   |
+ +-----------------------------------------+-----------------------------------------+
+                                           | HTTPS / REST API Calls
+                                           v
+ +-----------------------------------------------------------------------------------+
+ |                          API GATEWAY & SECURITY LAYER                             |
+ |  - JWT Authentication  - Authorization  - Role-Based Access  - CORS Validation    |
+ +-----------------------------------------+-----------------------------------------+
+                                           |
+                                           v
+ +-----------------------------------------------------------------------------------+
+ |                           BACKEND SERVICES (SPRING BOOT)                          |
+ |  [ Auth Service ]           [ User & Role Service ]    [ Medicine Inventory ]    |
+ |  [ Supplier Management ]    [ Stock Monitoring ]       [ Expiry Tracking ]       |
+ |  [ Purchase Order ]         [ Analytics & Reporting ]  [ Notification Service ]  |
+ +-----------------------------------------+-----------------------------------------+
+                                           |
+                                           v
+ +-----------------------------------------------------------------------------------+
+ |                                DATA LAYER & STORAGE                               |
+ |  [ PostgreSQL Database ]                                                          |
+ |  - Master Data Tables (Users, Roles, Suppliers)                                   |
+ |  - Inventory Tables (Medicines, Batches, Inventory, Stock Logs)                   |
+ |  - Transaction & Tracking (Purchase Orders, Expiry Tracking, Notifications)       |
+ +-----------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 🚀 Execution Guide (VS Code)
+## 🧩 3. Modules Implemented
 
-### Step 1: Start Backend Server (Spring Boot)
-Open VS Code Terminal:
+### 1. User Authentication & Role-Based Access
+- **Authentication**: JWT Token Authentication & OAuth2 Login.
+- **User Management**: Role Management, Password Reset, User Profile Management.
+- **Roles**:
+  - `Admin`: Full system access, user management, inventory analytics, purchase order approval.
+  - `Pharmacist`: Inventory overview, stock management, expiry monitoring, purchase summaries.
+  - `Staff`: Stock monitoring, low-stock alert dispatch to Admin.
+  - `Supplier`: Purchase order review, order status tracking, bill submission.
+
+### 2. Medicine Inventory Management
+- **Actions**: Add medicines, update stock quantities, delete medicines, manage categories, track batches, inventory history.
+- **Medicine Details**: Name, Batch Number, Category, Supplier, Quantity, Manufacturing Date, Expiry Date, Price.
+
+### 3. Supplier Management System
+- **Features**: Add supplier details, manage contacts, track supplier purchases, supplier history, performance tracking.
+- **Supplier Information**: Supplier Name, Contact Number, Email, Address, Supplied Medicines.
+
+### 4. Stock Monitoring & Alerts
+- Real-time stock tracking.
+- Low-stock & out-of-stock notifications.
+- Automatic stock updates and inventory movement tracking.
+
+### 5. Expiry Tracking System
+- Medicine expiry monitoring & near-expiry tracking.
+- Expired stock management & expiry reports.
+- Automated expiry alerts.
+
+### 6. Search & Filtering System
+- Search and filter medicines by: **Name**, **Category**, **Supplier**, **Batch Number**, **Expiry Date**, and **Stock Status**.
+
+### 7. Dashboard & Analytics
+- **Pharmacist Dashboard**: Inventory overview, low-stock items, expiring medicines, purchase summary, supplier insights.
+- **Admin Dashboard**: Inventory analytics, user activity, supplier analytics, stock movement reports, system monitoring.
+
+### 8. Notification & Reminder System
+- Low-stock notifications, expiry alerts, inventory reminders, purchase order alerts, email & push notifications.
+
+### 9. Reports & Data Export
+- Generate inventory reports, purchase history reports, and expiry reports.
+- Export stock data with downloadable PDF and Excel options.
+
+### 10. Integration, Testing & Deployment
+- Docker containerization for unified frontend + backend deployment.
+- Deployed on Render using PostgreSQL.
+- End-to-end API validation and security testing.
+
+---
+
+## 📅 4. Week-Wise Milestone Implementation
+
+| Milestone | Period | Focus & Tasks | Key Outcomes |
+| :--- | :--- | :--- | :--- |
+| **Milestone 1** | Week 1 & 2 | Requirements, Database Design (Users, Roles, Medicines, Suppliers, Inventory, Orders), Spring Boot & React Setup, JWT Auth. | Architecture setup complete, authentication functional, database schema finalized. |
+| **Milestone 2** | Week 3 & 4 | Medicine Inventory APIs, Supplier Management, Medicine Dashboards, Stock Tracking, Search & Filtering. | Inventory management operational, supplier workflow functional, dynamic stock tracking. |
+| **Milestone 3** | Week 5 & 6 | Expiry Tracking System, Low-Stock Alert Dispatch, Purchase Order Workflows, Notification Integrations. | Expiry monitoring active, alert & notification system functional, purchase order flow complete. |
+| **Milestone 4** | Week 7 & 8 | Analytics Dashboard, Visual Charts & Reports, Docker Containerization, Deployment on Render/AWS, CORS & SSL setup. | Production-ready deployed app on Render, complete end-to-end demonstrable workflow. |
+
+---
+
+## 🛠️ 5. Tools & Tech Stack
+
+| Domain | Technology / Tool |
+| :--- | :--- |
+| **Programming Languages** | Java 17, JavaScript (ES6+), TypeScript |
+| **Backend Framework** | Spring Boot 3.3.0, Spring Security, Spring Data JPA, Hibernate, Maven |
+| **Frontend Framework** | React 18 (Vite 6), React Router, Axios, Tailwind CSS, Context API, Framer Motion |
+| **Database** | MySQL (Development), PostgreSQL (Production) |
+| **Authentication** | Spring Security, JWT (JSON Web Tokens), OAuth2 (Google Login) |
+| **Notifications** | JavaMailSender, Firebase Cloud Messaging (FCM), Twilio |
+| **Testing Tools** | JUnit, Mockito, Postman, React Testing Library |
+| **Dev & Deployment Tools** | VS Code, IntelliJ IDEA, Git & GitHub, Docker, Docker Compose, Render / AWS, Postman |
+
+---
+
+## 📊 6. Performance Metrics & Quantitative Goals
+
+### Inventory & Stock Metrics
+- **Stock Tracking Accuracy**: Real-time accurate reconciliation of medicine inventory.
+- **Inventory Update Success Rate**: 100% reliable stock level updates on purchase approvals.
+- **Medicine Search Efficiency**: Fast indexing and multi-criteria filtering by name, category, and batch.
+
+### Expiry & Alert Metrics
+- **Expiry Detection Accuracy**: Proactive identification of near-expiry and expired medicine batches.
+- **Notification Delivery**: Immediate delivery of low-stock alerts and order status updates.
+
+### Supplier & Platform Performance
+- **Order Processing Efficiency**: Streamlined PO creation, supplier bill submission, and admin approval.
+- **System Metrics**: Low API response time, rapid dashboard load speed, and efficient database query execution.
+
+---
+
+## 🚀 7. How to Run Locally
+
+### Prerequisites
+- Java 17 JDK
+- Node.js (v20+)
+- Maven / `mvnw`
+
+### 1. Start Backend (Spring Boot)
 ```cmd
 cd medistock-backend
 .\mvnw.cmd spring-boot:run
 ```
 📍 **Backend REST API**: `http://localhost:8081`
 
----
-
-### Step 2: Start Frontend Dev Server (React + Vite)
-Open a 2nd Terminal tab in VS Code:
+### 2. Start Frontend (React + Vite)
 ```cmd
 cd medistock-frontend
-set PATH=c:\Users\hp\Documents\Medical-Inventory-Platform\node-v20.15.0-win-x64;%PATH% && npm run dev
+npm run dev
 ```
-📍 **Frontend Application**: `http://localhost:5173`
+📍 **Frontend App**: `http://localhost:5173`
 
 ---
 
-## 🔑 Verified Demo Credentials
+## 🔑 Demo Credentials
 
 | Role | Username | Password |
 | :--- | :--- | :--- |
 | **Admin** | `nithya` | `Admin@123` |
-| **Staff** | `Stella-staff` | `User@123` |
-| **Supplier ABC** | `ABC` | `ABC@123` |
-
----
-
-## 🧪 Verification & Automated Test Status
-
-- **Frontend TypeScript Build**: `0 errors` (`npx tsc --noEmit` passed cleanly).
-- **Admin $\rightarrow$ Supplier PO Notification Test**: `PASSED` (Single notification generated per PO).
-- **Total Amount Consistency Test**: `PASSED` (Admin total = Supplier notification total = Supplier PO total).
-- **Submitted Bill Approval Test**: `PASSED` (Status updated from `BILL_SUBMITTED` to `COMPLETED`).
+| **User** | `arun` | `User@123` |
+| **Pharmacist** | `priya` | `Pharma@123` |
+| **Supplier** | `rahul` | `Supplier@123` |
