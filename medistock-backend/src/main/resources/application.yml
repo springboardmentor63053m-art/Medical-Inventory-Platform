@@ -1,0 +1,70 @@
+# =========================================================
+# MEDISTOCK — Application Configuration (PostgreSQL)
+# =========================================================
+
+server:
+  port: ${PORT:8081}
+
+spring:
+  application:
+    name: medistock
+
+  # PostgreSQL Configuration
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Jackson
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: UTC
+
+# JWT Configuration
+app:
+  jwt:
+    secret: bWVkaXN0b2NrLWp3dC1zZWNyZXQta2V5LWZvci1hdXRoZW50aWNhdGlvbi0yMDI1LXNlY3VyZS1rZXktbXVzdC1iZS1sb25n
+    expiration-ms: 86400000       # 24 hours
+    refresh-expiration-ms: 604800000  # 7 days
+
+# CORS
+  cors:
+    allowed-origins: http://localhost:5173,http://localhost:3000,http://localhost:8081
+
+# MediStock Custom Config
+medistock:
+  expiry:
+    threshold-days: 30
+  scheduler:
+    expiry-cron: "0 0 1 * * ?"
+
+
+# Swagger / OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+# Logging
+logging:
+  level:
+    com.medistock: DEBUG
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

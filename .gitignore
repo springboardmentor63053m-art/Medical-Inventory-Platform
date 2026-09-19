@@ -1,0 +1,40 @@
+# Temporary files
+~$*
+*.tmp
+
+# Java/Maven build output
+target/
+*.class
+
+# Node / Frontend build output
+node_modules/
+dist/
+dist-ssr/
+
+# IDE / OS files
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Uploads
+uploads/
+**/uploads/*
+!**/uploads/.gitkeep
+
+# Environment & Local Secrets
+.env
+.env.*
+!.env.example
+*.local
+application-local.yml
+application-local.properties
+
+
+# Environment files
+.env
+.env.*
+!.env.example
