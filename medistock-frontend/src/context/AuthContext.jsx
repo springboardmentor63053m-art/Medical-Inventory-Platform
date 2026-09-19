@@ -112,8 +112,54 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const requestPasswordResetOtp = async (email) => {
+    try {
+      const response = await API.post('/api/auth/forgot-password', { email: email.trim() });
+      return { success: true, message: response.data.message || 'OTP sent successfully' };
+    } catch (error) {
+      const msg = error.response?.data?.message || (error.code === 'ERR_NETWORK' ? 'Unable to reach backend server.' : 'Failed to send OTP code.');
+      return { success: false, message: msg };
+    }
+  };
+
+  const verifyPasswordResetOtp = async (email, otp) => {
+    try {
+      const response = await API.post('/api/auth/verify-otp', { email: email.trim(), otp: otp.trim() });
+      return { success: true, message: response.data.message || 'OTP verified' };
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Invalid or expired OTP code.';
+      return { success: false, message: msg };
+    }
+  };
+
+  const resetPasswordWithOtp = async (email, otp, newPassword) => {
+    try {
+      const response = await API.post('/api/auth/reset-password', {
+        email: email.trim(),
+        otp: otp.trim(),
+        newPassword: newPassword.trim()
+      });
+      return { success: true, message: response.data.message || 'Password reset successfully' };
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to reset password.';
+      return { success: false, message: msg };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!token, loading, login, register, socialLogin, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      token,
+      isAuthenticated: !!token,
+      loading,
+      login,
+      register,
+      socialLogin,
+      logout,
+      requestPasswordResetOtp,
+      verifyPasswordResetOtp,
+      resetPasswordWithOtp
+    }}>
       {children}
     </AuthContext.Provider>
   );
