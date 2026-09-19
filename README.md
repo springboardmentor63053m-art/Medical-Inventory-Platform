@@ -1,158 +1,701 @@
 # MediStock — Medical Inventory Management Platform
 
-A full-stack web app for pharmacies, hospitals, and clinics to manage medicine
-inventory, track expiry dates, monitor stock levels, and maintain supplier
-records — built with **React.js** (frontend) and **Spring Boot** (backend).
+A full-stack medical inventory management system for pharmacies, hospitals,
+and clinics to manage medicines, suppliers, purchase orders, stock movements,
+sales, expiry tracking, notifications, reports, and role-based dashboards.
 
-This is a ready-to-run implementation of the core MediStock modules, with
-**three separate role-based dashboards** (Admin, Pharmacist, Staff):
-
-- JWT authentication with role-based accounts (Admin / Pharmacist / Staff)
-- Medicine inventory management (add / edit / delete, batch numbers, categories)
-- Supplier management
-- Real-time stock tracking with low-stock and out-of-stock detection
-- Expiry tracking (near-expiry + expired medicine detection)
-- Search & filter by name, category, supplier
-- **Purchases**: record restocks from suppliers — automatically updates
-  stock, logs a stock movement, and fires a purchase-alert notification
-- **Stock movement report** (Admin): full audit trail of every stock change
-- **User activity log** (Admin): who did what, and when
-- **Supplier analytics** (Admin): spend-by-supplier chart from real purchase data
-- **System monitoring** (Admin): live system status + server time
-- **Notifications**: in-app alert center (bell icon) covering low stock,
-  out of stock, expiry, purchases, and a daily inventory reminder —
-  generated automatically by a scheduled job, and instantly on manual
-  stock/purchase actions
-- **Reports**: role-gated CSV downloads — inventory, expiry, purchase
-  history, and stock movement reports (opens cleanly in Excel/Sheets)
-- **Role-specific dashboards**:
-  - **Admin** — inventory analytics, supplier analytics, purchases &
-    spend, system monitoring, links to user activity / stock movements / reports
-  - **Pharmacist** — purchase summary, supply insight (top suppliers by
-    spend), expiry report
-  - **Staff** — their own purchase history, quick low-stock check, link
-    to record a new purchase
-
-No Docker required for local dev — everything runs directly with Maven and
-npm. Docker/Compose files are also included if you'd rather containerize it
-(see [Deployment](#deployment-tech-stack-additions) below).
+**Stack:** React 19 + Vite · Spring Boot 3.3.2 / Java 17 · MySQL · JWT ·
+OAuth2 Google Login · Docker · Render · Aiven Cloud MySQL
 
 ---
 
-## 1. Project structure
+## 1. Live Application
 
+| Service | URL |
+|---|---|
+| Frontend | https://medistock-frontend-ve4g.onrender.com/ |
+| Backend API | https://medistock-backend-ov78.onrender.com/api |
+| Health Check | https://medistock-backend-ov78.onrender.com/api/health |
+
+### Production Architecture
+
+```text
+User Browser
+     |
+     v
+React 19 + Vite Frontend
+     |
+     | HTTPS / REST API
+     v
+Spring Boot Backend
+(Render + Docker)
+     |
+     | JDBC / MySQL
+     v
+Aiven Cloud MySQL
+````
+
+The frontend and backend are deployed separately on Render.
+
+The production database is hosted on Aiven Cloud MySQL.
+
+---
+
+## 2. User Roles
+
+MediStock provides four role-based accounts:
+
+### Admin
+
+Full system access including:
+
+* Inventory management
+* Category management
+* Supplier management
+* Purchase orders
+* Sales
+* Reports
+* User management
+* User activity monitoring
+* Stock movement monitoring
+* System settings
+* Inventory health monitoring
+* Supplier analytics
+
+### Pharmacist
+
+Access to:
+
+* Medicines
+* Categories
+* Suppliers
+* Purchases
+* Sales
+* Expiry information
+* Inventory insights
+* Relevant reports
+* Inventory health information
+
+### Staff
+
+Access to:
+
+* Medicines
+* Suppliers
+* Purchases
+* Sales
+* Low-stock information
+* Personal purchase history
+* Relevant reports
+
+### Supplier
+
+Supplier accounts are linked to an existing supplier record and provide
+supplier-specific access to:
+
+* Supplier dashboard
+* Assigned supplier information
+* Purchase orders
+* Purchase-order responses
+* Dispatch updates
+* Relevant medicines and purchasing information
+
+---
+
+## 3. Account Creation and Authentication
+
+Account creation is controlled by the backend.
+
+### Public registration
+
+```text
+POST /api/auth/register
 ```
+
+Public registration can create only:
+
+* STAFF
+* PHARMACIST
+
+The backend validates the requested role and does not trust the frontend.
+
+### Admin account
+
+Admin accounts are not created through public registration.
+
+The system maintains the Admin account through the application's controlled
+administration process.
+
+### Supplier accounts
+
+Supplier accounts cannot be created through public registration.
+
+An Admin creates a supplier login for an existing supplier:
+
+```text
+POST /api/admin/suppliers/{supplierId}/create-login
+```
+
+### Login
+
+```text
+POST /api/auth/login
+```
+
+Successful authentication returns a JWT which is used to access protected
+endpoints.
+
+### Logout
+
+```text
+POST /api/auth/logout
+```
+
+The application also tracks login activity and the user's last activity.
+
+---
+
+## 4. Authentication and Security Features
+
+MediStock uses:
+
+* JWT authentication
+* BCrypt password hashing
+* Spring Security
+* Method-level authorization using `@PreAuthorize`
+* Role-based access control
+* Google OAuth2 login
+* Password reset through email
+* Protected REST APIs
+* Session/activity tracking
+* CORS configuration
+* Production environment variables for secrets
+
+Protected APIs require:
+
+```text
+Authorization: Bearer <JWT>
+```
+
+---
+
+## 5. Forgot Password / Password Reset
+
+MediStock supports password recovery through an emailed reset token.
+
+### Request password reset
+
+```text
+POST /api/auth/forgot-password
+```
+
+The application intentionally provides a generic response so that the
+existence of an account cannot be determined from the password-reset request.
+
+### Reset password
+
+```text
+POST /api/auth/reset-password
+```
+
+The reset process uses a secure token with an expiry period.
+
+Email delivery depends on the production email configuration.
+
+Required production configuration includes:
+
+```text
+EMAIL_ALERTS_ENABLED
+MAIL_HOST
+MAIL_PORT
+MAIL_USERNAME
+MAIL_PASSWORD
+MAIL_SMTP_AUTH
+MAIL_SMTP_STARTTLS
+```
+
+If email delivery is disabled or incorrectly configured, the reset request
+may be accepted by the backend but the user will not receive the reset email.
+
+---
+
+## 6. Google OAuth2 Login
+
+Google OAuth2 login is implemented in the backend.
+
+The current production deployment supports the OAuth2 configuration through:
+
+```text
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+```
+
+OAuth2 status can be checked using:
+
+```text
+GET /api/auth/oauth2-status
+```
+
+For production Google login, the following redirect URI must be registered
+with Google Cloud:
+
+```text
+https://medistock-backend-ov78.onrender.com/login/oauth2/code/google
+```
+
+The production frontend uses the deployed Render backend rather than the
+local development backend.
+
+---
+
+## 7. Core Features
+
+### Authentication
+
+* Registration
+* Login
+* Logout
+* JWT authentication
+* Role-based authorization
+* BCrypt password hashing
+* Google OAuth2 login
+* Forgot password
+* Password reset
+* Profile management
+* Change password
+* Active-user tracking
+
+### Medicine Inventory
+
+* Add medicines
+* Edit medicines
+* Delete medicines
+* Medicine categories
+* Batch number tracking
+* Quantity tracking
+* Reorder-level tracking
+* Expiry-date tracking
+* Supplier association
+* Search
+* Filtering
+* Low-stock detection
+* Out-of-stock detection
+* Near-expiry detection
+* Expired-medicine detection
+* Dead-stock detection
+* Inventory health score
+* Manual stock adjustment
+* Stock removal
+* Stock movement auditing
+
+### Categories
+
+* Create categories
+* Update categories
+* Delete categories
+* View active categories
+* View all categories
+
+### Suppliers
+
+* Supplier CRUD
+* Supplier summary
+* Supplier analytics
+* Supplier-specific login
+* Supplier purchase-order management
+
+### Purchase Orders
+
+MediStock uses a purchase-order lifecycle:
+
+```text
+PENDING
+   |
+   +----> REJECTED
+   |
+   v
+ACCEPTED
+   |
+   v
+DISPATCHED
+   |
+   v
+RECEIVED
+```
+
+A purchase can also be:
+
+```text
+PENDING / ACCEPTED / DISPATCHED
+        |
+        v
+    CANCELLED
+```
+
+Stock is increased only when the purchase order reaches:
+
+```text
+RECEIVED
+```
+
+This prevents stock from being incorrectly increased when an order is only
+created or accepted.
+
+### Sales
+
+MediStock also supports sales/billing independently from purchases.
+
+Features include:
+
+* Record sales
+* View sales
+* View personal sales
+* View individual sale details
+* Sales analytics
+* Recent-sales information
+* Top-selling medicine information
+
+### Notifications
+
+Notifications can be generated for:
+
+* Low stock
+* Out of stock
+* Near expiry
+* Expired medicines
+* Purchase events
+* Daily inventory reminders
+
+Notifications support:
+
+* Unread count
+* Mark one as read
+* Mark all as read
+* Scheduled alerts
+* Event-triggered alerts
+
+Optional notification channels include:
+
+* Email
+* SMS through Twilio
+* Push notifications through Firebase
+
+These optional channels can be independently enabled or disabled.
+
+### Reports
+
+CSV reports are available for:
+
+* Inventory
+* Expiry
+* Purchases
+* Sales
+* Stock movements
+* Analytics
+
+The CSV files can be opened using applications such as:
+
+* Microsoft Excel
+* Google Sheets
+* LibreOffice Calc
+
+---
+
+## 8. Dashboards
+
+MediStock provides role-specific dashboards.
+
+### Admin Dashboard
+
+Includes:
+
+* Inventory analytics
+* Supplier analytics
+* Purchase information
+* Sales information
+* Spend information
+* Inventory health score
+* System monitoring
+* User activity
+* Stock movement information
+
+### Pharmacist Dashboard
+
+Includes:
+
+* Purchase summary
+* Supply insights
+* Supplier information
+* Expiry information
+* Inventory insights
+
+### Staff Dashboard
+
+Includes:
+
+* Personal purchase information
+* Low-stock information
+* Purchase-related actions
+* Sales-related information
+
+### Supplier Dashboard
+
+Includes supplier-specific:
+
+* Purchase orders
+* Order status
+* Supplier information
+* Purchasing information
+
+---
+
+## 9. Inventory Health and System Settings
+
+MediStock provides an inventory health score based on inventory conditions.
+
+The system also allows configurable inventory alert windows.
+
+These include:
+
+* Near-expiry window
+* Dead-stock window
+
+Relevant settings APIs:
+
+```text
+GET /api/settings
+PUT /api/settings
+```
+
+Reading settings is available to:
+
+```text
+ADMIN
+PHARMACIST
+STAFF
+```
+
+Updating settings is restricted to:
+
+```text
+ADMIN
+```
+
+---
+
+## 10. Stock Movement Audit
+
+Every relevant stock change can be recorded in the stock movement history.
+
+This provides an audit trail for:
+
+* Stock additions
+* Stock reductions
+* Purchases
+* Manual adjustments
+* Stock removal
+
+The Admin can review the complete stock movement history.
+
+---
+
+## 11. User Activity Monitoring
+
+Admin users can monitor user activity.
+
+The system records relevant information such as:
+
+* User
+* Action
+* Timestamp
+* Activity information
+
+Admin endpoint:
+
+```text
+GET /api/admin/user-activity
+```
+
+Active-user information is also available through:
+
+```text
+GET /api/admin/active-users
+```
+
+---
+
+## 12. Project Structure
+
+```text
 medistock/
-├── backend/                  Spring Boot API (Java 17, Maven)
+│
+├── backend/
 │   ├── src/main/java/com/medistock/
-│   │   ├── config/            Security & CORS configuration
-│   │   ├── security/          JWT filter, JWT util, auth entry point
-│   │   ├── model/              JPA entities (User, Medicine, Supplier, Role)
-│   │   ├── repository/         Spring Data JPA repositories
-│   │   ├── dto/                 Request/response DTOs
-│   │   ├── service/             Business logic
-│   │   ├── controller/          REST controllers
-│   │   └── exception/           Global exception handling
+│   │   ├── config/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── exception/
+│   │   ├── model/
+│   │   ├── repository/
+│   │   ├── security/
+│   │   └── service/
+│   │
 │   ├── src/main/resources/
-│   │   ├── application.properties        (MySQL, local dev)
-│   │   └── application-prod.properties   (PostgreSQL, production)
+│   │   ├── application.properties
+│   │   └── application-prod.properties
+│   │
+│   ├── Dockerfile
 │   └── pom.xml
 │
-├── frontend/                 React 19 + Vite + Tailwind CSS v4
-│   └── src/
-│       ├── api/                axios client with JWT interceptor
-│       ├── context/            AuthContext (login/register/logout)
-│       ├── components/         Sidebar, modals, status pills, etc.
-│       └── pages/               Login, Register, Dashboard, Medicines, Suppliers
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── context/
+│   │   └── pages/
+│   │
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── package.json
 │
 ├── database/
-│   ├── schema.sql             Manual reference schema (tables auto-created by Hibernate too)
-│   └── seed.sql                Sample suppliers & medicines
+│   ├── schema.sql
+│   └── seed.sql
 │
-└── README.md                  You are here
+├── postman/
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+│
+├── docker-compose.yml
+└── README.md
 ```
 
 ---
 
-## 2. Prerequisites
+## 13. Technology Stack
 
-Install these before you start:
+### Backend
 
-| Tool | Version | Check with |
-|---|---|---|
-| Java JDK | 17+ | `java -version` |
-| Maven | 3.8+ | `mvn -version` |
-| Node.js | 18+ | `node -version` |
-| npm | 9+ | `npm -version` |
-| MySQL | 8.x | `mysql --version` |
+* Java 17
+* Spring Boot 3.3.2
+* Spring Security
+* Spring Data JPA
+* Hibernate
+* JWT
+* OAuth2 Client
+* JavaMailSender
+* Maven
+* MySQL Connector/J
 
-Download links if you need them:
-- Java: https://adoptium.net/
-- Maven: https://maven.apache.org/download.cgi
-- Node.js: https://nodejs.org/
-- MySQL: https://dev.mysql.com/downloads/mysql/
+### Frontend
+
+* React 19
+* Vite
+* React Router
+* Axios
+* Tailwind CSS
+* Recharts
+* Lucide React
+
+### Database
+
+Local development:
+
+```text
+MySQL 8
+```
+
+Production:
+
+```text
+Aiven Cloud MySQL
+```
+
+### Deployment
+
+* Docker
+* Render
+
+### Development and Testing
+
+* Git
+* GitHub
+* GitHub Actions
+* Postman
+* Maven tests
+* Vitest / React Testing Library
 
 ---
 
-## 3. Step-by-step setup
+## 14. Local Development
 
-### Step 1 — Create the MySQL database
+### Prerequisites
 
-Open a terminal and log into MySQL:
+Install:
 
-```bash
-mysql -u root -p
-```
+| Tool    | Version       |
+| ------- | ------------- |
+| Java    | 17+           |
+| Maven   | 3.8+          |
+| Node.js | 18+           |
+| npm     | 9+            |
+| MySQL   | 8+            |
+| Git     | Latest stable |
+| Docker  | Optional      |
 
-Then run:
+---
+
+### Create Local Database
+
+Open MySQL and run:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS medistock_db;
-EXIT;
 ```
 
-That's it — Hibernate will auto-create all tables the first time the backend
-starts (`spring.jpa.hibernate.ddl-auto=update`). You don't need to run
-`schema.sql` manually, but it's there for reference or if you prefer to
-manage migrations yourself.
+Configure the local database credentials in:
 
-**Optional:** load sample data after the backend has started once (so the
-tables exist):
-
-```bash
-mysql -u root -p medistock_db < database/seed.sql
+```text
+backend/src/main/resources/application.properties
 ```
 
-### Step 2 — Configure the backend
-
-Open `backend/src/main/resources/application.properties` and update the
-MySQL username/password if they differ from the defaults:
+Example:
 
 ```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/medistock_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC
 spring.datasource.username=root
 spring.datasource.password=root
 ```
 
-### Step 3 — Run the backend
+---
+
+### Run Backend Locally
 
 ```bash
 cd backend
-mvn clean install
+mvn clean package
 mvn spring-boot:run
 ```
 
-The API will start on **http://localhost:8080**.
+The local backend runs at:
 
-Verify it's alive:
-
-```bash
-curl http://localhost:8080/api/health
-# {"status":"UP","service":"MediStock API"}
+```text
+http://localhost:8080
 ```
 
-### Step 4 — Run the frontend
+Health check:
 
-Open a **new terminal** (keep the backend running):
+```text
+http://localhost:8080/api/health
+```
+
+---
+
+### Run Frontend Locally
+
+Open another terminal:
 
 ```bash
 cd frontend
@@ -160,171 +703,749 @@ npm install
 npm run dev
 ```
 
-The app will start on **http://localhost:5173**.
+The local frontend runs at:
 
-The frontend already points to `http://localhost:8080/api` by default. If
-you need to change it, copy `.env.example` to `.env` and edit
-`VITE_API_BASE_URL`.
-
-### Step 5 — Create accounts for each role
-
-Register three accounts (one per role) so you can see all three dashboards:
-
-1. Open http://localhost:5173 → **Create an account**
-2. Create `admin@medistock.com` with role **Admin**
-3. Log out, create `pharmacist@medistock.com` with role **Pharmacist**
-4. Log out, create `staff@medistock.com` with role **Staff**
-
-Each account is automatically routed to its own dashboard on login:
-
-| Role | Lands on | Sidebar links |
-|---|---|---|
-| Admin | `/admin/dashboard` | Dashboard, Medicines, Purchases, Suppliers, Reports, User activity, Stock movements |
-| Pharmacist | `/pharmacist/dashboard` | Dashboard, Medicines, Purchases, Suppliers, Reports |
-| Staff | `/staff/dashboard` | Dashboard, Medicines, Purchases, Suppliers, Reports |
-
-Admin can also view the Pharmacist/Staff dashboards directly (e.g.
-`/pharmacist/dashboard`) since Admin has access to every role's views.
-
-### Step 6 — Add suppliers and medicines
-
-- Go to **Suppliers** → **Add supplier** to create a supplier record
-- Go to **Medicines** → **Add medicine** to add stock, linking it to a
-  supplier, setting quantity, reorder level, batch number, and expiry date
-- Use the **+ / −** buttons in the Medicines table for quick manual stock
-  adjustments (these are logged and can trigger low-stock alerts)
-
-### Step 7 — Record a purchase
-
-Go to **Purchases** → **Record purchase**, pick a medicine, quantity, and
-unit price. This:
-1. Increases the medicine's stock
-2. Adds an entry to the stock movement audit trail
-3. Fires a "New purchase recorded" notification (bell icon, top of sidebar)
-
-### Step 8 — Check notifications & reports
-
-- The **bell icon** in the sidebar shows live alerts: low stock, out of
-  stock, expiry warnings, purchase alerts, and a daily inventory reminder.
-  It polls every 30 seconds and shows an unread badge.
-- A scheduled job (`AlertScheduler`) also runs once a day (07:00 server
-  time) and once ~30 seconds after the backend starts, so you'll see alerts
-  populate shortly after your first run — no need to wait a full day.
-- Go to **Reports** to download CSV reports. Which reports you see depends
-  on your role (Admin sees all four; Pharmacist sees expiry + purchases;
-  Staff sees purchases).
-
----
-
-## 4. API reference (quick overview)
-
-All endpoints are prefixed with `/api`. Endpoints other than `/api/auth/**`
-and `/api/health` require a `Authorization: Bearer <token>` header.
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/auth/register` | Create an account, returns JWT |
-| POST | `/auth/login` | Log in, returns JWT |
-| GET | `/medicines` | List all medicines (supports `?name=` / `?category=`) |
-| GET | `/medicines/{id}` | Get one medicine |
-| GET | `/medicines/low-stock` | Medicines at/below reorder level |
-| GET | `/medicines/out-of-stock` | Medicines with zero quantity |
-| GET | `/medicines/near-expiry?days=30` | Medicines expiring soon |
-| GET | `/medicines/expired` | Already-expired medicines |
-| POST | `/medicines` | Create a medicine |
-| PUT | `/medicines/{id}` | Update a medicine |
-| PATCH | `/medicines/{id}/adjust-stock` | Body: `{ "delta": 1 }` or `{ "delta": -1 }` |
-| DELETE | `/medicines/{id}` | Delete a medicine |
-| GET | `/suppliers` | List all suppliers |
-| POST | `/suppliers` | Create a supplier |
-| PUT | `/suppliers/{id}` | Update a supplier |
-| DELETE | `/suppliers/{id}` | Delete a supplier |
-| GET | `/dashboard/stats` | Generic aggregate stats |
-| GET | `/dashboard/admin` | **Admin only** — full analytics + supplier insights + system status |
-| GET | `/dashboard/pharmacist` | **Admin/Pharmacist** — purchase summary, supply insight, expiry list |
-| GET | `/dashboard/staff` | **Admin/Staff** — the caller's own purchase history |
-| GET | `/purchases` | All purchases, newest first |
-| GET | `/purchases/mine` | Purchases recorded by the current user |
-| POST | `/purchases` | Record a purchase — body: `{ medicineId, supplierId, quantity, unitPrice, note }` |
-| GET | `/stock-movements` | Full stock movement audit trail |
-| GET | `/stock-movements/medicine/{id}` | Movement history for one medicine |
-| GET | `/notifications` | Notifications for the current user's role |
-| GET | `/notifications/unread-count` | `{ "count": n }` |
-| PATCH | `/notifications/{id}/read` | Mark one notification read |
-| PATCH | `/notifications/read-all` | Mark all (for the current role) read |
-| GET | `/admin/user-activity` | **Admin only** — full user activity log |
-| GET | `/reports/inventory` | **Admin only** — CSV |
-| GET | `/reports/expiry` | **Admin/Pharmacist** — CSV |
-| GET | `/reports/purchases` | **Admin/Staff/Pharmacist** — CSV |
-| GET | `/reports/stock-movements` | **Admin only** — CSV |
-
----
-
-## 5. Switching to PostgreSQL for production
-
-The backend ships with a `prod` profile pre-wired for PostgreSQL. To use it:
-
-```bash
-export DB_URL=jdbc:postgresql://<host>:5432/medistock_db
-export DB_USERNAME=<your-username>
-export DB_PASSWORD=<your-password>
-export JWT_SECRET=<a-long-random-secret>
-
-mvn spring-boot:run -Dspring-boot.run.profiles=prod
+```text
+http://localhost:5173
 ```
 
-No Docker needed — deploy the backend as a standard Spring Boot JAR
-(`mvn clean package` → `java -jar target/medistock-backend-1.0.0.jar`) and the
-frontend as a static build (`npm run build` → deploy the `dist/` folder to
-any static host).
+For local development, configure:
+
+```text
+VITE_API_BASE_URL=http://localhost:8080/api
+```
+
+Local URLs are used only for development.
+
+They are not the production URLs.
 
 ---
 
-## 6. Tech stack (matches the original spec)
+## 15. Production Environment
 
-**Backend:** Java, Spring Boot, Spring Security, Spring Data JPA, Hibernate,
-JWT (jjwt), Maven, MySQL (dev) / PostgreSQL (prod)
+The production backend uses the Spring Boot `prod` profile.
 
-**Frontend:** React.js, React Router, Axios, Tailwind CSS, Recharts,
-lucide-react icons
+Production database:
+
+```text
+Aiven Cloud MySQL
+```
+
+Production schema validation:
+
+```properties
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+This means Hibernate validates the existing production schema rather than
+automatically modifying the production database schema.
+
+### Production environment variables
+
+The following variables are configured on Render and should never be
+hard-coded into the source code:
+
+```text
+DB_URL
+DB_USERNAME
+DB_PASSWORD
+
+JWT_SECRET
+JWT_EXPIRATION_MS
+
+FRONTEND_URL
+CORS_ALLOWED_ORIGINS
+
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+
+EMAIL_ALERTS_ENABLED
+EMAIL_ALERTS_RECIPIENTS
+
+MAIL_HOST
+MAIL_PORT
+MAIL_USERNAME
+MAIL_PASSWORD
+MAIL_SMTP_AUTH
+MAIL_SMTP_STARTTLS
+
+SMS_ALERTS_ENABLED
+PUSH_ALERTS_ENABLED
+
+DEMO_DATA_ENABLED
+```
+
+Production demo data is disabled:
+
+```text
+DEMO_DATA_ENABLED=false
+```
+
+The backend receives the Render-provided `PORT` environment variable.
+
+Therefore the application uses:
+
+```properties
+server.port=${PORT:8080}
+```
 
 ---
 
-## 7. What's included vs. what to extend next
+## 16. Production Deployment
 
-This build implements the core, demo-ready system end-to-end: auth, medicine
-inventory, suppliers, stock/expiry tracking, search & filter, and dashboard
-analytics — all working together against a real database.
+The project is deployed using Docker and Render.
 
-Not yet wired up (natural next steps, following the same patterns already in
-the codebase):
-- Admin user-management screen (roles are already enforced server-side —
-  this would just be the UI for managing them)
+### Backend
 
-Each of these follows the same layered structure (entity → repository →
-service → controller / component → page), so they're a natural continuation
-rather than a redesign.
+The backend uses a multi-stage Docker build:
+
+```text
+Maven + Java 17
+       |
+       v
+Build Spring Boot JAR
+       |
+       v
+Java 17 Runtime Container
+```
+
+### Frontend
+
+The frontend uses a Docker build process:
+
+```text
+Node.js
+   |
+   v
+npm build
+   |
+   v
+Nginx
+```
+
+### Deployment flow
+
+```text
+GitHub
+   |
+   +--------------------+
+   |                    |
+   v                    v
+Render Backend      Render Frontend
+Docker              Docker/Nginx
+   |                    |
+   |                    |
+   +-------- HTTPS -----+
+            |
+            v
+       Aiven MySQL
+```
 
 ---
 
-## Deployment & tech-stack additions
+## 17. Production URLs
 
-The original tech-stack doc (`Java_Medical_Inventory_Management_Platform.pdf`)
-listed a few pieces that weren't in the codebase yet. Here's what was added,
-and — because several of these need real third-party credentials — exactly
-what's active by default vs. what you need to turn on:
+### Frontend
 
-| Item | Status | To activate |
-|---|---|---|
-| OAuth2 Google login | **Wired up**, inactive by default | Set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` env vars (get them from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials); redirect URI is `http://localhost:8080/login/oauth2/code/google`). Until then, Spring never creates the OAuth2 registration bean, so `SecurityConfig` automatically skips it — the rest of the app is unaffected either way. |
-| Email alerts (JavaMailSender) | **Wired up**, inactive by default | Uncomment the `spring.mail.*` block in `application.properties`, set `MAIL_USERNAME`/`MAIL_PASSWORD`, and set `EMAIL_ALERTS_ENABLED=true` + `EMAIL_ALERTS_RECIPIENTS=you@example.com`. The daily `AlertScheduler` job will then also email a digest of out-of-stock/expired items. |
-| SMS alerts (Twilio) | Dependency + service added, inactive by default | Set `twilio.account-sid` / `twilio.auth-token` / `twilio.from-number` and `SMS_ALERTS_ENABLED=true`. `SmsNotificationService.sendAlert(...)` is ready to call from anywhere that needs it. |
-| Push alerts (Firebase Cloud Messaging) | Dependency + service added, inactive by default | Set `firebase.service-account-path` to a service-account JSON key and `PUSH_ALERTS_ENABLED=true`. `PushNotificationService.sendAlert(...)` is ready to call. |
-| React Testing Library | **Fully working** | `npm test` runs Vitest + RTL (`src/components/StatusPill.test.jsx` is a working example). |
-| Framer Motion | **Installed**, ready to use | Not yet applied to any component — add `motion.div` etc. where you want animation. |
-| Docker / Docker Compose | **Added** | `docker-compose up --build` runs MySQL + backend + frontend together. Individual `Dockerfile`s are in `backend/` and `frontend/`. |
-| GitHub Actions | **Added** | `.github/workflows/ci.yml` builds/tests both backend (Maven) and frontend (npm) on every push/PR. |
+```text
+https://medistock-frontend-ve4g.onrender.com/
+```
 
-None of the "inactive by default" items change existing behavior — they're
-additive and safely no-op (with a debug log line) until configured, so the
-app builds and runs exactly as before if you don't touch them.
+### Backend
+
+```text
+https://medistock-backend-ov78.onrender.com/api
+```
+
+### Health Check
+
+```text
+https://medistock-backend-ov78.onrender.com/api/health
+```
+
+### OAuth2 Callback
+
+```text
+https://medistock-backend-ov78.onrender.com/login/oauth2/code/google
+```
+
+---
+
+## 18. API Reference
+
+All REST APIs use the `/api` prefix.
+
+Protected endpoints require:
+
+```text
+Authorization: Bearer <JWT>
+```
+
+### Authentication
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+GET  /api/auth/me
+GET  /api/auth/oauth2-status
+POST /api/auth/logout
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+GET  /api/health
+```
+
+### Medicines
+
+```text
+GET    /api/medicines
+GET    /api/medicines/{id}
+GET    /api/medicines/low-stock
+GET    /api/medicines/out-of-stock
+GET    /api/medicines/near-expiry
+GET    /api/medicines/expired
+POST   /api/medicines
+PUT    /api/medicines/{id}
+PATCH  /api/medicines/{id}/adjust-stock
+PATCH  /api/medicines/{id}/remove-stock
+DELETE /api/medicines/{id}
+```
+
+### Categories
+
+```text
+GET    /api/categories
+GET    /api/categories/all
+POST   /api/categories
+PUT    /api/categories/{id}
+DELETE /api/categories/{id}
+```
+
+### Suppliers
+
+```text
+GET    /api/suppliers
+GET    /api/suppliers/summary
+GET    /api/suppliers/{id}
+POST   /api/suppliers
+PUT    /api/suppliers/{id}
+DELETE /api/suppliers/{id}
+```
+
+### Purchases
+
+```text
+GET   /api/purchases
+GET   /api/purchases/mine
+POST  /api/purchases
+PATCH /api/purchases/{id}/respond
+PATCH /api/purchases/{id}/dispatch
+PATCH /api/purchases/{id}/receive
+PATCH /api/purchases/{id}/cancel
+```
+
+### Sales
+
+```text
+GET  /api/sales
+GET  /api/sales/mine
+GET  /api/sales/{id}
+POST /api/sales
+GET  /api/sales/analytics
+```
+
+### Stock Movements
+
+```text
+GET /api/stock-movements
+GET /api/stock-movements/medicine/{id}
+```
+
+### Notifications
+
+```text
+GET   /api/notifications
+GET   /api/notifications/unread-count
+PATCH /api/notifications/{id}/read
+PATCH /api/notifications/read-all
+```
+
+### Dashboards
+
+```text
+GET /api/dashboard/stats
+GET /api/dashboard/admin
+GET /api/dashboard/pharmacist
+GET /api/dashboard/staff
+GET /api/dashboard/supplier
+GET /api/dashboard/inventory-health
+```
+
+### Reports
+
+```text
+GET /api/reports/inventory
+GET /api/reports/expiry
+GET /api/reports/purchases
+GET /api/reports/sales
+GET /api/reports/stock-movements
+GET /api/reports/analytics
+```
+
+### Admin
+
+```text
+GET   /api/admin/user-activity
+GET   /api/admin/active-users
+GET   /api/admin/users
+POST  /api/admin/suppliers/{supplierId}/create-login
+PATCH /api/admin/users/{id}/activate
+PATCH /api/admin/users/{id}/deactivate
+PATCH /api/admin/users/{id}/role
+```
+
+### Profile
+
+```text
+GET  /api/profile
+PUT  /api/profile
+POST /api/profile/change-password
+```
+
+### Settings
+
+```text
+GET /api/settings
+PUT /api/settings
+```
+
+---
+
+## 19. Testing
+
+### Backend Tests
+
+Run:
+
+```bash
+cd backend
+mvn test
+```
+
+### Frontend Tests
+
+Run:
+
+```bash
+cd frontend
+npm test
+```
+
+### API Testing
+
+The project includes Postman testing resources under:
+
+```text
+postman/
+```
+
+Protected API requests require a valid JWT.
+
+Typical testing flow:
+
+```text
+Register/Login
+     |
+     v
+Obtain JWT
+     |
+     v
+Set Bearer Token
+     |
+     v
+Test protected APIs
+```
+
+### CI
+
+GitHub Actions is configured to build and test the project on pushes and
+pull requests.
+
+Workflow:
+
+```text
+.github/workflows/ci.yml
+```
+
+---
+
+## 20. Docker
+
+Docker files are included for both backend and frontend.
+
+### Run complete local stack
+
+```bash
+docker-compose up --build
+```
+
+This can run:
+
+```text
+MySQL
+Backend
+Frontend
+```
+
+Docker is optional for normal local development.
+
+The project can also be run directly using:
+
+```text
+Maven
++
+npm
++
+MySQL
+```
+
+---
+
+## 21. Security
+
+Production secrets must never be committed to GitHub.
+
+Never commit:
+
+```text
+DB_PASSWORD
+JWT_SECRET
+GOOGLE_CLIENT_SECRET
+MAIL_PASSWORD
+TWILIO_AUTH_TOKEN
+FIREBASE credentials
+.env files containing real secrets
+```
+
+Production secrets should be stored only in the deployment platform's
+environment-variable configuration.
+
+If a secret is accidentally exposed:
+
+1. Revoke the exposed credential.
+2. Generate a new credential.
+3. Update the deployment environment variable.
+4. Redeploy the affected service.
+
+---
+
+## 22. Local vs Production
+
+| Feature       | Local Development                   | Production                                        |
+| ------------- | ----------------------------------- | ------------------------------------------------- |
+| Frontend      | Vite                                | Render                                            |
+| Backend       | Spring Boot                         | Render + Docker                                   |
+| Database      | Local MySQL                         | Aiven Cloud MySQL                                 |
+| API           | `http://localhost:8080/api`         | `https://medistock-backend-ov78.onrender.com/api` |
+| Frontend      | `http://localhost:5173`             | `https://medistock-frontend-ve4g.onrender.com/`   |
+| Schema        | Hibernate development configuration | `ddl-auto=validate`                               |
+| Demo data     | Configurable                        | Disabled                                          |
+| HTTPS         | Development may use HTTP            | Enabled                                           |
+| CORS          | Local frontend origin               | Render frontend origin                            |
+| Google OAuth2 | Requires credentials                | Requires production credentials and callback      |
+| Email         | Depends on local configuration      | Depends on Render mail configuration              |
+
+---
+
+## 23. Important Production Notes
+
+### Render
+
+The backend listens on the port supplied by Render:
+
+```text
+${PORT:8080}
+```
+
+Render may therefore show the application running on a port such as:
+
+```text
+10000
+```
+
+This is expected.
+
+The public URL remains:
+
+```text
+https://medistock-backend-ov78.onrender.com
+```
+
+### Aiven
+
+Production database connectivity uses:
+
+```text
+Aiven Cloud MySQL
+```
+
+The production database URL, username, and password are supplied through
+environment variables.
+
+### CORS
+
+The production backend must allow the deployed frontend origin:
+
+```text
+https://medistock-frontend-ve4g.onrender.com
+```
+
+This is controlled through:
+
+```text
+CORS_ALLOWED_ORIGINS
+```
+
+### Frontend API
+
+The deployed frontend must use the production backend API:
+
+```text
+https://medistock-backend-ov78.onrender.com/api
+```
+
+It must not use:
+
+```text
+http://localhost:8080/api
+```
+
+for the live deployment.
+
+---
+
+## 24. Current Production Architecture
+
+```text
+                         ┌─────────────────────────┐
+                         │        User Browser     │
+                         └────────────┬────────────┘
+                                      │
+                                      │ HTTPS
+                                      ▼
+                    ┌───────────────────────────────┐
+                    │     Render Frontend           │
+                    │ React 19 + Vite + Nginx       │
+                    │                               │
+                    │ medistock-frontend-ve4g       │
+                    └───────────────┬───────────────┘
+                                    │
+                                    │ REST API / HTTPS
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │      Render Backend            │
+                    │ Spring Boot 3.3.2             │
+                    │ Java 17 + Docker               │
+                    │ JWT + Spring Security         │
+                    │ OAuth2 + JavaMail              │
+                    │                               │
+                    │ medistock-backend-ov78         │
+                    └───────────────┬───────────────┘
+                                    │
+                                    │ JDBC / MySQL
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │       Aiven Cloud MySQL        │
+                    │                               │
+                    │ Production Database            │
+                    └───────────────────────────────┘
+```
+
+---
+
+## 25. Complete Application Workflow
+
+```text
+User
+ |
+ v
+Authentication
+ |
+ +----------------------+
+ |                      |
+ v                      v
+JWT Login          Google OAuth2
+ |
+ v
+Role-Based Dashboard
+ |
+ +----------+----------+-----------+
+ |          |          |           |
+ v          v          v           v
+Admin   Pharmacist   Staff      Supplier
+ |
+ v
+Inventory
+ |
+ +-------------------+
+ |                   |
+ v                   v
+Medicines         Categories
+ |
+ v
+Suppliers
+ |
+ v
+Purchase Orders
+ |
+ v
+Supplier Response
+ |
+ v
+Dispatch
+ |
+ v
+Receive
+ |
+ v
+Stock Updated
+ |
+ v
+Stock Movement Audit
+ |
+ +----------------------+
+ |                      |
+ v                      v
+Expiry / Stock Alerts   Sales
+ |                      |
+ v                      v
+Notifications        Sales Analytics
+ |
+ v
+Reports
+```
+
+---
+
+## 26. Project Highlights
+
+MediStock combines inventory management with operational monitoring rather
+than treating medicine records as simple CRUD data.
+
+Key system capabilities include:
+
+* Four role-based dashboards
+* Secure JWT authentication
+* BCrypt password hashing
+* Google OAuth2 integration
+* Password recovery
+* Medicine and category management
+* Supplier management
+* Supplier-specific accounts
+* Purchase-order workflow
+* Stock updates only after purchase receipt
+* Sales and billing
+* Stock movement audit trail
+* User activity monitoring
+* Inventory health scoring
+* Configurable expiry and dead-stock windows
+* Automated notifications
+* CSV reporting
+* Production deployment using Docker and Render
+* Cloud MySQL database through Aiven
+* GitHub Actions CI
+* Postman API testing
+
+---
+
+## 27. Production Status
+
+The MediStock application is deployed using:
+
+```text
+Frontend  → Render
+Backend   → Render + Docker
+Database  → Aiven Cloud MySQL
+Source    → GitHub
+CI        → GitHub Actions
+Testing   → Postman + Maven + Frontend Tests
+```
+
+Live frontend:
+
+```text
+https://medistock-frontend-ve4g.onrender.com/
+```
+
+Live backend:
+
+```text
+https://medistock-backend-ov78.onrender.com/api
+```
+
+Health check:
+
+```text
+https://medistock-backend-ov78.onrender.com/api/health
+```
+
+---
+
+## 28. Summary
+
+MediStock is a full-stack medical inventory management platform built around
+secure role-based access, real inventory workflows, supplier management,
+purchase orders, sales, stock auditing, notifications, reporting, and
+inventory analytics.
+
+The production architecture is:
+
+```text
+React 19
+   ↓
+Render Frontend
+   ↓ HTTPS
+Spring Boot 3.3.2
+   ↓
+Render + Docker
+   ↓ JDBC / MySQL
+Aiven Cloud MySQL
+```
+
+The system supports four roles:
+
+```text
+ADMIN
+PHARMACIST
+STAFF
+SUPPLIER
+```
+
+The main operational workflow is:
+
+```
+Authentication
+      ↓
+Role-Based Dashboard
+      ↓
+Inventory / Suppliers
+      ↓
+Purchase Orders
+      ↓
+Supplier Processing
+      ↓
+Receipt
+      ↓
+Stock Update
+      ↓
+Stock Audit
+      ↓
+Notifications
+      ↓
+Sales / Analytics
+      ↓
+Reports
+```
+
+MediStock is designed as a production-deployed, role-based medical inventory
+management platform with cloud hosting, database persistence, API security,
+automated monitoring, and reporting.
