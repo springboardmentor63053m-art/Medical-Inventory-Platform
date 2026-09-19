@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API from '../api/axiosConfig';
 import {
@@ -130,7 +130,7 @@ const AdminDashboard = ({ summary }) => {
 
       {/* Quick Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
-        <a href="/medicines" style={{
+        <Link to="/medicines" style={{
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
@@ -140,8 +140,8 @@ const AdminDashboard = ({ summary }) => {
           transition: 'all 0.2s ease'
         }}>
           <Pill size={20} /> Manage Medicines <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
-        </a>
-        <a href="/stock-management" style={{
+        </Link>
+        <Link to="/stock-management" style={{
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
@@ -151,8 +151,8 @@ const AdminDashboard = ({ summary }) => {
           transition: 'all 0.2s ease'
         }}>
           <Package size={20} /> Stock Operations <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
-        </a>
-        <a href="/suppliers" style={{
+        </Link>
+        <Link to="/suppliers" style={{
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
@@ -162,8 +162,8 @@ const AdminDashboard = ({ summary }) => {
           transition: 'all 0.2s ease'
         }}>
           <Users size={20} /> View Suppliers <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
-        </a>
-        <a href="/expiry" style={{
+        </Link>
+        <Link to="/expiry" style={{
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
@@ -173,8 +173,8 @@ const AdminDashboard = ({ summary }) => {
           transition: 'all 0.2s ease'
         }}>
           <Calendar size={20} /> Expiry Tracking <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
-        </a>
-        <a href="/user-management" style={{
+        </Link>
+        <Link to="/user-management" style={{
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
@@ -184,8 +184,8 @@ const AdminDashboard = ({ summary }) => {
           transition: 'all 0.2s ease'
         }}>
           <Shield size={20} /> User Management <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
-        </a>
-        <a href="/reports" style={{
+        </Link>
+        <Link to="/reports" style={{
           background: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '12px', padding: '16px 20px',
@@ -195,7 +195,7 @@ const AdminDashboard = ({ summary }) => {
           transition: 'all 0.2s ease'
         }}>
           <FileText size={20} /> Role Reports <ArrowRight size={16} style={{ marginLeft: 'auto' }} />
-        </a>
+        </Link>
       </div>
 
       {/* Charts Grid */}
@@ -465,12 +465,12 @@ const PharmacistDashboard = ({ summary }) => {
           >
             <Plus size={16} /> Quick Restock PO
           </button>
-          <a href="/sales" className="btn btn-secondary">
+          <Link to="/sales" className="btn btn-secondary">
             <ShoppingCart size={16} /> POS Billing
-          </a>
-          <a href="/reports" className="btn btn-secondary">
+          </Link>
+          <Link to="/reports" className="btn btn-secondary">
             <FileText size={16} /> Pharmacist Reports
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -996,15 +996,15 @@ const SupplierDashboard = ({ supplierData }) => {
           <p style={{ color: '#64748b', fontSize: '14px', marginTop: '4px' }}>Vendor profile, assigned purchase orders, supplied medicine inventory, and fulfillment metrics</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <a href="/supplier-orders" className="btn btn-primary">
+          <Link to="/supplier-orders" className="btn btn-primary">
             <Truck size={16} /> Open Dispatch Portal
-          </a>
-          <a href="/reports" className="btn btn-secondary">
+          </Link>
+          <Link to="/reports" className="btn btn-secondary">
             <FileText size={16} /> Supplier Reports
-          </a>
-          <a href="/messages" className="btn btn-secondary">
+          </Link>
+          <Link to="/messages" state={{ targetRole: 'ADMIN' }} className="btn btn-secondary">
             <MessageSquare size={16} /> Message Admin
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -1159,9 +1159,9 @@ const SupplierDashboard = ({ supplierData }) => {
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <a href="/supplier-orders" className="btn btn-secondary btn-sm">
+                    <Link to="/supplier-orders" className="btn btn-secondary btn-sm">
                       View / Dispatch
-                    </a>
+                    </Link>
                   </td>
                 </tr>
               ))
