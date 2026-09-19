@@ -197,7 +197,7 @@ http://localhost:5173
 
 ## Author
 
-**Nallabhavitha** & **Vishnu Yaragalla**
+**Nallabhavitha** , **Vishnu Yaragalla** and ** Raj Kumar**
 
 ---
 
