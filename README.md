@@ -182,6 +182,7 @@ npm run dev
 | Role | Username | Password |
 | :--- | :--- | :--- |
 | **Admin** | `nithya` | `Admin@123` |
-| **User** | `arun` | `User@123` |
-| **Pharmacist** | `priya` | `Pharma@123` |
-| **Supplier** | `rahul` | `Supplier@123` |
+| **User** | `priya` | `Priya@123` |
+| **Pharmacist** | `Kavya` | `Kavya@123` |
+| **Supplier** | `Healthcare` | `Healthcare@123` |
+|**Staff** |`Sweety` |`Sweety@123` |
