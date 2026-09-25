@@ -15,6 +15,11 @@
 
 ---
 
+
+## 🌐 Live Deployment
+
+**Frontend / Application:** https://medical-inventory-management-zeta.vercel.app/login
+
 ## 📋 Project Overview
 
 **MediStock Pro** is an enterprise-level medical inventory management platform designed for hospitals, clinics, and retail pharmacies. It replaces error-prone manual processes with a secure, scalable, real-time digital solution covering every aspect of medical supply chain management — from medicine catalog management to purchase orders, sales billing, expiry monitoring, and automated alerting.
